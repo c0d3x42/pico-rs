@@ -22,11 +22,16 @@ enum VarLiteral {
     N (u32)
 }
 
-
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(untagged)]
+enum Var {
+    Literal(VarLiteral),
+    Lookup(VarLookup)
+}
 
 
 #[derive(Serialize, Deserialize, Debug)]
-struct PicoConditionEqualityTuple (VarLookup, String, String);
+struct PicoConditionEqualityTuple (Var, Var, Var);
 
 #[derive(Serialize, Deserialize, Debug)]
 struct PicoConditionEquality {
@@ -37,18 +42,12 @@ struct PicoConditionEquality {
 
 #[derive(Serialize, Deserialize, Debug)]
 struct PicoConditionAnd {
-    and: Vec<String>
+    and: Vec<PicoConditions>
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 struct PicoConditionOr {
-    or: Vec<String>
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-#[serde(untagged)]
-enum PicoConditionSimple {
-    Eq(PicoConditionEquality)
+    or: Vec<PicoConditions>
 }
 
 #[derive(Serialize, Deserialize, Debug)]
