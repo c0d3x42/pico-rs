@@ -9,8 +9,61 @@ use std::fs::File;
 
 use serde::{Serialize, Deserialize};
 
+
 #[derive(Serialize, Deserialize, Debug)]
-struct PicoIfThenElseTuple (String, String, String);
+struct VarLookup {
+    var: VarLiteral
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(untagged)]
+enum VarLiteral {
+    S (String),
+    N (u32)
+}
+
+
+
+
+#[derive(Serialize, Deserialize, Debug)]
+struct PicoConditionEqualityTuple (VarLookup, String, String);
+
+#[derive(Serialize, Deserialize, Debug)]
+struct PicoConditionEquality {
+    #[serde(rename = "==")]
+    eq: PicoConditionEqualityTuple
+}
+
+
+#[derive(Serialize, Deserialize, Debug)]
+struct PicoConditionAnd {
+    and: Vec<String>
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+struct PicoConditionOr {
+    or: Vec<String>
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(untagged)]
+enum PicoConditionSimple {
+    Eq(PicoConditionEquality)
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(untagged)]
+enum PicoConditions {
+//    And { and: Vec<String> },
+    And(PicoConditionAnd),
+    Or(PicoConditionOr),
+//    Simple(PicoConditionSimple)
+    Eq(PicoConditionEquality)
+}
+
+
+#[derive(Serialize, Deserialize, Debug)]
+struct PicoIfThenElseTuple (PicoConditions, String, String);
 
 #[derive(Serialize, Deserialize, Debug)]
 struct PicoIfThenElse {
