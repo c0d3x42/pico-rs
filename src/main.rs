@@ -28,4 +28,7 @@ fn main() {
 
     println!("Is valid: {}", schema.validate(&json_v4_schema).is_valid());
 
+    let json_rules: PicoIfThenElse = serde_json::from_reader(File::open("pico.json").unwrap()).unwrap();
+    println!("Pico rules: {:?}", json_rules)
+
 }
