@@ -152,6 +152,13 @@ impl PicoIfThenElse {
     }
 }
 
+struct ContextVars { hm: HashMap<String,String>}
+impl ContextVars{
+    fn new()-> ContextVars{
+        ContextVars{ hm: HashMap::new()}
+    }
+}
+
 
 fn main() {
     println!("Hello, world!");
@@ -165,6 +172,9 @@ fn main() {
 
     let json_rules: PicoIfThenElse = serde_json::from_reader(File::open("pico.json").unwrap()).unwrap();
     println!("Pico rules: {:?}", json_rules);
+
+    let mut oo = ContextVars::new();
+    oo.hm.insert("bob".to_string(), "boooob".to_string());
 
     let mut hm :HashMap<String,String> = HashMap::new();
     hm.insert("lop".to_ascii_lowercase(), "bingo".into());
