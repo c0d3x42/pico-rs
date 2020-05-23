@@ -6,7 +6,7 @@ extern crate valico;
 use serde_json::{Value};
 use valico::json_schema;
 use std::fs::File;
-
+use std::collections::HashMap;
 use serde::{Serialize, Deserialize};
 
 
@@ -132,13 +132,18 @@ struct PicoIfThenElse {
 }
 
 impl PicoIfThenElse {
-    pub fn exec(&self) -> bool {
+    pub fn exec(&self, hm:HashMap<String, String>) -> bool {
 //        println!("Exec: {:?}", self.r#if.0);
 //        let c = &self.r#if;
 //        let i = &c.0;
         let i = &self.ite.0;
 
         i.exec();
+
+        let value = hm.get("lop");
+        if let Some(v) =value {
+            println!("ALSO found {:?}", v)
+        }
         
         println!("Exec IIIIi 0: {:?}", i);
         println!("Exec IIIIi 1: {:?}", self.ite.1);
@@ -161,7 +166,15 @@ fn main() {
     let json_rules: PicoIfThenElse = serde_json::from_reader(File::open("pico.json").unwrap()).unwrap();
     println!("Pico rules: {:?}", json_rules);
 
-    let truth = json_rules.exec();
+    let mut hm :HashMap<String,String> = HashMap::new();
+    hm.insert("lop".to_ascii_lowercase(), "bingo".into());
+    let value = hm.get("lop");
+    if let Some(v) =value {
+        println!("FOUND {:?}", v);
+    }
+
+
+    let truth = json_rules.exec( hm);
     println!("Truth: {:?}", truth);
 
 }
