@@ -14,6 +14,12 @@ use serde::{Serialize, Deserialize};
 struct VarLookup {
     var: VarLiteral
 }
+impl Executable for VarLookup {
+    fn exec (&self)->bool{
+        println!("VarLookup");
+        return self.var.exec();
+    }
+}
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(untagged)]
@@ -21,12 +27,38 @@ enum VarLiteral {
     S (String),
     N (u32)
 }
+impl Executable for VarLiteral {
+    fn exec (&self)->bool{
+
+        match &*self {
+            Self::S(_s) => {
+                println!("VarLiteral (S) {:?}", _s);
+            },
+            Self::N(_n) => {
+                println!("VarLiteral (N) {:?}", _n);
+            },
+
+        }
+        return true;
+    }
+}
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(untagged)]
 enum Var {
     Literal(VarLiteral),
     Lookup(VarLookup)
+}
+
+impl Executable for Var{
+
+    fn exec(&self)->bool{
+        match &*self {
+            Self::Literal(varLiteral) => { return varLiteral.exec()},
+            Self::Lookup(varLookup) => { return varLookup.exec()},
+
+        }
+    }
 }
 
 
@@ -119,7 +151,11 @@ impl Executable for PicoConditionOr {
 impl Executable for PicoConditionEquality {
     fn exec(&self)->bool{
         println!("Condition EQ {:?}", self);
-        return true;
+        let lhs = &self.eq.0.exec();
+        let rhs = &self.eq.1.exec();
+
+
+        return lhs == rhs;
     }
 }
 
@@ -175,6 +211,7 @@ fn main() {
 
     let mut oo = ContextVars::new();
     oo.hm.insert("bob".to_string(), "boooob".to_string());
+    oo.hm.insert("lop".to_string(), "LOOOOB".to_string());
 
     let mut hm :HashMap<String,String> = HashMap::new();
     hm.insert("lop".to_ascii_lowercase(), "bingo".into());
@@ -184,7 +221,7 @@ fn main() {
     }
 
 
-    let truth = json_rules.exec( hm);
+    let truth = json_rules.exec( oo.hm );
     println!("Truth: {:?}", truth);
 
 }
