@@ -20,6 +20,10 @@ use crate::context::{pico::PicoContext, pico::PicoHashMap};
 mod pathing;
 use crate::pathing::{path::PathLookup, path::PathLookupAugmented};
 
+mod variables;
+use crate::variables::literal::VarLiteral;
+use crate::variables::var::Var;
+
 trait Initializable {
     fn init(&self)->bool{
         return true;
@@ -37,114 +41,8 @@ impl Executable for VarLookup {
     }
 }
 
-type VarS = String;
-type VarN = u32;
-#[derive(Serialize, Deserialize, Debug)]
-#[serde(untagged)]
-enum VarLiteral {
-    S (VarS),
-    N (VarN)
-}
-impl VarLiteral {
-    fn variant_eq(l: &VarLiteral, r: &VarLiteral)->bool{
-        match(l,r){
-        (&VarLiteral::S(_), &VarLiteral::S(_)) => true,
-        (&VarLiteral::N(_), &VarLiteral::N(_)) => true,
-        _ => false
-        }
-    }
-    fn value_eq(l: &VarLiteral, r: &VarLiteral)->bool{
-        match(l,r){
-            (VarLiteral::S(lv), VarLiteral::S(rv)) => {
-                return lv == rv;
-            },
-            (VarLiteral::N(lv), VarLiteral::N(rv)) => {
-                return lv == rv;
-            },
-            _ => false
-        }
-    }
 
-    fn eq(&self, other: &VarLiteral) ->bool {
-        if( VarLiteral::variant_eq(self, other)){
-            return VarLiteral::value_eq(self, other);
-        }
-        return false;
-    }
-}
 
-impl Executable for VarLiteral {
-    fn exec (&self, hm: &PicoHashMap)->bool{
-
-        match &*self {
-            Self::S(_s) => {
-                debug!("VarLiteral (S) {:?}", _s);
-            },
-            Self::N(_n) => {
-                debug!("VarLiteral (N) {:?}", _n);
-            },
-
-        }
-        return true;
-    }
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-#[serde(untagged)]
-enum Var {
-    Literal(VarLiteral),
-    Lookup(VarLookup)
-}
-
-impl Executable for Var{
-
-    fn exec(&self, hm: &PicoHashMap)->bool{
-        match self {
-            Self::Literal(varLiteral) => { return varLiteral.exec(hm)},
-            Self::Lookup(varLookup) => { return varLookup.exec(hm)},
-
-        }
-    }
-}
-impl Var {
-    fn resolve(&self, hm: &PicoHashMap)->Option<VarLiteral>{
-        match self {
-            Self::Literal(v) => {
-
-                match v {
-                    VarLiteral::N(n) => {
-                        return Some(VarLiteral::N(*n));
-                    }
-                    VarLiteral::S(s) => {
-                        let t = s.clone();
-                        return Some(VarLiteral::S(t));
-                    }
-                }
-            },
-            Self::Lookup(v) => {
-                match &v.var{
-                    VarLiteral::S(_s) => {
-
-                        
-                        let looked_up = hm.get(&_s.to_string());
-                        if let Some(v) = looked_up {
-                            let y = VarLiteral::S("lll".to_string());
-                            let yy = v;
-
-                            return Some(VarLiteral::S(v.to_string()));
-                        } else {
-                            return None;
-                        }
-                    },
-                    VarLiteral::N(_n) => {
-                        return None;
-                    }
-                }
-            }
-
-        }
-    }
-}
 
 #[derive(Serialize, Deserialize, Debug)]
 struct PicoConditionEqualityTuple (Var, Var);
