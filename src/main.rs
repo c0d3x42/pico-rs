@@ -2,8 +2,13 @@
 extern crate serde_json;
 extern crate serde;
 extern crate valico;
+extern crate jsonpath_lib as jsonpath;
 
-use serde_json::{Value};
+#[macro_use]
+extern crate log;
+
+
+use serde_json::{Value,json};
 use valico::json_schema;
 use std::fs::File;
 use std::collections::HashMap;
@@ -12,6 +17,14 @@ use serde::{Serialize, Deserialize};
 mod context;
 use crate::context::{pico::PicoContext, pico::PicoHashMap};
 
+mod pathing;
+use crate::pathing::{path::PathLookup, path::PathLookupAugmented};
+
+trait Initializable {
+    fn init(&self)->bool{
+        return true;
+    }
+}
 
 #[derive(Serialize, Deserialize, Debug)]
 struct VarLookup {
@@ -19,7 +32,7 @@ struct VarLookup {
 }
 impl Executable for VarLookup {
     fn exec (&self, hm: &PicoHashMap)->bool{
-        println!("VarLookup");
+        debug!("VarLookup");
         return self.var.exec(hm);
     }
 }
@@ -51,6 +64,13 @@ impl VarLiteral {
             _ => false
         }
     }
+
+    fn eq(&self, other: &VarLiteral) ->bool {
+        if( VarLiteral::variant_eq(self, other)){
+            return VarLiteral::value_eq(self, other);
+        }
+        return false;
+    }
 }
 
 impl Executable for VarLiteral {
@@ -58,10 +78,10 @@ impl Executable for VarLiteral {
 
         match &*self {
             Self::S(_s) => {
-                println!("VarLiteral (S) {:?}", _s);
+                debug!("VarLiteral (S) {:?}", _s);
             },
             Self::N(_n) => {
-                println!("VarLiteral (N) {:?}", _n);
+                debug!("VarLiteral (N) {:?}", _n);
             },
 
         }
@@ -79,7 +99,7 @@ enum Var {
 impl Executable for Var{
 
     fn exec(&self, hm: &PicoHashMap)->bool{
-        match &*self {
+        match self {
             Self::Literal(varLiteral) => { return varLiteral.exec(hm)},
             Self::Lookup(varLookup) => { return varLookup.exec(hm)},
 
@@ -88,7 +108,7 @@ impl Executable for Var{
 }
 impl Var {
     fn resolve(&self, hm: &PicoHashMap)->Option<VarLiteral>{
-        match &*self {
+        match self {
             Self::Literal(v) => {
 
                 match v {
@@ -129,10 +149,40 @@ impl Var {
 #[derive(Serialize, Deserialize, Debug)]
 struct PicoConditionEqualityTuple (Var, Var);
 
+struct VarLiteralTuple (VarLiteral, VarLiteral);
+
 #[derive(Serialize, Deserialize, Debug)]
 struct PicoConditionEquality {
     #[serde(rename = "==")]
     eq: PicoConditionEqualityTuple
+}
+
+impl PicoConditionEquality{
+
+    fn resolve(&self, hm: &PicoHashMap) -> Option<VarLiteralTuple>{
+        if let Some(l) = self.eq.0.resolve(hm){
+            if let Some(r) = self.eq.1.resolve(hm){
+                 return Some(VarLiteralTuple( l,r ));
+            }
+        }
+        return None;
+    }
+
+    fn eq(&self, hm: &PicoHashMap) -> bool{
+        if let Some(l) = self.resolve(hm){
+            debug!("HHHHHHHHH resolved");
+            let left = l.0;
+            let right = &l.1;
+
+            debug!("HHHHHHHHHHH {:?}, {:?}", left, right);
+
+            if left.eq(right){
+                return true;
+            }
+        }
+
+        return false;
+    }
 }
 
 
@@ -154,8 +204,18 @@ enum PicoConditions {
     Or(PicoConditionOr),
     Eq(PicoConditionEquality)
 }
+impl Executable for PicoConditions {
+    fn exec(&self, hm: &PicoHashMap) -> bool{
+        match self {
+            PicoConditions::And(x) => x.exec(hm),
+            PicoConditions::Or(x) => x.exec(hm),
+            PicoConditions::Eq(x) => x.exec(hm),
+        }
+    }
+}
 
 
+/*
 impl Executable for PicoConditions{
     fn exec(&self, hm: &PicoHashMap) -> bool {
         match &*self {
@@ -165,33 +225,36 @@ impl Executable for PicoConditions{
         }
     }
 }
+*/
 
 
 trait Executable {
-    fn exec(&self, hm: &PicoHashMap)->bool;
+    fn exec(&self, _hm: &PicoHashMap)->bool{
+        return true;
+    }
 }
 
 impl Executable for PicoConditionAnd {
     fn exec(&self, hm: &PicoHashMap)->bool{
-        println!("Condition AND {:?}", self);
+        debug!("Condition AND {:?}", self);
         let itterator = self.and.iter();
         let mut counter = 0;
         for c in itterator{
-            println!("Itterating [{:?}]", counter);
+            debug!("Itterating [{:?}]", counter);
             counter = counter+1;
             c.exec(hm);
         }
         let b = self.and.iter().map(|c|{ c.exec(hm)}).collect::<Vec<bool>>();
-        println!("Condition AND ----- booleans {:?}", b);
+        debug!("Condition AND ----- booleans {:?}", b);
         return true;
     }
 }
 impl Executable for PicoConditionOr {
     fn exec(&self, hm: &PicoHashMap)->bool{
-        println!("Condition OR {:?}", self);
+        debug!("Condition OR {:?}", self);
 
         let b = self.or.iter().map(|c|{ c.exec(hm)}).collect::<Vec<bool>>();
-        println!("Condition OR booleans {:?}", b);
+        debug!("Condition OR booleans {:?}", b);
 
         for c in self.or.iter(){
             c.exec(hm);
@@ -202,25 +265,30 @@ impl Executable for PicoConditionOr {
 
 impl Executable for PicoConditionEquality {
     fn exec(&self, hm: &PicoHashMap)->bool{
-        println!("Condition EQ {:?}", self);
+        debug!("Condition EQ {:?}", self);
+
+        let b = self.eq(hm); 
+        debug!("HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH {:?}", b);
+        
+
         let lhs = &self.eq.0.exec(hm);
         let rhs = &self.eq.1.exec(hm);
 
         let lhsv = &self.eq.0.resolve(hm);
         let rhsv = &self.eq.1.resolve(hm);
 
-        println!("LHSV: {:?}, RHSV: {:?}", lhsv, rhsv);
+        debug!("LHSV: {:?}, RHSV: {:?}", lhsv, rhsv);
 
         if let Some(lv) = lhsv{
-            println!("EQUALITY left {:?}", lv);
+            debug!("EQUALITY left {:?}", lv);
             if let Some(rv) = rhsv{
-                println!("EQUALITY right {:?}", rv);
+                debug!("EQUALITY right {:?}", rv);
                 if ! VarLiteral::variant_eq(&lv, &rv){
-                    println!("VARIANT NOT THE SAME - NO COMPARE");
+                    debug!("VARIANT NOT THE SAME - NO COMPARE");
                     return false;
                 }
                 let b = VarLiteral::value_eq(&lv, &rv);
-                println!("EQUALITY is {:?}", b);
+                debug!("EQUALITY is {:?}", b);
                 return b;
             }
         } else {
@@ -236,11 +304,13 @@ struct PicoIfThenElseTuple (PicoConditions, String, String);
 
 #[derive(Serialize, Deserialize, Debug)]
 struct PicoIfThenElse {
-    ite: (PicoConditions, String, String)
+    ite: (PicoConditions, String, String),
+    p: PathLookup
 }
 
 impl PicoIfThenElse {
     pub fn exec(&self, hm:HashMap<String, String>) -> bool {
+
 //        println!("Exec: {:?}", self.r#if.0);
 //        let c = &self.r#if;
 //        let i = &c.0;
@@ -250,12 +320,12 @@ impl PicoIfThenElse {
 
         let value = hm.get("lop");
         if let Some(v) =value {
-            println!("ALSO found {:?}", v)
+            debug!("ALSO found {:?}", v)
         }
         
-        println!("Exec IIIIi 0: {:?}", i);
-        println!("Exec IIIIi 1: {:?}", self.ite.1);
-        println!("Exec IIIIi 2: {:?}", self.ite.2);
+        debug!("Exec IIIIi 0: {:?}", i);
+        debug!("Exec IIIIi 1: {:?}", self.ite.1);
+        debug!("Exec IIIIi 2: {:?}", self.ite.2);
         return true;
     }
 }
@@ -269,17 +339,21 @@ impl ContextVars{
 
 
 fn main() {
-    println!("Hello, world!");
+    env_logger::init();
+
+    info!("Starting up");
+
+    debug!("Hello, world!");
     let json_v4_schema: Value = serde_json::from_reader(File::open("schema/schema.json").unwrap()).unwrap();
 
-    println!("schema is {:?}", json_v4_schema);
+    debug!("schema is {:?}", json_v4_schema);
     let mut scope = json_schema::Scope::new();
     let schema = scope.compile_and_return(json_v4_schema.clone(), false).unwrap();
 
-    println!("Is valid: {}", schema.validate(&json_v4_schema).is_valid());
+    debug!("Is valid: {}", schema.validate(&json_v4_schema).is_valid());
 
     let json_rules: PicoIfThenElse = serde_json::from_reader(File::open("pico.json").unwrap()).unwrap();
-    println!("Pico rules: {:?}", json_rules);
+    debug!("Pico rules: {:?}", json_rules);
 
     let mut oo = ContextVars::new();
     oo.hm.insert("bob".to_string(), "boooob".to_string());
@@ -289,17 +363,25 @@ fn main() {
     hm.insert("lop".to_ascii_lowercase(), "bingo".into());
     let value = hm.get("lop");
     if let Some(v) =value {
-        println!("FOUND {:?}", v);
+        debug!("FOUND {:?}", v);
     }
 
     let t = PicoContext::new();
-    println!("PC {:?}", t);
-    let got = t.get("lop".to_string());
+    debug!("PC {:?}", t);
+    let got = t.get("lop");
+    if let Some(vvv) =got {
+        debug!("VVVV: {:?}", vvv);
+    }
 
 
     let truth = json_rules.exec( t.values );
-    println!("Truth: {:?}", truth);
+    debug!("Truth: {:?}", truth);
 
     let a  = VarLiteral::S("lll".to_string());
+    let json_obj =json!({ "store": {}});
+    let mut selector = jsonpath::selector(&json_obj);
+    let t = selector("$.");
 
+    debug!("finish");
+    warn!("DONE");
 }

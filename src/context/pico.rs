@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+
 pub type PicoHashMap = HashMap<String, String>;
 
 #[derive(Debug)]
@@ -11,10 +12,11 @@ impl PicoContext{
   pub fn new()->Self {
     let mut t = PicoHashMap::new();
     t.insert("lop".to_string(), "LOP".to_string());
+    info!("New PicoContext");
     Self { values: t  }
   }
 
-  pub fn get(&self, name: String)->Option<&String>{
-    return self.values.get(&name);
+  pub fn get(&self, name: &str)->Option<&String>{
+    return self.values.get(name);
   }
 }
