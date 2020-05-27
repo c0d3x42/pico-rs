@@ -1,0 +1,6 @@
+{
+    "lldb.launch.sourceLanguages": [
+        "cpp",
+        "rust"
+    ]
+}
