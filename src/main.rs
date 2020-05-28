@@ -83,6 +83,9 @@ fn main() {
   let mut oo = ContextVars::new();
   oo.hm.insert("bob".to_string(), "boooob".to_string());
   oo.hm.insert("lop".to_string(), "LOOOOB".to_string());
+  let mut ctx = PicoContext::new();
+  ctx.put("dddd", "llll");
+  info!("CTX {:?}", ctx);
 
   let mut hm: HashMap<String, String> = HashMap::new();
   hm.insert("lop".to_ascii_lowercase(), "bingo".into());
