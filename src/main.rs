@@ -12,6 +12,9 @@ use std::collections::HashMap;
 use std::fs::File;
 use valico::json_schema;
 
+mod command;
+use crate::command::{IfThenElse, RuleFile};
+
 mod context;
 use crate::context::{pico::PicoContext, pico::PicoHashMap};
 
@@ -111,4 +114,7 @@ fn main() {
 
   debug!("finish");
   warn!("DONE");
+
+  let pico_rule: RuleFile = serde_json::from_reader(File::open("pico-rule.json").unwrap()).unwrap();
+  info!("Pico rules: {:?}", pico_rule);
 }
