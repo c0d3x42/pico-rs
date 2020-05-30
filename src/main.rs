@@ -15,8 +15,10 @@ use valico::json_schema;
 mod command;
 use crate::command::{IfThenElse, RuleFile};
 
+mod runners;
+
 mod context;
-use crate::context::{pico::PicoContext, pico::PicoHashMap};
+use crate::context::{pico::Context, pico::PicoContext, pico::PicoHashMap};
 
 mod pathing;
 use crate::pathing::{path::PathLookup, path::PathLookupAugmented};
@@ -117,4 +119,12 @@ fn main() {
 
   let pico_rule: RuleFile = serde_json::from_reader(File::open("pico-rule.json").unwrap()).unwrap();
   info!("Pico rules: {:?}", pico_rule);
+
+  let ctx = Context::new();
+
+  let result = crate::runners::run(pico_rule.root, ctx);
+  match result {
+    Ok(_) => info!("OK"),
+    Err(e) => warn!("oopsie : {}", e),
+  }
 }

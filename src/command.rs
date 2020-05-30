@@ -1,5 +1,30 @@
 use serde::{Deserialize, Serialize, Serializer};
 
+use crate::context::pico::{Context, VariablesMap};
+
+#[derive(Clone, Debug)]
+pub enum ExecutionResult {
+    Continue(Option<Value>),
+    Error(String),
+    Crash(String),
+    Exit(Option<String>),
+}
+
+pub trait Execution {
+    fn name(&self) -> String;
+    fn alises(&self) -> Vec<String> {
+        vec![]
+    }
+    fn run(&self) -> ExecutionResult {
+        ExecutionResult::Crash(format!("Not done for: {}", &self.name()).to_string())
+    }
+
+    fn run_with_context(&self, _variables: &VariablesMap) -> ExecutionResult {
+        trace!("Running with context for: {}", &self.name());
+        ExecutionResult::Crash(format!("Not done for: {}", &self.name()).to_string())
+    }
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(untagged)]
 pub enum Value {
@@ -32,6 +57,18 @@ pub struct And {
     and: Vec<Condition>,
 }
 
+impl Execution for And {
+    fn name(&self) -> String {
+        return "and".to_string();
+    }
+    fn run_with_context(&self, variables: &VariablesMap) -> ExecutionResult {
+        for condition in &self.and {
+            condition.run_with_context(variables);
+        }
+        ExecutionResult::Continue(None)
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Or {
     or: Vec<Condition>,
@@ -60,6 +97,16 @@ pub enum Condition {
     Eq(Eq),
     Match(Match),
     Not(Not),
+}
+
+impl Execution for Condition {
+    fn name(&self) -> String {
+        "condition".to_string()
+    }
+
+    fn run_with_context(&self, _variables: &VariablesMap)->ExecutionResult{
+
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -93,9 +140,24 @@ pub struct IfThenElse {
     r#then: Action,
     r#else: Action,
 }
+impl Execution for IfThenElse {
+    fn name(&self) -> String {
+        return "ifthenelse".to_string();
+    }
+
+    fn run_with_context(&self, variables: &VariablesMap) -> ExecutionResult {
+        let if_result = self.r#if.run_with_context(variables);
+        match if_result {
+            ExecutionResult::Continue(opt) => {
+                if Some(tr) = opt //////
+            }
+        }
+        return ExecutionResult::Error("xxx".to_string());
+    }
+}
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct RuleFile {
-    root: Vec<IfThenElse>,
+    pub root: Vec<IfThenElse>,
     version: Option<String>,
 }

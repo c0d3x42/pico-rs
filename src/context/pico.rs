@@ -1,4 +1,28 @@
+use crate::command::Value;
 use std::collections::HashMap;
+
+#[derive(Debug, Clone)]
+pub enum StateValue {
+  Boolean(bool),
+  Number(isize),
+  String(String),
+}
+
+pub type VariablesMap = HashMap<String, Value>;
+
+pub struct Context {
+  pub variables: VariablesMap,
+  pub state: HashMap<String, StateValue>,
+}
+
+impl Context {
+  pub fn new() -> Self {
+    Self {
+      state: HashMap::new(),
+      variables: HashMap::new(),
+    }
+  }
+}
 
 pub type PicoHashMap = HashMap<String, String>;
 
