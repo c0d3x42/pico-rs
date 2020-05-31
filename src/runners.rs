@@ -18,8 +18,11 @@ pub fn run(instructions: Vec<IfThenElse>, context: Context) -> Result<EndReason,
         debug!("RUN result: {:?}", run_result);
         match run_result {
             ExecutionResult::Crash(_) => return Err("ddd".to_string()),
-            ExecutionResult::Error(msg) => return Err(msg),
-            (_) => return Ok(EndReason::EndReached),
+            ExecutionResult::Error(msg) => {
+                error!("failed on instruction: {:?}", instruction);
+                return Err(msg);
+            }
+            (_) => {}
         }
     }
 
