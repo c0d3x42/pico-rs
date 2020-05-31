@@ -127,7 +127,20 @@ impl Execution for And {
     }
     fn run_with_context(&self, variables: &VariablesMap) -> ExecutionResult {
         for condition in &self.and {
-            condition.run_with_context(variables);
+            match condition.run_with_context(variables) {
+                ExecutionResult::Continue(cont) => match cont {
+                    None => break,
+                    Some(s) => match s {
+                        Value::Boolean(b) => {
+                            if !b {
+                                break;
+                            };
+                        }
+                        _ => {}
+                    },
+                },
+                bad => return bad,
+            }
         }
         ExecutionResult::Continue(None)
     }
