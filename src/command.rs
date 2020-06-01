@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize, Serializer};
 
 use crate::context::pico::{Context, VariablesMap};
+use tinytemplate::TinyTemplate;
 
 #[derive(Clone, Debug)]
 pub enum ExecutionResult {
@@ -191,7 +192,9 @@ impl Execution for Eq {
     }
     fn run_with_context(&self, variables: &VariablesMap) -> ExecutionResult {
         let lhs = self.eq.0.run_with_context(variables);
-        let rhs = self.eq.0.run_with_context(variables);
+        let rhs = self.eq.1.run_with_context(variables);
+
+        trace!("EQ lhs: {:?}, rhs: {:?}", lhs, rhs);
 
         match (lhs, rhs) {
             (ExecutionResult::Continue(left), ExecutionResult::Continue(right)) => {
@@ -318,7 +321,16 @@ impl Execution for DebugLog {
         return "debug-log".to_string();
     }
     fn run_with_context(&self, variables: &VariablesMap) -> ExecutionResult {
-        debug!("MSG: {:?}, variables: {:#?}", self.debug, variables);
+        let mut tt = TinyTemplate::new();
+        tt.add_template("debug", &self.debug);
+
+        let rendered = tt.render("debug", variables);
+        trace!("MSG: {:?}, variables: {:#?}", self.debug, variables);
+
+        match rendered {
+            Ok(val) => debug!("tmpl: {:?}", val),
+            Err(e) => error!("{:?}", e),
+        }
 
         return ExecutionResult::Continue(None);
     }

@@ -1,6 +1,7 @@
 extern crate jsonpath_lib as jsonpath;
 extern crate serde;
 extern crate serde_json;
+extern crate tinytemplate;
 extern crate valico;
 
 #[macro_use]
@@ -120,7 +121,15 @@ fn main() {
   let pico_rule: RuleFile = serde_json::from_reader(File::open("pico-rule.json").unwrap()).unwrap();
   info!("Pico rules: {:?}", pico_rule);
 
-  let ctx = Context::new();
+  let mut ctx = Context::new();
+  ctx.variables.insert(
+    "x".to_string(),
+    crate::command::Value::String("xxxx".to_string()),
+  );
+  ctx.variables.insert(
+    "q".to_string(),
+    crate::command::Value::String("QQQQ".to_string()),
+  );
 
   let result = crate::runners::run(pico_rule.root, ctx);
   match result {

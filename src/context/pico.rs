@@ -1,7 +1,8 @@
 use crate::command::Value;
+use serde::{Deserialize, Serialize, Serializer};
 use std::collections::HashMap;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub enum StateValue {
   Boolean(bool),
   Number(isize),
@@ -10,6 +11,7 @@ pub enum StateValue {
 
 pub type VariablesMap = HashMap<String, Value>;
 
+#[derive(Serialize)]
 pub struct Context {
   pub variables: VariablesMap,
   pub state: HashMap<String, StateValue>,
