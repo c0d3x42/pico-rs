@@ -25,7 +25,7 @@ pub trait Execution {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(untagged)]
 pub enum Value {
     UnsignedNumber(usize),
@@ -108,10 +108,7 @@ impl Execution for Var {
     fn run_with_context(&self, variables: &VariablesMap) -> ExecutionResult {
         match self {
             Var::Lookup(lookup) => lookup.run_with_context(variables),
-            Var::Literal(literal) => {
-                let v = literal.clone();
-                return ExecutionResult::Continue(Some(v));
-            }
+            Var::Literal(literal) => ExecutionResult::Continue(Some(literal.clone())),
         }
     }
 }
@@ -150,6 +147,39 @@ impl Execution for And {
 pub struct Or {
     or: Vec<Condition>,
 }
+impl Execution for Or {
+    fn name(&self) -> String {
+        return "or".to_string();
+    }
+
+    fn run_with_context(&self, variables: &VariablesMap) -> ExecutionResult {
+        let condition_count = self.or.len();
+        debug!("OR ...{:?}", condition_count);
+
+        for condition in &self.or {
+            match condition.run_with_context(variables) {
+                ExecutionResult::Continue(cont) => match cont {
+                    None => break,
+                    Some(condition_result) => match condition_result {
+                        Value::Boolean(b) => {
+                            if b {
+                                // finished with the first condition to return true
+                                return ExecutionResult::Continue(Some(Value::Boolean(true)));
+                            }
+                        }
+                        _ => {
+                            debug!("OR condition execution did not return a bool");
+                        }
+                    },
+                },
+                failure => return failure,
+            }
+        }
+        // no conditions returned true
+
+        ExecutionResult::Continue(Some(Value::Boolean(false)))
+    }
+}
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Eq {
@@ -160,6 +190,21 @@ impl Execution for Eq {
         return "equality".to_string();
     }
     fn run_with_context(&self, variables: &VariablesMap) -> ExecutionResult {
+        let lhs = self.eq.0.run_with_context(variables);
+        let rhs = self.eq.0.run_with_context(variables);
+
+        match (lhs, rhs) {
+            (ExecutionResult::Continue(left), ExecutionResult::Continue(right)) => {
+                match (left, right) {
+                    (Some(l), Some(r)) => {
+                        return ExecutionResult::Continue(Some(Value::Boolean(l == r)))
+                    }
+                    _ => {}
+                }
+            }
+            _ => {}
+        }
+
         return ExecutionResult::Continue(None);
     }
 }
@@ -183,6 +228,7 @@ impl Execution for Match {
                 match (left, right) {
                     (Some(l), Some(r)) => {
                         info!("L: {:?}, R: {:?}", l, r);
+                        let b = l == r;
                         return l.cmp_match(&r);
                         // return ExecutionResult::Continue(None);
                     }
@@ -201,6 +247,24 @@ impl Execution for Match {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Not {
     not: Box<Condition>,
+}
+impl Execution for Not {
+    fn name(&self) -> String {
+        return "not".to_string();
+    }
+
+    fn run_with_context(&self, variables: &VariablesMap) -> ExecutionResult {
+        match self.not.run_with_context(variables) {
+            ExecutionResult::Continue(cont) => match cont {
+                None => ExecutionResult::Continue(None),
+                Some(condition_result) => match condition_result {
+                    Value::Boolean(b) => ExecutionResult::Continue(Some(Value::Boolean(!b))),
+                    _ => ExecutionResult::Continue(None),
+                },
+            },
+            bad => return bad,
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -221,6 +285,8 @@ impl Execution for Condition {
     fn run_with_context(&self, variables: &VariablesMap) -> ExecutionResult {
         match self {
             Condition::And(and) => and.run_with_context(variables),
+            Condition::Or(or) => or.run_with_context(variables),
+            Condition::Not(not) => not.run_with_context(variables),
             Condition::Match(m) => m.run_with_context(variables),
             Condition::Eq(eq) => eq.run_with_context(variables),
             (_) => ExecutionResult::Error("not impl".to_string()),
@@ -232,10 +298,30 @@ impl Execution for Condition {
 pub struct Log {
     log: String,
 }
+impl Execution for Log {
+    fn name(&self) -> String {
+        return "log".to_string();
+    }
+    fn run_with_context(&self, variables: &VariablesMap) -> ExecutionResult {
+        info!("MSG: {:?}", self.log);
+
+        return ExecutionResult::Continue(None);
+    }
+}
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct DebugLog {
     debug: String,
+}
+impl Execution for DebugLog {
+    fn name(&self) -> String {
+        return "debug-log".to_string();
+    }
+    fn run_with_context(&self, variables: &VariablesMap) -> ExecutionResult {
+        debug!("MSG: {:?}, variables: {:#?}", self.debug, variables);
+
+        return ExecutionResult::Continue(None);
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -253,7 +339,9 @@ impl Execution for Command {
         info!("Running command...");
         match self {
             Command::IfThenElse(ite) => ite.run_with_context(variables),
-            (_) => ExecutionResult::Error("not impl".to_string()),
+            Command::Log(log) => log.run_with_context(variables),
+            Command::DebugLog(debug_log) => debug_log.run_with_context(variables),
+            (_) => ExecutionResult::Error("command not impl".to_string()),
         }
     }
 }
@@ -323,4 +411,10 @@ impl Execution for IfThenElse {
 pub struct RuleFile {
     pub root: Vec<IfThenElse>,
     version: Option<String>,
+}
+
+impl Execution for RuleFile {
+    fn name(&self) -> String {
+        return "rule-file".to_string();
+    }
 }
