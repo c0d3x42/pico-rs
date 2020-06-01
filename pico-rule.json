@@ -2,13 +2,14 @@
     "version": "1.1",
     "root": [
         {
+            "uuid": "de5b1618-cfb0-4b3d-9dbf-9c3fb3f778de",
             "if": {
                 "match": [
                     "x",
                     {
                         "var": [
                             "q",
-                            -12
+                            "x"
                         ]
                     }
                 ]
@@ -46,14 +47,32 @@
                 ]
             },
             "then": {
-                "debug": "dd {i}"
+                "debug": "dd {i"
             },
             "else": [
                 {
                     "log": "ll"
                 },
                 {
-                    "debug": "ddd"
+                    "debug": "ddd {dd}"
+                },
+                {
+                    "if": {
+                        "eq": [
+                            false,
+                            false
+                        ]
+                    },
+                    "then": {
+                        "log": "took nested then"
+                    }
+                },
+                {
+                    "if": {
+                        "regmatch": "^(?P<ff>loo)(.*)",
+                        "val": "loopy"
+                    },
+                    "then": []
                 }
             ]
         }

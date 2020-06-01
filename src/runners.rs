@@ -14,6 +14,7 @@ fn run_instruction(ite: IfThenElse, context: Context) -> EndReason {
 
 pub fn run(instructions: Vec<IfThenElse>, context: Context) -> Result<EndReason, String> {
     for instruction in &instructions {
+        info!("--> {:?}", instruction.name());
         let run_result = instruction.run_with_context(&context.variables);
         debug!("RUN result: {:?}", run_result);
         match run_result {
@@ -24,6 +25,7 @@ pub fn run(instructions: Vec<IfThenElse>, context: Context) -> Result<EndReason,
             }
             (_) => {}
         }
+        info!("<-- {:?}", instruction.name());
     }
 
     return Ok(EndReason::EndReached);

@@ -252,8 +252,10 @@ dependencies = [
  "env_logger",
  "jsonpath_lib",
  "log",
+ "regex",
  "serde",
  "serde_json",
+ "serde_regex",
  "tinytemplate",
  "uuid",
  "valico",
@@ -406,6 +408,16 @@ dependencies = [
  "indexmap",
  "itoa",
  "ryu",
+ "serde",
+]
+
+[[package]]
+name = "serde_regex"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f6df1bd02973c8c85e333287f6ac6c6a5fbed414e4be450fd6f52280b7c7b209"
+dependencies = [
+ "regex",
  "serde",
 ]
 

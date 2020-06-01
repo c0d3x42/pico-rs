@@ -1,6 +1,8 @@
 use serde::{Deserialize, Serialize, Serializer};
 
 use crate::context::pico::{Context, VariablesMap};
+use regex::Regex;
+use serde_regex;
 use tinytemplate::TinyTemplate;
 use uuid::Uuid;
 
@@ -214,6 +216,30 @@ impl Execution for Eq {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
+pub struct RegMatch {
+    #[serde(with = "serde_regex")]
+    regmatch: Regex,
+
+    val: String,
+}
+
+impl Execution for RegMatch {
+    fn name(&self) -> String {
+        return "regmatch".to_string();
+    }
+
+    fn run_with_context(&self, variables: &VariablesMap) -> ExecutionResult {
+        let t = self.regmatch.is_match(&self.val);
+
+        debug!("Regmatch: {:?} / {:?} = {:?}", self.regmatch, self.val, t);
+
+        let loc = self.regmatch.captures(&self.val);
+        debug!("LOC {:?}", loc);
+        return ExecutionResult::Continue(Some(Value::Boolean(t)));
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug)]
 pub struct Match {
     r#match: (Var, Var),
 }
@@ -278,6 +304,7 @@ pub enum Condition {
     Or(Or),
     Eq(Eq),
     Match(Match),
+    RegMatch(RegMatch),
     Not(Not),
 }
 
@@ -292,8 +319,9 @@ impl Execution for Condition {
             Condition::Or(or) => or.run_with_context(variables),
             Condition::Not(not) => not.run_with_context(variables),
             Condition::Match(m) => m.run_with_context(variables),
+            Condition::RegMatch(rm) => rm.run_with_context(variables),
+
             Condition::Eq(eq) => eq.run_with_context(variables),
-            (_) => ExecutionResult::Error("not impl".to_string()),
         }
     }
 }
@@ -316,6 +344,14 @@ impl Execution for Log {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct DebugLog {
     debug: String,
+
+    #[serde(default = "DebugLog::default_tt", skip)]
+    tt: String,
+}
+impl DebugLog {
+    fn default_tt() -> String {
+        return "TTT".to_string();
+    }
 }
 impl Execution for DebugLog {
     fn name(&self) -> String {
@@ -323,13 +359,21 @@ impl Execution for DebugLog {
     }
     fn run_with_context(&self, variables: &VariablesMap) -> ExecutionResult {
         let mut tt = TinyTemplate::new();
-        tt.add_template("debug", &self.debug);
+        trace!("Building tiny template");
+
+        match tt.add_template("debug", &self.debug) {
+            Err(e) => {
+                error!("template failure: {:?}", e);
+                return ExecutionResult::Error("Template failure".to_string());
+            }
+            Ok(_) => {}
+        }
 
         let rendered = tt.render("debug", variables);
         trace!("MSG: {:?}, variables: {:#?}", self.debug, variables);
 
         match rendered {
-            Ok(val) => debug!("tmpl: {:?}", val),
+            Ok(val) => debug!("tmpl[{:?}]: {:?}", self.tt, val),
             Err(e) => error!("{:?}", e),
         }
 
@@ -370,17 +414,22 @@ impl Execution for Action {
         return "Action".to_string();
     }
     fn run_with_context(&self, variables: &VariablesMap) -> ExecutionResult {
-        match self {
+        let command_result = match self {
             Action::Command(command) => command.run_with_context(variables),
             Action::Commands(commands) => {
                 for command in commands {
                     debug!("Running a command");
-                    command.run_with_context(variables);
+                    let result = command.run_with_context(variables);
+                    match result {
+                        ExecutionResult::Continue(_) => {}
+                        bad => return bad,
+                    }
                 }
                 return ExecutionResult::Continue(Some(Value::Boolean(true)));
             }
-            (_) => ExecutionResult::Error("unhandled action".to_string()),
-        }
+        };
+
+        return command_result;
     }
 }
 
@@ -388,7 +437,7 @@ impl Execution for Action {
 pub struct IfThenElse {
     r#if: Condition,
     r#then: Action,
-    r#else: Action,
+    r#else: Option<Action>,
 
     #[serde(default = "IfThenElse::default_uuid")]
     uuid: uuid::Uuid,
@@ -401,29 +450,38 @@ impl IfThenElse {
 
 impl Execution for IfThenElse {
     fn name(&self) -> String {
-        return "ifthenelse".to_string();
+        let s = format!("ifthenelse [{:?}]", self.uuid);
+        return s;
     }
 
     fn run_with_context(&self, variables: &VariablesMap) -> ExecutionResult {
-        info!("running ITE");
+        info!("running ITE -> {:?}", self.uuid);
         let if_result = self.r#if.run_with_context(variables);
         match if_result {
             ExecutionResult::Continue(opt) => match opt {
                 Some(optional) => match optional {
                     Value::Boolean(b) => {
-                        if (b) {
+                        if b {
                             info!("ITE: then branch");
                             return self.then.run_with_context(variables);
                         } else {
                             info!("ITE: else branch");
-                            return self.r#else.run_with_context(variables);
+                            match &self.r#else {
+                                None => {
+                                    debug!("else branch taken but nothing here");
+                                    return ExecutionResult::Continue(None);
+                                }
+                                Some(else_branch) => {
+                                    return else_branch.run_with_context(variables)
+                                }
+                            }
                         }
                     }
                     (_) => return ExecutionResult::Error("if result unexpected".to_string()),
                 },
                 None => return ExecutionResult::Continue(None),
             },
-            (_) => {}
+            _ => {}
         }
         return if_result;
     }
