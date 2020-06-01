@@ -15,3 +15,4 @@ jsonpath_lib = "*"
 log = "0.4.8"
 env_logger = "0.7.1"
 tinytemplate = "1"
+uuid = { version = "0.8", features = ["serde", "v4"] }

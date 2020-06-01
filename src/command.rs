@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize, Serializer};
 
 use crate::context::pico::{Context, VariablesMap};
 use tinytemplate::TinyTemplate;
+use uuid::Uuid;
 
 #[derive(Clone, Debug)]
 pub enum ExecutionResult {
@@ -388,7 +389,16 @@ pub struct IfThenElse {
     r#if: Condition,
     r#then: Action,
     r#else: Action,
+
+    #[serde(default = "IfThenElse::default_uuid")]
+    uuid: uuid::Uuid,
 }
+impl IfThenElse {
+    fn default_uuid() -> uuid::Uuid {
+        return Uuid::new_v4();
+    }
+}
+
 impl Execution for IfThenElse {
     fn name(&self) -> String {
         return "ifthenelse".to_string();
