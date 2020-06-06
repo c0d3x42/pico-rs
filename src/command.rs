@@ -37,23 +37,13 @@ pub enum Value {
     String(String),
     Boolean(bool),
 }
-impl Value {
-    pub fn cmp_match(&self, other: &Value) -> ExecutionResult {
-        match (self, other) {
-            (Value::String(s1), Value::String(s2)) => {
-                return ExecutionResult::Continue(Some(Value::Boolean(s1 == s2)));
-            }
-            _ => return ExecutionResult::Error("mismatched comparisions".to_string()),
-        }
-    }
-}
 impl PartialEq for Value {
     fn eq(&self, other: &Value) -> bool {
         match (self, other) {
-            (Value::Boolean(a), Value::Boolean(b)) => a == b,
-            (Value::UnsignedNumber(a), Value::UnsignedNumber(b)) => a == b,
-            (Value::Number(a), Value::Number(b)) => a == b,
-            (Value::String(a), Value::String(b)) => a == b,
+            (&Value::Boolean(a), &Value::Boolean(b)) => a == b,
+            (&Value::UnsignedNumber(a), &Value::UnsignedNumber(b)) => a == b,
+            (&Value::Number(a), &Value::Number(b)) => a == b,
+            (&Value::String(ref a), &Value::String(ref b)) => a == b,
             _ => false,
         }
     }
@@ -269,8 +259,16 @@ impl Execution for Match {
                 match (left, right) {
                     (Some(l), Some(r)) => {
                         info!("L: {:?}, R: {:?}", l, r);
+                        match (l, r) {
+                            (Value::String(ls), Value::String(rs)) => {
+                                let re = Regex::new(&rs).unwrap();
+                                let b = re.is_match(&ls);
+                                return ExecutionResult::Continue(Some(Value::Boolean(b)));
+                            }
+                            _ => return ExecutionResult::Continue(Some(Value::Boolean(false))),
+                        }
 
-                        return ExecutionResult::Continue(Some(Value::Boolean(l == r)));
+                        //return ExecutionResult::Continue(Some(Value::Boolean(l == r)));
                         // return l.cmp_match(&r);
                         // return ExecutionResult::Continue(None);
                     }
