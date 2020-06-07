@@ -16,14 +16,9 @@ pub fn run(instructions: Vec<IfThenElse>, context: Context) -> Result<EndReason,
     for instruction in &instructions {
         info!("--> {:?}", instruction.name());
         let run_result = instruction.run_with_context(&context.variables);
-        debug!("RUN result: {:?}", run_result);
         match run_result {
-            ExecutionResult::Crash(_) => return Err("ddd".to_string()),
-            ExecutionResult::Error(msg) => {
-                error!("failed on instruction: {:?}", instruction);
-                return Err(msg);
-            }
-            (_) => {}
+            Ok(_) => {}
+            Err(_bad_thing) => return Err("bad thing".to_string()),
         }
         info!("<-- {:?}", instruction.name());
     }

@@ -8,24 +8,33 @@ use uuid::Uuid;
 
 #[derive(Clone, Debug)]
 pub enum ExecutionResult {
-    Continue(Option<Value>),
+    Continue(Value),
+    Stop(Option<String>),
+}
+
+pub enum ErrorResult {
     Error(String),
     Crash(String),
-    Exit(Option<String>),
 }
+
+pub type FnResult = Result<ExecutionResult, ErrorResult>;
 
 pub trait Execution {
     fn name(&self) -> String;
     fn alises(&self) -> Vec<String> {
         vec![]
     }
-    fn run(&self) -> ExecutionResult {
-        ExecutionResult::Crash(format!("Not done for: {}", &self.name()).to_string())
+    fn run(&self) -> FnResult {
+        Err(ErrorResult::Crash(
+            format!("Not done for: {}", &self.name()).to_string(),
+        ))
     }
 
-    fn run_with_context(&self, _variables: &VariablesMap) -> ExecutionResult {
+    fn run_with_context(&self, _variables: &VariablesMap) -> FnResult {
         trace!("Running with context for: {}", &self.name());
-        ExecutionResult::Crash(format!("Not done for: {}", &self.name()).to_string())
+        Err(ErrorResult::Crash(
+            format!("Not done for: {}", &self.name()).to_string(),
+        ))
     }
 }
 
@@ -53,7 +62,7 @@ impl PartialEq for Value {
 #[serde(untagged)]
 pub enum VarValue {
     Lookup(String),
-    DefaultLookup(String, Option<Value>),
+    DefaultLookup(String, Value),
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -66,7 +75,7 @@ impl Execution for VarLookup {
         return "VarLookup".to_string();
     }
 
-    fn run_with_context(&self, variables: &VariablesMap) -> ExecutionResult {
+    fn run_with_context(&self, variables: &VariablesMap) -> FnResult {
         match &self.var {
             VarValue::Lookup(s) => {
                 debug!("lookup {:?}", s);
@@ -74,9 +83,9 @@ impl Execution for VarLookup {
                 return match lookup {
                     Some(v) => {
                         let r = v.clone();
-                        return ExecutionResult::Continue(Some(r));
+                        return Ok(ExecutionResult::Continue(r));
                     }
-                    None => ExecutionResult::Continue(None),
+                    None => Ok(ExecutionResult::Stop(None)),
                 };
             }
             VarValue::DefaultLookup(s, ov) => {
@@ -84,15 +93,9 @@ impl Execution for VarLookup {
 
                 let lookup = variables.get(s);
                 match lookup {
-                    Some(v) => return ExecutionResult::Continue(Some(v.clone())),
-                    None => match ov {
-                        Some(fallback) => return ExecutionResult::Continue(Some(fallback.clone())),
-                        _ => {}
-                    },
+                    Some(v) => return Ok(ExecutionResult::Continue(v.clone())),
+                    None => return Ok(ExecutionResult::Continue(ov.clone())),
                 }
-                info!("no default lookup");
-
-                return ExecutionResult::Continue(None);
             }
         }
     }
@@ -110,10 +113,10 @@ impl Execution for Var {
         return "Var".to_string();
     }
 
-    fn run_with_context(&self, variables: &VariablesMap) -> ExecutionResult {
+    fn run_with_context(&self, variables: &VariablesMap) -> FnResult {
         match self {
             Var::Lookup(lookup) => lookup.run_with_context(variables),
-            Var::Literal(literal) => ExecutionResult::Continue(Some(literal.clone())),
+            Var::Literal(literal) => Ok(ExecutionResult::Continue(literal.clone())),
         }
     }
 }
@@ -127,24 +130,29 @@ impl Execution for And {
     fn name(&self) -> String {
         return "and".to_string();
     }
-    fn run_with_context(&self, variables: &VariablesMap) -> ExecutionResult {
+    fn run_with_context(&self, variables: &VariablesMap) -> FnResult {
         for condition in &self.and {
             match condition.run_with_context(variables) {
-                ExecutionResult::Continue(cont) => match cont {
-                    None => break,
-                    Some(s) => match s {
+                Ok(exr) => match exr {
+                    ExecutionResult::Continue(cont) => match cont {
                         Value::Boolean(b) => {
                             if !b {
                                 break;
                             };
+                            // otherwise it was true, so carry on
                         }
-                        _ => {}
+                        _ => {
+                            return Err(ErrorResult::Crash(
+                                "Condition in AND returned a non boolean".to_string(),
+                            ))
+                        }
                     },
+                    ExecutionResult::Stop(o) => return Ok(ExecutionResult::Stop(o)),
                 },
-                bad => return bad,
+                Err(fail) => return Err(fail),
             }
         }
-        ExecutionResult::Continue(None)
+        Ok(ExecutionResult::Continue(Value::Boolean(true)))
     }
 }
 
@@ -157,32 +165,27 @@ impl Execution for Or {
         return "or".to_string();
     }
 
-    fn run_with_context(&self, variables: &VariablesMap) -> ExecutionResult {
+    fn run_with_context(&self, variables: &VariablesMap) -> FnResult {
         let condition_count = self.or.len();
         debug!("OR ...{:?}", condition_count);
 
         for condition in &self.or {
             match condition.run_with_context(variables) {
-                ExecutionResult::Continue(cont) => match cont {
-                    None => break,
-                    Some(condition_result) => match condition_result {
+                Ok(exp) => match exp {
+                    ExecutionResult::Continue(cont) => match cont {
                         Value::Boolean(b) => {
                             if b {
-                                // finished with the first condition to return true
-                                return ExecutionResult::Continue(Some(Value::Boolean(true)));
+                                return Ok(ExecutionResult::Continue(Value::Boolean(true)));
                             }
                         }
-                        _ => {
-                            debug!("OR condition execution did not return a bool");
-                        }
+                        _ => return Err(ErrorResult::Crash("non boolean value".to_string())),
                     },
+                    _ => return Err(ErrorResult::Error("mismatched type".to_string())),
                 },
-                failure => return failure,
+                Err(fail) => return Err(fail),
             }
         }
-        // no conditions returned true
-
-        ExecutionResult::Continue(Some(Value::Boolean(false)))
+        Ok(ExecutionResult::Continue(Value::Boolean(false)))
     }
 }
 
@@ -194,25 +197,17 @@ impl Execution for Eq {
     fn name(&self) -> String {
         return "equality".to_string();
     }
-    fn run_with_context(&self, variables: &VariablesMap) -> ExecutionResult {
-        let lhs = self.eq.0.run_with_context(variables);
-        let rhs = self.eq.1.run_with_context(variables);
-
-        trace!("EQ lhs: {:?}, rhs: {:?}", lhs, rhs);
+    fn run_with_context(&self, variables: &VariablesMap) -> FnResult {
+        let lhs = self.eq.0.run_with_context(variables)?;
+        let rhs = self.eq.1.run_with_context(variables)?;
 
         match (lhs, rhs) {
             (ExecutionResult::Continue(left), ExecutionResult::Continue(right)) => {
-                match (left, right) {
-                    (Some(l), Some(r)) => {
-                        return ExecutionResult::Continue(Some(Value::Boolean(l == r)))
-                    }
-                    _ => {}
-                }
+                return Ok(ExecutionResult::Continue(Value::Boolean(left == right)))
             }
-            _ => {}
-        }
 
-        return ExecutionResult::Continue(None);
+            _ => return Ok(ExecutionResult::Continue(Value::Boolean(false))),
+        }
     }
 }
 
@@ -229,14 +224,15 @@ impl Execution for RegMatch {
         return "regmatch".to_string();
     }
 
-    fn run_with_context(&self, variables: &VariablesMap) -> ExecutionResult {
+    fn run_with_context(&self, variables: &VariablesMap) -> FnResult {
         let t = self.regmatch.is_match(&self.val);
 
         debug!("Regmatch: {:?} / {:?} = {:?}", self.regmatch, self.val, t);
 
         let loc = self.regmatch.captures(&self.val);
         debug!("LOC {:?}", loc);
-        return ExecutionResult::Continue(Some(Value::Boolean(t)));
+
+        return Ok(ExecutionResult::Continue(Value::Boolean(t)));
     }
 }
 
@@ -249,30 +245,20 @@ impl Execution for Match {
         return "match".to_string();
     }
 
-    fn run_with_context(&self, variables: &VariablesMap) -> ExecutionResult {
+    fn run_with_context(&self, variables: &VariablesMap) -> FnResult {
         info!("running match");
-        let lhs = self.r#match.0.run_with_context(variables);
-        let rhs = self.r#match.1.run_with_context(variables);
+        let lhs = self.r#match.0.run_with_context(variables)?;
+        let rhs = self.r#match.1.run_with_context(variables)?;
 
         match (lhs, rhs) {
             (ExecutionResult::Continue(left), ExecutionResult::Continue(right)) => {
                 match (left, right) {
-                    (Some(l), Some(r)) => {
-                        info!("L: {:?}, R: {:?}", l, r);
-                        match (l, r) {
-                            (Value::String(ls), Value::String(rs)) => {
-                                let re = Regex::new(&rs).unwrap();
-                                let b = re.is_match(&ls);
-                                return ExecutionResult::Continue(Some(Value::Boolean(b)));
-                            }
-                            _ => return ExecutionResult::Continue(Some(Value::Boolean(false))),
-                        }
-
-                        //return ExecutionResult::Continue(Some(Value::Boolean(l == r)));
-                        // return l.cmp_match(&r);
-                        // return ExecutionResult::Continue(None);
+                    (Value::String(ls), Value::String(rs)) => {
+                        let re = Regex::new(&rs).unwrap();
+                        let b = re.is_match(&ls);
+                        return Ok(ExecutionResult::Continue(Value::Boolean(b)));
                     }
-                    _ => {}
+                    _ => return Err(ErrorResult::Error("mismatched typed".to_string())),
                 }
             }
             _ => {}
@@ -280,7 +266,7 @@ impl Execution for Match {
 
         debug!("No match");
 
-        return ExecutionResult::Continue(Some(Value::Boolean(false)));
+        return Ok(ExecutionResult::Continue(Value::Boolean(false)));
     }
 }
 
@@ -293,16 +279,17 @@ impl Execution for Not {
         return "not".to_string();
     }
 
-    fn run_with_context(&self, variables: &VariablesMap) -> ExecutionResult {
-        match self.not.run_with_context(variables) {
-            ExecutionResult::Continue(cont) => match cont {
-                None => ExecutionResult::Continue(None),
-                Some(condition_result) => match condition_result {
-                    Value::Boolean(b) => ExecutionResult::Continue(Some(Value::Boolean(!b))),
-                    _ => ExecutionResult::Continue(None),
-                },
+    fn run_with_context(&self, variables: &VariablesMap) -> FnResult {
+        let r = self.not.run_with_context(variables)?;
+
+        match r {
+            ExecutionResult::Continue(val) => match (val) {
+                Value::Boolean(b) => {
+                    return Ok(ExecutionResult::Continue(Value::Boolean(!b)));
+                }
+                _ => return Ok(ExecutionResult::Continue(Value::Boolean(false))),
             },
-            bad => return bad,
+            ExecutionResult::Stop(s) => return Ok(ExecutionResult::Stop(s)),
         }
     }
 }
@@ -323,7 +310,7 @@ impl Execution for Condition {
         "condition".to_string()
     }
 
-    fn run_with_context(&self, variables: &VariablesMap) -> ExecutionResult {
+    fn run_with_context(&self, variables: &VariablesMap) -> FnResult {
         match self {
             Condition::And(and) => and.run_with_context(variables),
             Condition::Or(or) => or.run_with_context(variables),
@@ -344,10 +331,10 @@ impl Execution for Log {
     fn name(&self) -> String {
         return "log".to_string();
     }
-    fn run_with_context(&self, variables: &VariablesMap) -> ExecutionResult {
+    fn run_with_context(&self, variables: &VariablesMap) -> FnResult {
         info!("MSG: {:?}", self.log);
 
-        return ExecutionResult::Continue(None);
+        return Ok(ExecutionResult::Continue(Value::Boolean(true)));
     }
 }
 
@@ -367,14 +354,14 @@ impl Execution for DebugLog {
     fn name(&self) -> String {
         return "debug-log".to_string();
     }
-    fn run_with_context(&self, variables: &VariablesMap) -> ExecutionResult {
+    fn run_with_context(&self, variables: &VariablesMap) -> FnResult {
         let mut tt = TinyTemplate::new();
         trace!("Building tiny template");
 
         match tt.add_template("debug", &self.debug) {
             Err(e) => {
                 error!("template failure: {:?}", e);
-                return ExecutionResult::Error("Template failure".to_string());
+                return Err(ErrorResult::Crash("Template failure".to_string()));
             }
             Ok(_) => {}
         }
@@ -387,7 +374,7 @@ impl Execution for DebugLog {
             Err(e) => error!("{:?}", e),
         }
 
-        return ExecutionResult::Continue(None);
+        return Ok(ExecutionResult::Continue(Value::Boolean(true)));
     }
 }
 
@@ -402,13 +389,13 @@ impl Execution for Command {
     fn name(&self) -> String {
         return "Command".to_string();
     }
-    fn run_with_context(&self, variables: &VariablesMap) -> ExecutionResult {
+    fn run_with_context(&self, variables: &VariablesMap) -> FnResult {
         info!("Running command...");
         match self {
             Command::IfThenElse(ite) => ite.run_with_context(variables),
             Command::Log(log) => log.run_with_context(variables),
             Command::DebugLog(debug_log) => debug_log.run_with_context(variables),
-            (_) => ExecutionResult::Error("command not impl".to_string()),
+            (_) => Err(ErrorResult::Crash("command not impl".to_string())),
         }
     }
 }
@@ -423,7 +410,7 @@ impl Execution for Action {
     fn name(&self) -> String {
         return "Action".to_string();
     }
-    fn run_with_context(&self, variables: &VariablesMap) -> ExecutionResult {
+    fn run_with_context(&self, variables: &VariablesMap) -> FnResult {
         let command_result = match self {
             Action::Command(command) => command.run_with_context(variables),
             Action::Commands(commands) => {
@@ -431,11 +418,11 @@ impl Execution for Action {
                     debug!("Running a command");
                     let result = command.run_with_context(variables);
                     match result {
-                        ExecutionResult::Continue(_) => {}
+                        Ok(r) => {}
                         bad => return bad,
                     }
                 }
-                return ExecutionResult::Continue(Some(Value::Boolean(true)));
+                return Ok(ExecutionResult::Continue(Value::Boolean(true)));
             }
         };
 
@@ -464,36 +451,31 @@ impl Execution for IfThenElse {
         return s;
     }
 
-    fn run_with_context(&self, variables: &VariablesMap) -> ExecutionResult {
+    fn run_with_context(&self, variables: &VariablesMap) -> FnResult {
         info!("running ITE -> {:?}", self.uuid);
-        let if_result = self.r#if.run_with_context(variables);
+        let if_result = self.r#if.run_with_context(variables)?;
         match if_result {
+            ExecutionResult::Stop(stp) => return Ok(ExecutionResult::Stop(stp)),
             ExecutionResult::Continue(opt) => match opt {
-                Some(optional) => match optional {
-                    Value::Boolean(b) => {
-                        if b {
-                            info!("ITE: then branch");
-                            return self.then.run_with_context(variables);
-                        } else {
-                            info!("ITE: else branch");
-                            match &self.r#else {
-                                None => {
-                                    debug!("else branch taken but nothing here");
-                                    return ExecutionResult::Continue(None);
-                                }
-                                Some(else_branch) => {
-                                    return else_branch.run_with_context(variables)
-                                }
+                Value::Boolean(b) => {
+                    if b {
+                        info!("ITE: then branch");
+                        return self.then.run_with_context(variables);
+                    } else {
+                        info!("ITE: else branch");
+                        match &self.r#else {
+                            None => {
+                                debug!("else branch taken but nothing here");
+                                return Ok(ExecutionResult::Continue(Value::Boolean(true)));
                             }
+                            Some(else_branch) => return else_branch.run_with_context(variables),
                         }
                     }
-                    (_) => return ExecutionResult::Error("if result unexpected".to_string()),
-                },
-                None => return ExecutionResult::Continue(None),
+                }
+                _ => return Ok(ExecutionResult::Stop(None)),
             },
-            _ => {}
         }
-        return if_result;
+        //return if_result;
     }
 }
 
