@@ -58,6 +58,12 @@ impl PartialEq for Value {
     }
 }
 
+#[test]
+fn eq9() {
+    let v = Value::Number(9);
+    assert_eq!(v.eq(&Value::Number(9)), true);
+}
+
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(untagged)]
 pub enum VarValue {
@@ -209,6 +215,22 @@ impl Execution for Eq {
             _ => return Ok(ExecutionResult::Continue(Value::Boolean(false))),
         }
     }
+}
+
+#[test]
+fn var1var1() {
+    let vm = VariablesMap::new();
+    let var1 = Var::Literal(Value::String("q".to_string()));
+    let var2 = Var::Literal(Value::String("q".to_string()));
+    let var3 = Var::Literal(Value::String("xnot".to_string()));
+    let var4 = Var::Literal(Value::String("not".to_string()));
+    let eq1 = Eq { eq: (var1, var2) };
+    let t = eq1.run_with_context(&vm);
+    assert_eq!(t.is_ok(), true);
+
+    let eq2 = Eq { eq: (var3, var4) };
+    let x = eq2.run_with_context(&vm);
+    assert!(x.is_ok());
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -489,4 +511,9 @@ impl Execution for RuleFile {
     fn name(&self) -> String {
         return "rule-file".to_string();
     }
+}
+
+#[test]
+fn has_name() {
+    assert_eq!(2 + 2, 4);
 }
