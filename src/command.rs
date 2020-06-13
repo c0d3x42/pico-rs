@@ -3,6 +3,9 @@ use serde::{Deserialize, Serialize, Serializer};
 use crate::context::pico::{Context, VariablesMap};
 use regex::Regex;
 use serde_regex;
+use std::error::Error;
+use std::fmt;
+use std::result;
 use tinytemplate::TinyTemplate;
 use uuid::Uuid;
 
@@ -12,12 +15,24 @@ pub enum ExecutionResult {
     Stop(Option<String>),
 }
 
-pub enum ErrorResult {
-    Error(String),
+#[derive(Debug)]
+pub enum PicoError {
+    IncompatibleComparison,
+    NoSuchValue,
     Crash(String),
 }
 
-pub type FnResult = Result<ExecutionResult, ErrorResult>;
+impl fmt::Display for PicoError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "error: {:?}", self)
+    }
+}
+impl Error for PicoError {}
+
+type MyResult<T> = result::Result<T, PicoError>;
+pub type FnResult = MyResult<ExecutionResult>;
+
+// pub type FnResult = Result<ExecutionResult, PicoError>;
 
 pub trait Execution {
     fn name(&self) -> String;
@@ -25,16 +40,17 @@ pub trait Execution {
         vec![]
     }
     fn run(&self) -> FnResult {
+        Err(PicoError::Crash("Not implemented".to_string()))
+        /*
         Err(ErrorResult::Crash(
             format!("Not done for: {}", &self.name()).to_string(),
         ))
+        */
     }
 
     fn run_with_context(&self, _variables: &VariablesMap) -> FnResult {
         trace!("Running with context for: {}", &self.name());
-        Err(ErrorResult::Crash(
-            format!("Not done for: {}", &self.name()).to_string(),
-        ))
+        Err(PicoError::Crash("Not implemented".to_string()))
     }
 }
 
@@ -46,6 +62,7 @@ pub enum Value {
     String(String),
     Boolean(bool),
 }
+
 impl PartialEq for Value {
     fn eq(&self, other: &Value) -> bool {
         match (self, other) {
@@ -83,24 +100,29 @@ impl Execution for VarLookup {
 
     fn run_with_context(&self, variables: &VariablesMap) -> FnResult {
         match &self.var {
+            // Plain lookup in ctx variables
             VarValue::Lookup(s) => {
                 debug!("lookup {:?}", s);
                 let lookup = variables.get(s);
-                return match lookup {
+                match lookup {
                     Some(v) => {
                         let r = v.clone();
                         return Ok(ExecutionResult::Continue(r));
                     }
-                    None => Ok(ExecutionResult::Stop(None)),
+                    None => {
+                        return Ok(ExecutionResult::Stop(Some(
+                            format!("No such value {:?}", s).to_string(),
+                        )))
+                    }
                 };
             }
-            VarValue::DefaultLookup(s, ov) => {
-                debug!("default lookup {:?}, {:?}", s, ov);
+            VarValue::DefaultLookup(varname, fallback) => {
+                debug!("default lookup {:?}, {:?}", varname, fallback);
 
-                let lookup = variables.get(s);
+                let lookup = variables.get(varname);
                 match lookup {
-                    Some(v) => return Ok(ExecutionResult::Continue(v.clone())),
-                    None => return Ok(ExecutionResult::Continue(ov.clone())),
+                    Some(value) => return Ok(ExecutionResult::Continue(value.clone())),
+                    None => return Ok(ExecutionResult::Continue(fallback.clone())),
                 }
             }
         }
@@ -138,26 +160,24 @@ impl Execution for And {
     }
     fn run_with_context(&self, variables: &VariablesMap) -> FnResult {
         for condition in &self.and {
-            match condition.run_with_context(variables) {
-                Ok(exr) => match exr {
-                    ExecutionResult::Continue(cont) => match cont {
-                        Value::Boolean(b) => {
-                            if !b {
-                                break;
-                            };
-                            // otherwise it was true, so carry on
+            let condition_result = condition.run_with_context(variables)?;
+
+            match condition_result {
+                ExecutionResult::Stop(stopping_reason) => {
+                    return Ok(ExecutionResult::Stop(stopping_reason))
+                }
+                ExecutionResult::Continue(continuation) => match continuation {
+                    Value::Boolean(b) => {
+                        if !b {
+                            // AND exits as soon as one condition returns boolean false
+                            return Ok(ExecutionResult::Continue(Value::Boolean(false)));
                         }
-                        _ => {
-                            return Err(ErrorResult::Crash(
-                                "Condition in AND returned a non boolean".to_string(),
-                            ))
-                        }
-                    },
-                    ExecutionResult::Stop(o) => return Ok(ExecutionResult::Stop(o)),
+                    }
+                    _ => return Err(PicoError::Crash("non boolean".to_string())),
                 },
-                Err(fail) => return Err(fail),
             }
         }
+        // all conditions returned boolean true
         Ok(ExecutionResult::Continue(Value::Boolean(true)))
     }
 }
@@ -176,19 +196,19 @@ impl Execution for Or {
         debug!("OR ...{:?}", condition_count);
 
         for condition in &self.or {
-            match condition.run_with_context(variables) {
-                Ok(exp) => match exp {
-                    ExecutionResult::Continue(cont) => match cont {
-                        Value::Boolean(b) => {
-                            if b {
-                                return Ok(ExecutionResult::Continue(Value::Boolean(true)));
-                            }
+            let condition_result = condition.run_with_context(variables)?;
+
+            match condition_result {
+                ExecutionResult::Stop(stopping) => return Ok(ExecutionResult::Stop(stopping)),
+                ExecutionResult::Continue(continuation) => match continuation {
+                    Value::Boolean(b) => {
+                        if b {
+                            // OR completes succesfully on the first boolean true
+                            return Ok(ExecutionResult::Continue(Value::Boolean(true)));
                         }
-                        _ => return Err(ErrorResult::Crash("non boolean value".to_string())),
-                    },
-                    _ => return Err(ErrorResult::Error("mismatched type".to_string())),
+                    }
+                    _ => return Err(PicoError::Crash("Non boolean".to_string())),
                 },
-                Err(fail) => return Err(fail),
             }
         }
         Ok(ExecutionResult::Continue(Value::Boolean(false)))
@@ -238,7 +258,7 @@ pub struct RegMatch {
     #[serde(with = "serde_regex")]
     regmatch: Regex,
 
-    val: String,
+    with: Var,
 }
 
 impl Execution for RegMatch {
@@ -247,14 +267,65 @@ impl Execution for RegMatch {
     }
 
     fn run_with_context(&self, variables: &VariablesMap) -> FnResult {
-        let t = self.regmatch.is_match(&self.val);
+        debug!("Looking up regmatch/with");
 
-        debug!("Regmatch: {:?} / {:?} = {:?}", self.regmatch, self.val, t);
+        let with_value = self.with.run_with_context(variables)?;
 
-        let loc = self.regmatch.captures(&self.val);
-        debug!("LOC {:?}", loc);
+        match with_value {
+            ExecutionResult::Stop(stopping_reason) => {
+                return Ok(ExecutionResult::Stop(stopping_reason))
+            }
+            ExecutionResult::Continue(continuation) => match continuation {
+                Value::String(string_value) => {
+                    let match_result = self.regmatch.is_match(&string_value);
 
-        return Ok(ExecutionResult::Continue(Value::Boolean(t)));
+                    debug!(
+                        "Regmatch: {:?} / {:?} = {:?}",
+                        self.regmatch, string_value, match_result
+                    );
+
+                    let loc = self.regmatch.captures(&string_value);
+                    debug!("LOC {:?}", loc);
+
+                    return Ok(ExecutionResult::Continue(Value::Boolean(match_result)));
+                }
+                _ => return Err(PicoError::IncompatibleComparison),
+            },
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct StartsWith {
+    match_start: (Var, Var), // needle, haystack
+}
+impl Execution for StartsWith {
+    fn name(&self) -> String {
+        return "startswith".to_string();
+    }
+    fn run_with_context(&self, variables: &VariablesMap) -> FnResult {
+        let needle_ctx = self.match_start.0.run_with_context(variables)?;
+        let haystack_ctx = self.match_start.1.run_with_context(variables)?;
+
+        match (needle_ctx, haystack_ctx) {
+            (
+                ExecutionResult::Continue(needle_continuation),
+                ExecutionResult::Continue(haystack_continuation),
+            ) => {
+                match (needle_continuation, haystack_continuation) {
+                    (Value::String(needle), Value::String(haystack)) => {
+                        // do stuff
+                        let needle_str = needle.as_str();
+                        let haystack_str = haystack.as_str();
+
+                        let b = haystack_str.starts_with(needle_str);
+                        return Ok(ExecutionResult::Continue(Value::Boolean(b)));
+                    }
+                    _ => return Err(PicoError::IncompatibleComparison),
+                }
+            }
+            _ => return Ok(ExecutionResult::Stop(Some("Stopping".to_string()))),
+        }
     }
 }
 
@@ -280,15 +351,15 @@ impl Execution for Match {
                         let b = re.is_match(&ls);
                         return Ok(ExecutionResult::Continue(Value::Boolean(b)));
                     }
-                    _ => return Err(ErrorResult::Error("mismatched typed".to_string())),
+                    _ => return Err(PicoError::IncompatibleComparison),
                 }
             }
-            _ => {}
+            _ => {
+                return Ok(ExecutionResult::Stop(Some(
+                    "match requested stop".to_string(),
+                )))
+            }
         }
-
-        debug!("No match");
-
-        return Ok(ExecutionResult::Continue(Value::Boolean(false)));
     }
 }
 
@@ -302,14 +373,14 @@ impl Execution for Not {
     }
 
     fn run_with_context(&self, variables: &VariablesMap) -> FnResult {
-        let r = self.not.run_with_context(variables)?;
+        let condition_result = self.not.run_with_context(variables)?;
 
-        match r {
-            ExecutionResult::Continue(val) => match (val) {
+        match condition_result {
+            ExecutionResult::Continue(val) => match val {
                 Value::Boolean(b) => {
                     return Ok(ExecutionResult::Continue(Value::Boolean(!b)));
                 }
-                _ => return Ok(ExecutionResult::Continue(Value::Boolean(false))),
+                _ => return Err(PicoError::IncompatibleComparison),
             },
             ExecutionResult::Stop(s) => return Ok(ExecutionResult::Stop(s)),
         }
@@ -324,6 +395,7 @@ pub enum Condition {
     Eq(Eq),
     Match(Match),
     RegMatch(RegMatch),
+    StartsWith(StartsWith),
     Not(Not),
 }
 
@@ -333,14 +405,18 @@ impl Execution for Condition {
     }
 
     fn run_with_context(&self, variables: &VariablesMap) -> FnResult {
+        debug!("Checking condition {:?}", self);
         match self {
             Condition::And(and) => and.run_with_context(variables),
             Condition::Or(or) => or.run_with_context(variables),
             Condition::Not(not) => not.run_with_context(variables),
             Condition::Match(m) => m.run_with_context(variables),
             Condition::RegMatch(rm) => rm.run_with_context(variables),
+            Condition::StartsWith(sw) => sw.run_with_context(variables),
 
             Condition::Eq(eq) => eq.run_with_context(variables),
+
+            _ => Err(PicoError::Crash("no such condition".to_string())),
         }
     }
 }
@@ -383,7 +459,7 @@ impl Execution for DebugLog {
         match tt.add_template("debug", &self.debug) {
             Err(e) => {
                 error!("template failure: {:?}", e);
-                return Err(ErrorResult::Crash("Template failure".to_string()));
+                return Err(PicoError::Crash("Template failure".to_string()));
             }
             Ok(_) => {}
         }
@@ -417,7 +493,7 @@ impl Execution for Command {
             Command::IfThenElse(ite) => ite.run_with_context(variables),
             Command::Log(log) => log.run_with_context(variables),
             Command::DebugLog(debug_log) => debug_log.run_with_context(variables),
-            (_) => Err(ErrorResult::Crash("command not impl".to_string())),
+            (_) => Err(PicoError::Crash("command not impl".to_string())),
         }
     }
 }
@@ -433,22 +509,22 @@ impl Execution for Action {
         return "Action".to_string();
     }
     fn run_with_context(&self, variables: &VariablesMap) -> FnResult {
-        let command_result = match self {
+        return match self {
             Action::Command(command) => command.run_with_context(variables),
             Action::Commands(commands) => {
                 for command in commands {
                     debug!("Running a command");
-                    let result = command.run_with_context(variables);
+                    let result = command.run_with_context(variables)?;
                     match result {
-                        Ok(r) => {}
-                        bad => return bad,
+                        ExecutionResult::Stop(stopping_reason) => {
+                            return Ok(ExecutionResult::Stop(stopping_reason))
+                        }
+                        ExecutionResult::Continue(_value) => {}
                     }
                 }
                 return Ok(ExecutionResult::Continue(Value::Boolean(true)));
             }
         };
-
-        return command_result;
     }
 }
 

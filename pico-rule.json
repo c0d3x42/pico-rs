@@ -54,13 +54,13 @@
                     "log": "ll"
                 },
                 {
-                    "debug": "ddd {dd}"
+                    "debug": "ddd {x}"
                 },
                 {
                     "if": {
                         "eq": [
-                            false,
-                            false
+                            "xx",
+                            "xx"
                         ]
                     },
                     "then": {
@@ -70,7 +70,27 @@
                 {
                     "if": {
                         "regmatch": "^(?P<ff>loo)(.*)",
-                        "val": "loopy"
+                        "with": {
+                            "var": "qj"
+                        }
+                    },
+                    "then": []
+                },
+                {
+                    "if": {
+                        "match": [
+                            "ban",
+                            "bannana"
+                        ]
+                    },
+                    "then": []
+                },
+                {
+                    "if": {
+                        "match": [
+                            "gloopy",
+                            "^glur"
+                        ]
                     },
                     "then": []
                 }
