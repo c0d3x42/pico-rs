@@ -517,7 +517,8 @@ impl Execution for Action {
                     let result = command.run_with_context(variables)?;
                     match result {
                         ExecutionResult::Stop(stopping_reason) => {
-                            return Ok(ExecutionResult::Stop(stopping_reason))
+                            info!("Action collection terminated {:?}", stopping_reason);
+                            //return Ok(ExecutionResult::Continue(Value::Boolean(true)));
                         }
                         ExecutionResult::Continue(_value) => {}
                     }
