@@ -81,6 +81,46 @@
                 },
                 {
                     "if": {
+                        "exists": "q"
+                    },
+                    "then": {
+                        "log": "q exists"
+                    },
+                    "else": {
+                        "log": "NO q"
+                    }
+                },
+                {
+                    "if": {
+                        "exists": "CCCCCq"
+                    },
+                    "then": {
+                        "log": "CCCCCq exists"
+                    },
+                    "else": {
+                        "log": "NO CCCCCq"
+                    }
+                },
+                {
+                    "if": {
+                        "lt": [
+                            true,
+                            false
+                        ]
+                    },
+                    "then": [
+                        {
+                            "log": "3 less than 4"
+                        }
+                    ],
+                    "else": [
+                        {
+                            "log": "not lessthan"
+                        }
+                    ]
+                },
+                {
+                    "if": {
                         "match": [
                             "ban",
                             "bannana"

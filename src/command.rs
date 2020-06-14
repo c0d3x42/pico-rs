@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize, Serializer};
 use crate::context::pico::{Context, VariablesMap};
 use regex::Regex;
 use serde_regex;
+use std::cmp::Ordering;
 use std::error::Error;
 use std::fmt;
 use std::result;
@@ -72,6 +73,17 @@ impl PartialEq for Value {
             (&Value::Number(a), &Value::Number(b)) => a == b,
             (&Value::String(ref a), &Value::String(ref b)) => a == b,
             _ => false,
+        }
+    }
+}
+
+impl PartialOrd for Value {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        match (self, other) {
+            (&Value::UnsignedNumber(a), &Value::UnsignedNumber(b)) => Some(a.cmp(&b)),
+            (&Value::Number(a), &Value::Number(b)) => Some(a.cmp(&b)),
+            (&Value::String(ref a), &Value::String(ref b)) => Some(a.cmp(b)),
+            _ => None,
         }
     }
 }
@@ -146,6 +158,36 @@ impl Execution for Var {
             Var::Lookup(lookup) => lookup.run_with_context(variables),
             Var::Literal(literal) => Ok(ExecutionResult::Continue(literal.clone())),
         }
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct VarExistsCondition {
+    exists: String,
+}
+impl Execution for VarExistsCondition {
+    fn name(&self) -> String {
+        return "VarExists".to_string();
+    }
+
+    fn run_with_context(&self, variables: &VariablesMap) -> FnResult {
+        let t = variables.contains_key(&self.exists);
+        return Ok(ExecutionResult::Continue(Value::Boolean(t)));
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct VarMissingCondition {
+    missing: String,
+}
+impl Execution for VarMissingCondition {
+    fn name(&self) -> String {
+        return "VarMissing".to_string();
+    }
+
+    fn run_with_context(&self, variables: &VariablesMap) -> FnResult {
+        let t = variables.contains_key(&self.missing);
+        return Ok(ExecutionResult::Continue(Value::Boolean(!t)));
     }
 }
 
@@ -235,6 +277,26 @@ impl Execution for Eq {
             }
 
             _ => return Ok(ExecutionResult::Continue(Value::Boolean(false))),
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct LessThan {
+    lt: (Var, Var),
+}
+impl Execution for LessThan {
+    fn name(&self) -> String {
+        return "less than".to_string();
+    }
+    fn run_with_context(&self, variables: &VariablesMap) -> FnResult {
+        let lhs = self.lt.0.run_with_context(variables)?;
+        let rhs = self.lt.1.run_with_context(variables)?;
+        match (lhs, rhs) {
+            (ExecutionResult::Continue(left), ExecutionResult::Continue(right)) => {
+                Ok(ExecutionResult::Continue(Value::Boolean(left < right)))
+            }
+            _ => Ok(ExecutionResult::Continue(Value::Boolean(false))),
         }
     }
 }
@@ -399,6 +461,9 @@ pub enum Condition {
     Match(Match),
     RegMatch(RegMatch),
     StartsWith(StartsWith),
+    LessThan(LessThan),
+    VarExists(VarExistsCondition),
+    VarMissing(VarMissingCondition),
     Not(Not),
 }
 
@@ -418,6 +483,10 @@ impl Execution for Condition {
             Condition::StartsWith(sw) => sw.run_with_context(variables),
 
             Condition::Eq(eq) => eq.run_with_context(variables),
+            Condition::LessThan(lt) => lt.run_with_context(variables),
+
+            Condition::VarExists(ve) => ve.run_with_context(variables),
+            Condition::VarMissing(vm) => vm.run_with_context(variables),
 
             _ => Err(PicoError::Crash("no such condition".to_string())),
         };
