@@ -36,10 +36,13 @@
                     ]
                 }
             },
-            "then": [],
+            "then": [
+                "stop"
+            ],
             "else": []
         },
         {
+            "uuid": "ae5b1618-cfb0-4b3d-9dbf-9c3fb3f778de",
             "if": {
                 "eq": [
                     "lop",
@@ -83,7 +86,17 @@
                             "bannana"
                         ]
                     },
-                    "then": []
+                    "then": [
+                        {
+                            "log": "about to break"
+                        },
+                        {
+                            "break": "ae5b1618-cfb0-4b3d-9dbf-9c3fb3f778de"
+                        }
+                    ],
+                    "else": {
+                        "break": "ae5b1618-cfb0-4b3d-9dbf-9c3fb3f778de"
+                    }
                 },
                 {
                     "if": {

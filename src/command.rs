@@ -13,6 +13,7 @@ use uuid::Uuid;
 pub enum ExecutionResult {
     Continue(Value),
     Stop(Option<String>),
+    BreakTo(uuid::Uuid),
 }
 
 #[derive(Debug)]
@@ -110,9 +111,8 @@ impl Execution for VarLookup {
                         return Ok(ExecutionResult::Continue(r));
                     }
                     None => {
-                        return Ok(ExecutionResult::Stop(Some(
-                            format!("No such value {:?}", s).to_string(),
-                        )))
+                        info!("Failed to lookup var {:?}", s);
+                        return Err(PicoError::NoSuchValue);
                     }
                 };
             }
@@ -175,6 +175,7 @@ impl Execution for And {
                     }
                     _ => return Err(PicoError::Crash("non boolean".to_string())),
                 },
+                c => return Ok(c),
             }
         }
         // all conditions returned boolean true
@@ -209,6 +210,7 @@ impl Execution for Or {
                     }
                     _ => return Err(PicoError::Crash("Non boolean".to_string())),
                 },
+                c => return Ok(c),
             }
         }
         Ok(ExecutionResult::Continue(Value::Boolean(false)))
@@ -291,6 +293,7 @@ impl Execution for RegMatch {
                 }
                 _ => return Err(PicoError::IncompatibleComparison),
             },
+            c => return Ok(c),
         }
     }
 }
@@ -382,7 +385,7 @@ impl Execution for Not {
                 }
                 _ => return Err(PicoError::IncompatibleComparison),
             },
-            ExecutionResult::Stop(s) => return Ok(ExecutionResult::Stop(s)),
+            c => return Ok(c), //ExecutionResult::Stop(s) => return Ok(ExecutionResult::Stop(s)),
         }
     }
 }
@@ -406,7 +409,7 @@ impl Execution for Condition {
 
     fn run_with_context(&self, variables: &VariablesMap) -> FnResult {
         debug!("Checking condition {:?}", self);
-        match self {
+        let condition_result = match self {
             Condition::And(and) => and.run_with_context(variables),
             Condition::Or(or) => or.run_with_context(variables),
             Condition::Not(not) => not.run_with_context(variables),
@@ -417,6 +420,17 @@ impl Execution for Condition {
             Condition::Eq(eq) => eq.run_with_context(variables),
 
             _ => Err(PicoError::Crash("no such condition".to_string())),
+        };
+
+        match condition_result {
+            Ok(result) => Ok(result),
+            Err(error_result) => match error_result {
+                PicoError::NoSuchValue | PicoError::IncompatibleComparison => {
+                    info!("condition result was bad - mapping to false");
+                    return Ok(ExecutionResult::Continue(Value::Boolean(false)));
+                }
+                err => Err(err),
+            },
         }
     }
 }
@@ -475,6 +489,25 @@ impl Execution for DebugLog {
         return Ok(ExecutionResult::Continue(Value::Boolean(true)));
     }
 }
+/*
+enum_str!(CommandWord{
+    Stop("stop") // https://stackoverflow.com/questions/35134684/deserialize-to-struct-with-an-enum-member
+});
+*/
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct BreakToCommand {
+    r#break: uuid::Uuid,
+}
+impl Execution for BreakToCommand {
+    fn name(&self) -> String {
+        return "BreakTo Command".to_string();
+    }
+    fn run_with_context(&self, variables: &VariablesMap) -> FnResult {
+        debug!("breaking to {:?}", self.r#break);
+        Ok(ExecutionResult::BreakTo(self.r#break))
+    }
+}
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(untagged)]
@@ -482,6 +515,7 @@ pub enum Command {
     Log(Log),
     DebugLog(DebugLog),
     IfThenElse(Box<IfThenElse>),
+    BreakTo(BreakToCommand),
 }
 impl Execution for Command {
     fn name(&self) -> String {
@@ -493,6 +527,7 @@ impl Execution for Command {
             Command::IfThenElse(ite) => ite.run_with_context(variables),
             Command::Log(log) => log.run_with_context(variables),
             Command::DebugLog(debug_log) => debug_log.run_with_context(variables),
+            Command::BreakTo(bto) => bto.run_with_context(variables),
             (_) => Err(PicoError::Crash("command not impl".to_string())),
         }
     }
@@ -513,14 +548,19 @@ impl Execution for Action {
             Action::Command(command) => command.run_with_context(variables),
             Action::Commands(commands) => {
                 for command in commands {
-                    debug!("Running a command");
+                    debug!("Running a command {:?}", command);
                     let result = command.run_with_context(variables)?;
+                    debug!("result: {:?}", result);
                     match result {
                         ExecutionResult::Stop(stopping_reason) => {
                             info!("Action collection terminated {:?}", stopping_reason);
                             //return Ok(ExecutionResult::Continue(Value::Boolean(true)));
                         }
                         ExecutionResult::Continue(_value) => {}
+                        ExecutionResult::BreakTo(breakto) => {
+                            info!("result breaks to {:?}", breakto);
+                            return Ok(ExecutionResult::BreakTo(breakto));
+                        }
                     }
                 }
                 return Ok(ExecutionResult::Continue(Value::Boolean(true)));
@@ -554,9 +594,34 @@ impl Execution for IfThenElse {
         info!("running ITE -> {:?}", self.uuid);
         let if_result = self.r#if.run_with_context(variables)?;
         match if_result {
+            ExecutionResult::BreakTo(bto) => return Ok(ExecutionResult::BreakTo(bto)),
             ExecutionResult::Stop(stp) => return Ok(ExecutionResult::Stop(stp)),
             ExecutionResult::Continue(opt) => match opt {
                 Value::Boolean(b) => {
+                    debug!("ITE got boolean back {:?}", b);
+                    let branch_result = match b {
+                        true => self.then.run_with_context(variables),
+                        false => match &self.r#else {
+                            None => Ok(ExecutionResult::Continue(Value::Boolean(true))),
+                            Some(else_branch) => else_branch.run_with_context(variables),
+                        },
+                    };
+                    // then OR else has run, check the result
+                    match branch_result {
+                        Err(unhappy) => return Err(unhappy),
+                        Ok(happy_result) => match happy_result {
+                            ExecutionResult::BreakTo(bto_uuid) => {
+                                debug!("Checking breakto {:?} == {:?}", self.uuid, bto_uuid);
+                                if bto_uuid == self.uuid {
+                                    debug!("breakto stopping");
+                                    return Ok(ExecutionResult::Stop(None));
+                                }
+                                return Ok(ExecutionResult::BreakTo(bto_uuid));
+                            }
+                            c => return Ok(c), // passback everything else as is
+                        },
+                    }
+                    /*
                     if b {
                         info!("ITE: then branch");
                         return self.then.run_with_context(variables);
@@ -570,10 +635,12 @@ impl Execution for IfThenElse {
                             Some(else_branch) => return else_branch.run_with_context(variables),
                         }
                     }
+                    */
                 }
                 _ => return Ok(ExecutionResult::Stop(None)),
             },
-        }
+        };
+
         //return if_result;
     }
 }
