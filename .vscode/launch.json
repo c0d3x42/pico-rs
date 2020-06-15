@@ -14,11 +14,11 @@
             "cargo": {
                 "args": [
                     "build",
-                    "--bin=pico-rs",
-                    "--package=pico-rs"
+                    "--bin=pico-lang",
+                    "--package=pico-lang"
                 ],
                 "filter": {
-                    "name": "pico-rs",
+                    "name": "pico-lang",
                     "kind": "bin"
                 }
             },
@@ -33,11 +33,11 @@
                 "args": [
                     "test",
                     "--no-run",
-                    "--bin=pico-rs",
-                    "--package=pico-rs"
+                    "--bin=pico-lang",
+                    "--package=pico-lang"
                 ],
                 "filter": {
-                    "name": "pico-rs",
+                    "name": "pico-lang",
                     "kind": "bin"
                 }
             },

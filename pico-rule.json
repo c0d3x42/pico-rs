@@ -50,14 +50,33 @@
                 ]
             },
             "then": {
-                "debug": "dd {i"
+                "debug": "dd i"
             },
             "else": [
+                {
+                    "set": [
+                        "one",
+                        -1
+                    ]
+                },
+                {
+                    "if": {
+                        "eq": [
+                            {
+                                "var": "one"
+                            },
+                            -1
+                        ]
+                    },
+                    "then": {
+                        "log": "FOUND ONE"
+                    }
+                },
                 {
                     "log": "ll"
                 },
                 {
-                    "debug": "ddd {x}"
+                    "debug": "ddd {one}"
                 },
                 {
                     "if": {
@@ -116,6 +135,9 @@
                     "else": [
                         {
                             "log": "not lessthan"
+                        },
+                        {
+                            "stop": "bailing out"
                         }
                     ]
                 },
@@ -137,6 +159,9 @@
                     "else": {
                         "break": "ae5b1618-cfb0-4b3d-9dbf-9c3fb3f778de"
                     }
+                },
+                {
+                    "stop": "bailing out"
                 },
                 {
                     "if": {
