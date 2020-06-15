@@ -131,9 +131,13 @@ fn main() {
     crate::command::Value::String("QQQQ".to_string()),
   );
 
-  let result = crate::runners::run(pico_rule.root, ctx);
+  let result = crate::runners::run(&pico_rule.root, ctx);
   match result {
     Ok(_) => info!("OK"),
     Err(e) => warn!("oopsie : {}", e),
   }
+
+  let j = serde_json::to_string(&pico_rule.root);
+
+  println!("JSON = {:?}", j);
 }
