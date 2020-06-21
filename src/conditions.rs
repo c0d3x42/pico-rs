@@ -4,7 +4,7 @@ use crate::command::{Execution, ExecutionResult, FnResult};
 use crate::context::{Context, VariablesMap};
 use crate::errors::PicoError;
 //use crate::values::{PicoValue, Var};
-use crate::{PicoValue, Var};
+use crate::{PicoValue, ValueProducer, Var};
 
 use regex::Regex;
 use serde_regex;
@@ -23,9 +23,17 @@ impl Execution for VarExistsCondition {
     }
 
     fn run_with_context(&self, ctx: &mut Context) -> FnResult {
+        if let Some(_v) = ctx.getValue(&self.exists) {
+            return Ok(ExecutionResult::Continue(PicoValue::Boolean(true)));
+        }
+        return Ok(ExecutionResult::Continue(PicoValue::Boolean(false)));
+
+        /*
         let variables = &ctx.variables;
+
         let t = variables.contains_key(&self.exists);
         return Ok(ExecutionResult::Continue(PicoValue::Boolean(t)));
+        */
     }
 }
 
@@ -39,8 +47,20 @@ impl Execution for VarMissingCondition {
     }
 
     fn run_with_context(&self, ctx: &mut Context) -> FnResult {
-        let t = ctx.variables.contains_key(&self.missing);
+        let final_result = match ctx.getValue(&self.missing) {
+            Some(_v) => Ok(ExecutionResult::Continue(PicoValue::Boolean(false))),
+            None => Ok(ExecutionResult::Continue(PicoValue::Boolean(true))),
+        };
+        return final_result;
+
+        /*
+        if let Some(v) = ctx.getValue(&self.missing){
+        return Ok(ExecutionResult::Continue(PicoValue::Boolean(false)));
+
+        }
+
         return Ok(ExecutionResult::Continue(PicoValue::Boolean(!t)));
+        */
     }
 }
 
@@ -118,15 +138,18 @@ impl Execution for Or {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Eq {
-    eq: (Var, Var),
+    eq: (ValueProducer, ValueProducer),
 }
 impl Execution for Eq {
     fn name(&self) -> String {
         return "equality".to_string();
     }
     fn run_with_context(&self, ctx: &mut Context) -> FnResult {
+        trace!("Eq resolving...");
         let lhs = self.eq.0.run_with_context(ctx)?;
         let rhs = self.eq.1.run_with_context(ctx)?;
+        trace!("LHS = {:?}", lhs);
+        trace!("RHS = {:?}", rhs);
 
         match (lhs, rhs) {
             (ExecutionResult::Continue(left), ExecutionResult::Continue(right)) => {
@@ -140,7 +163,7 @@ impl Execution for Eq {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct LessThan {
-    lt: (Var, Var),
+    lt: (ValueProducer, ValueProducer),
 }
 impl Execution for LessThan {
     fn name(&self) -> String {
@@ -163,7 +186,7 @@ pub struct RegMatch {
     #[serde(with = "serde_regex")]
     regmatch: Regex,
 
-    with: Var,
+    with: ValueProducer,
 }
 
 impl Execution for RegMatch {
@@ -203,7 +226,7 @@ impl Execution for RegMatch {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct StartsWith {
-    match_start: (Var, Var), // needle, haystack
+    match_start: (ValueProducer, ValueProducer), // needle, haystack
 }
 impl Execution for StartsWith {
     fn name(&self) -> String {
@@ -237,7 +260,7 @@ impl Execution for StartsWith {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Match {
-    r#match: (Var, Var),
+    r#match: (ValueProducer, ValueProducer),
 }
 impl Execution for Match {
     fn name(&self) -> String {

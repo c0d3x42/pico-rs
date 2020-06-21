@@ -9,7 +9,7 @@ extern crate valico;
 
 pub use crate::command::Action;
 pub use crate::runners::{run, EndReason};
-pub use crate::values::{PicoValue, Var};
+pub use crate::values::{PicoValue, ValueProducer, Var};
 
 pub mod command;
 pub mod conditions;

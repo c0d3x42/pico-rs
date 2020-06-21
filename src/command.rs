@@ -1,11 +1,13 @@
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 use crate::conditions::Condition;
 use crate::context::{Context, VariablesMap};
 use crate::errors::PicoError;
-use crate::values::PicoValue;
+use crate::values::{PicoValue, Var};
 //use crate::PicoValue;
 
+use std::option;
 use std::result;
 use tinytemplate::TinyTemplate;
 use uuid::Uuid;
@@ -85,7 +87,14 @@ impl Execution for DebugLog {
             Ok(_) => {}
         }
 
-        let rendered = tt.render("debug", &ctx.variables);
+        // combine variables and local_variables into one hashmap for template rendering
+
+        let c = ctx.variables.clone();
+        let l = ctx.local_variables.clone();
+
+        let k: HashMap<String, PicoValue> = l.into_iter().chain(c).collect();
+
+        let rendered = tt.render("debug", &k);
         trace!("MSG: {:?}, variables: {:#?}", self.debug, &ctx.variables);
 
         match rendered {
@@ -116,20 +125,23 @@ impl Execution for SetCommand {
         match &self.set.1 {
             PicoValue::String(val) => {
                 let c = PicoValue::String(val.to_string());
-                ctx.local_variables.insert(self.set.0.to_string(), c);
+                ctx.setValue(&self.set.0, c);
+                //ctx.local_variables.insert(self.set.0.to_string(), c);
             }
             PicoValue::Number(val) => {
                 let c = PicoValue::Number(*val);
-                ctx.local_variables.insert(self.set.0.to_string(), c);
+                ctx.setValue(&self.set.0, c);
+                //ctx.local_variables.insert(self.set.0.to_string(), c);
             }
             PicoValue::UnsignedNumber(val) => {
                 let c = PicoValue::UnsignedNumber(*val);
-                ctx.local_variables.insert(self.set.0.to_string(), c);
+                ctx.setValue(&self.set.0, c);
+                //ctx.local_variables.insert(self.set.0.to_string(), c);
             }
             something_else => {
                 info!("SOMETHING else {:?}", something_else);
-                ctx.local_variables
-                    .insert(self.set.0.to_string(), something_else.clone());
+                ctx.setValue(&self.set.0, something_else.clone());
+                //ctx.local_variables.insert(self.set.0.to_string(), something_else.clone());
             }
         }
         Ok(ExecutionResult::Continue(PicoValue::Boolean(true)))
@@ -264,6 +276,7 @@ impl Execution for IfThenElse {
             ExecutionResult::Continue(opt) => match opt {
                 PicoValue::Boolean(b) => {
                     debug!("ITE got boolean back {:?}", b);
+
                     let branch_result = match b {
                         true => self.then.run_with_context(ctx),
                         false => match &self.r#else {
@@ -272,8 +285,8 @@ impl Execution for IfThenElse {
                         },
                     };
                     // then OR else has run, check the result
-                    match branch_result {
-                        Err(unhappy) => return Err(unhappy),
+                    let command_result = match branch_result {
+                        Err(unhappy) => Err(unhappy),
                         Ok(happy_result) => match happy_result {
                             ExecutionResult::BreakTo(bto_uuid) => {
                                 debug!("Checking breakto {:?} == {:?}", self.uuid, bto_uuid);
@@ -283,9 +296,11 @@ impl Execution for IfThenElse {
                                 }
                                 return Ok(ExecutionResult::BreakTo(bto_uuid));
                             }
-                            c => return Ok(c), // passback everything else as is
+                            c => Ok(c), // passback everything else as is
                         },
-                    }
+                    };
+
+                    return command_result;
                     /*
                     if b {
                         info!("ITE: then branch");
