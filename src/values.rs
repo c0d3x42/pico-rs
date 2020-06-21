@@ -6,6 +6,8 @@ use crate::errors::PicoError;
 use std::cmp::Ordering;
 use std::convert::TryFrom;
 
+use unicode_segmentation::UnicodeSegmentation;
+
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(untagged)]
 pub enum PicoValue {
@@ -157,6 +159,62 @@ pub struct Slice {
     slice: (Box<ValueProducer>, isize, Option<isize>),
 }
 
+fn sliceStartsAt(requested_start: isize, vec_length: usize) -> usize {
+    if requested_start < 0 {
+        // index backwards from the end
+        let end_result = usize::try_from(requested_start.abs());
+        let end_pos = match end_result {
+            Ok(value) => value,
+            Err(_e) => usize::max_value(),
+        };
+        if end_pos < vec_length {
+            return vec_length - end_pos;
+        } else {
+            return 0;
+        }
+    } else {
+        let start_result = usize::try_from(requested_start);
+        let start_offset: usize = match start_result {
+            Ok(value) => value,
+            Err(_e) => usize::max_value(),
+        };
+
+        if start_offset > vec_length {
+            return vec_length;
+        } else {
+            return start_offset;
+        }
+    }
+}
+
+fn sliceEndsAt(requested_end: isize, vec_length: usize) -> usize {
+    if requested_end < 0 {
+        let end_result = usize::try_from(requested_end.abs());
+        let end_offset = match end_result {
+            Ok(value) => value,
+            Err(_e) => usize::max_value(),
+        };
+
+        if end_offset < vec_length {
+            return vec_length - end_offset;
+        } else {
+            return vec_length;
+        }
+    } else {
+        let end_result = usize::try_from(requested_end);
+        let end_offset: usize = match end_result {
+            Ok(value) => value,
+            Err(_e) => usize::max_value(),
+        };
+
+        if end_offset > vec_length {
+            return vec_length;
+        } else {
+            return vec_length;
+        }
+    }
+}
+
 impl Execution for Slice {
     fn name(&self) -> String {
         return "slice".to_string();
@@ -176,35 +234,15 @@ impl Execution for Slice {
                     let my_vec: Vec<char> = matched_string.chars().collect();
                     trace!("sliced vec {:?}", my_vec);
 
-                    // initial start..end indexes
-                    let mut start_at: usize = 0;
-                    let mut end_at: usize = my_vec.len();
-                    trace!("sliced vec {:?}, {:?}", start_at, end_at);
+                    let iistart = sliceStartsAt(startIndex, my_vec.len());
+                    trace!("IIII start {:?}", iistart);
 
-                    trace!("indexes {:?}, {:?}", startIndex, endIndex);
-                    if startIndex < 0 {
-                        let c = usize::try_from(startIndex.abs());
-                        trace!("C={:?}", c);
-                        start_at = match c {
-                            Ok(cv) => {
-                                trace!("CV = {:?}", cv);
-                                let u = if (cv > my_vec.len()) {
-                                    0
-                                } else {
-                                    my_vec.len() - cv
-                                };
-                                trace!("U = {:?}", u);
-                                u
-                            }
-                            _ => 0,
-                        }
-                    }
-                    trace!("sliced vec {:?}, {:?}", start_at, end_at);
+                    let end_offset = match self.slice.2 {
+                        Some(ending) => sliceEndsAt(ending, my_vec.len()),
+                        None => my_vec.len(),
+                    };
 
-                    let p = my_vec.get(start_at..end_at);
-                    debug!("P = {:?}", p);
-
-                    if let Some(substring) = matched_string.get(0..start_at) {
+                    if let Some(substring) = matched_string.get(iistart..end_offset) {
                         return Ok(ExecutionResult::Continue(PicoValue::String(
                             substring.to_string(),
                         )));

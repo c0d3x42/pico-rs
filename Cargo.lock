@@ -363,6 +363,7 @@ dependencies = [
  "serde_json",
  "serde_regex",
  "tinytemplate",
+ "unicode-segmentation",
  "uuid",
  "valico",
 ]
@@ -642,6 +643,12 @@ checksum = "5479532badd04e128284890390c1e876ef7a993d0570b3597ae43dfa1d59afa4"
 dependencies = [
  "smallvec",
 ]
+
+[[package]]
+name = "unicode-segmentation"
+version = "1.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e83e153d1053cbb5a118eeff7fd5be06ed99153f00dbcd8ae310c5fb2b22edc0"
 
 [[package]]
 name = "unicode-xid"
