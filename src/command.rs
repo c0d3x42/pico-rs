@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use crate::conditions::Condition;
 use crate::context::{Context, VariablesMap};
 use crate::errors::PicoError;
-use crate::values::{PicoValue, Var};
+use crate::values::{PicoValue, ValueProducer, Var};
 //use crate::PicoValue;
 
 use std::option;
@@ -113,7 +113,7 @@ enum SettableValue {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct SetCommand {
-    set: (String, PicoValue),
+    set: (String, ValueProducer),
 }
 impl Execution for SetCommand {
     fn name(&self) -> String {
@@ -122,28 +122,20 @@ impl Execution for SetCommand {
     fn run_with_context(&self, ctx: &mut Context) -> FnResult {
         info!("RUNNING SET");
 
-        match &self.set.1 {
-            PicoValue::String(val) => {
-                let c = PicoValue::String(val.to_string());
-                ctx.setValue(&self.set.0, c);
-                //ctx.local_variables.insert(self.set.0.to_string(), c);
-            }
-            PicoValue::Number(val) => {
-                let c = PicoValue::Number(*val);
-                ctx.setValue(&self.set.0, c);
-                //ctx.local_variables.insert(self.set.0.to_string(), c);
-            }
-            PicoValue::UnsignedNumber(val) => {
-                let c = PicoValue::UnsignedNumber(*val);
-                ctx.setValue(&self.set.0, c);
-                //ctx.local_variables.insert(self.set.0.to_string(), c);
-            }
-            something_else => {
-                info!("SOMETHING else {:?}", something_else);
-                ctx.setValue(&self.set.0, something_else.clone());
-                //ctx.local_variables.insert(self.set.0.to_string(), something_else.clone());
-            }
+        let produced_value = &self.set.1.run_with_context(ctx)?;
+
+        match produced_value {
+            ExecutionResult::Continue(pv) => match pv {
+                PicoValue::String(v) => ctx.setValue(&self.set.0, PicoValue::String(v.to_string())),
+                PicoValue::Number(val) => ctx.setValue(&self.set.0, PicoValue::Number(*val)),
+                PicoValue::UnsignedNumber(val) => {
+                    ctx.setValue(&self.set.0, PicoValue::UnsignedNumber(*val))
+                }
+                PicoValue::Boolean(val) => ctx.setValue(&self.set.0, PicoValue::Boolean(*val)),
+            },
+            _everything_else => {}
         }
+
         Ok(ExecutionResult::Continue(PicoValue::Boolean(true)))
     }
 }
