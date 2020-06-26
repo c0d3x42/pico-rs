@@ -182,11 +182,13 @@ impl Execution for LessThan {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct RegMatch {
-    #[serde(with = "serde_regex")]
-    regmatch: Regex,
+pub struct RegMatchInternal(#[serde(with = "serde_regex")] Regex, ValueProducer);
 
-    with: ValueProducer,
+#[derive(Serialize, Deserialize, Debug)]
+pub struct RegMatch {
+    //    #[serde(with = "serde_regex")]
+    //    regmatch: Regex,
+    regmatch: RegMatchInternal, //    with: ValueProducer,
 }
 
 impl Execution for RegMatch {
@@ -197,7 +199,7 @@ impl Execution for RegMatch {
     fn run_with_context(&self, ctx: &mut Context) -> FnResult {
         debug!("Looking up regmatch/with");
 
-        let with_value = self.with.run_with_context(ctx)?;
+        let with_value = self.regmatch.1.run_with_context(ctx)?;
 
         match with_value {
             ExecutionResult::Stop(stopping_reason) => {
@@ -205,15 +207,15 @@ impl Execution for RegMatch {
             }
             ExecutionResult::Continue(continuation) => match continuation {
                 PicoValue::String(string_value) => {
-                    let match_result = self.regmatch.is_match(&string_value);
+                    let match_result = self.regmatch.0.is_match(&string_value);
 
                     debug!(
                         "Regmatch: {:?} / {:?} = {:?}",
                         self.regmatch, string_value, match_result
                     );
 
-                    let loc = self.regmatch.captures(&string_value);
-                    debug!("LOC {:?}", loc);
+                    let re_captures = self.regmatch.0.captures(&string_value);
+                    debug!("LOC {:?}", re_captures);
 
                     return Ok(ExecutionResult::Continue(PicoValue::Boolean(match_result)));
                 }

@@ -110,10 +110,12 @@
                 },
                 {
                     "if": {
-                        "regmatch": "^(?P<ff>loo)(.*)",
-                        "with": {
-                            "var": "qj"
-                        }
+                        "regmatch": [
+                            "^(?P<ff>loo)(.*)",
+                            {
+                                "var": "qj"
+                            }
+                        ]
                     },
                     "then": []
                 },
