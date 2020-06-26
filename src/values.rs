@@ -3,8 +3,10 @@ use serde::{Deserialize, Serialize};
 use crate::command::{Execution, ExecutionResult, FnResult};
 use crate::context::{Context, VariablesMap};
 use crate::errors::PicoError;
+use itertools::Itertools;
 use std::cmp::Ordering;
 use std::convert::TryFrom;
+use std::fmt;
 
 use unicode_segmentation::UnicodeSegmentation;
 
@@ -25,6 +27,13 @@ impl Execution for PicoValue {
     fn run_with_context(&self, _ctx: &mut Context) -> FnResult {
         trace!("pico cloning");
         return Ok(ExecutionResult::Continue(self.clone()));
+    }
+}
+
+impl fmt::Display for PicoValue {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        info!("PicoValue::Display {}, {:?}", self, self);
+        return write!(f, "{}", self);
     }
 }
 
@@ -137,6 +146,7 @@ pub enum ValueProducer {
     Literal(PicoValue),
     Lookup(VarLookup),
     Slice(Slice),
+    ConCat(ConCat),
 }
 
 impl Execution for ValueProducer {
@@ -150,7 +160,50 @@ impl Execution for ValueProducer {
             ValueProducer::Lookup(lookup) => lookup.run_with_context(ctx),
             ValueProducer::Literal(literal) => literal.run_with_context(ctx),
             ValueProducer::Slice(slice) => slice.run_with_context(ctx),
+            ValueProducer::ConCat(concat) => concat.run_with_context(ctx),
         }
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct ConCat {
+    concat: Vec<ValueProducer>,
+}
+
+impl Execution for ConCat {
+    fn name(&self) -> String {
+        return "concat".to_string();
+    }
+
+    fn run_with_context(&self, ctx: &mut Context) -> FnResult {
+        let words = &self
+            .concat
+            .iter()
+            .map(|e| e.run_with_context(ctx))
+            .filter(|x| x.is_ok())
+            .filter_map(Result::ok)
+            .filter_map(|p| match p {
+                ExecutionResult::Continue(c) => Some(c),
+                _ => None,
+            })
+            .collect::<Vec<PicoValue>>();
+
+        info!("TTTTT {:?}", words);
+        for word in words {
+            info!("TTTTT word {:?}", word);
+        }
+
+        let tt = words
+            .iter()
+            .filter_map(|m| match m {
+                PicoValue::String(s) => Some(s.clone()),
+                _ => None,
+            })
+            .collect::<Vec<String>>();
+
+        info!("TT {:?}", tt.join(""));
+
+        return Ok(ExecutionResult::Continue(PicoValue::String(tt.join(""))));
     }
 }
 

@@ -113,6 +113,10 @@ fn main() {
   ctx
     .variables
     .insert("q".to_string(), PicoValue::String("QQQQ".to_string()));
+  ctx.variables.insert("n".to_string(), PicoValue::Number(42));
+  ctx
+    .variables
+    .insert("op".to_string(), PicoValue::String("OP".to_string()));
 
   let result = picolang::runners::run(&pico_rule.root, &mut ctx);
   match result {
