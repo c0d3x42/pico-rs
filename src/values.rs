@@ -190,23 +190,6 @@ impl Execution for Extract {
         match with_value {
             ExecutionResult::Continue(continuation) => match continuation {
                 PicoValue::String(string_value) => {
-                    if let Some(caps) = self.extract.0.captures(&string_value) {
-                        for name in self.extract.0.capture_names() {
-                            if let Some(name) = name {
-                                if let Some(value) = caps.name(name) {
-                                    let v = caps.name(name);
-                                    info!(
-                                        "CAP name = {:?} | value = {:?} | v = {:?}",
-                                        name, value, v
-                                    );
-                                }
-                            }
-                        }
-                    }
-
-                    let ff: Vec<_> = self.extract.0.find_iter(&string_value).collect();
-                    info!("FFFFFF {:?}", ff);
-
                     let captures = self.extract.0.captures(&string_value);
                     info!("CCCCCCC {:?}", captures);
 
@@ -227,22 +210,6 @@ impl Execution for Extract {
                         return Ok(ExecutionResult::Setting(dict));
                     }
                     return Ok(ExecutionResult::Setting(HashMap::new()));
-
-                    for w in self.extract.0.captures_iter(&string_value) {
-                        info!("W = {:?} | {:?}", w, &w[0]);
-                    }
-
-                    let words: Vec<_> = self.extract.0.captures_iter(&string_value).collect();
-                    info!("WWWWWW {:?}", words);
-
-                    let i: Vec<_> = captures.into_iter().collect();
-
-                    info!("IIIIIIII {:?}", i);
-                    for v in i {
-                        info!("VVVVVVVV {:?}", v);
-                    }
-
-                    Ok(ExecutionResult::Stop(None))
                 }
                 _ => Err(PicoError::IncompatibleComparison),
             },

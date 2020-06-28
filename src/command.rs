@@ -154,7 +154,17 @@ impl Execution for SetCommand {
                         }
                         PicoValue::Boolean(val) => ctx.setValue(var_name, PicoValue::Boolean(val)),
                     },
-                    _everything_else => {}
+                    ExecutionResult::Setting(dict) => {
+                        // convert dictionary to ctx values prefixed by var_name
+
+                        for (key, value) in dict {
+                            let new_key = format!("{}_{}", var_name, key);
+                            ctx.setValue(&new_key, value);
+                        }
+                    }
+                    everything_else => {
+                        info!("produced value ignored {:?}", everything_else);
+                    }
                 }
             }
         }
