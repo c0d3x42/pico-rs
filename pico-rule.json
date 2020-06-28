@@ -36,6 +36,25 @@
                     "log": "POP!!!!!!!!!!!"
                 },
                 {
+                    "set": {
+                        "extract": [
+                            "^(?P<AtoZ>[a-z]+)",
+                            "abc123"
+                        ]
+                    }
+                },
+                {
+                    "set": [
+                        "EXTRACT",
+                        {
+                            "extract": [
+                                "^(?P<first>(.)(.)).*([0-9]+)?(?P<last>.)$",
+                                "abcdefg"
+                            ]
+                        }
+                    ]
+                },
+                {
                     "set": [
                         "POPFINAL",
                         {

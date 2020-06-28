@@ -4,7 +4,10 @@ use crate::command::{Execution, ExecutionResult, FnResult};
 use crate::context::{Context, VariablesMap};
 use crate::errors::PicoError;
 use itertools::Itertools;
+use regex::Regex;
+use serde_regex;
 use std::cmp::Ordering;
+use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::fmt;
 
@@ -17,6 +20,8 @@ pub enum PicoValue {
     Number(isize),
     String(String),
     Boolean(bool),
+    //Array(Vec<PicoValue>),
+    //Dictionary(HashMap<String, PicoValue>),
 }
 
 impl Execution for PicoValue {
@@ -147,6 +152,7 @@ pub enum ValueProducer {
     Lookup(VarLookup),
     Slice(Slice),
     ConCat(ConCat),
+    Extract(Box<Extract>),
 }
 
 impl Execution for ValueProducer {
@@ -161,6 +167,86 @@ impl Execution for ValueProducer {
             ValueProducer::Literal(literal) => literal.run_with_context(ctx),
             ValueProducer::Slice(slice) => slice.run_with_context(ctx),
             ValueProducer::ConCat(concat) => concat.run_with_context(ctx),
+            ValueProducer::Extract(extract) => extract.run_with_context(ctx),
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct ExtractInternal(#[serde(with = "serde_regex")] Regex, ValueProducer);
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Extract {
+    extract: ExtractInternal,
+}
+
+impl Execution for Extract {
+    fn name(&self) -> String {
+        return String::from("extract");
+    }
+
+    fn run_with_context(&self, ctx: &mut Context) -> FnResult {
+        let with_value = self.extract.1.run_with_context(ctx)?;
+        match with_value {
+            ExecutionResult::Continue(continuation) => match continuation {
+                PicoValue::String(string_value) => {
+                    if let Some(caps) = self.extract.0.captures(&string_value) {
+                        for name in self.extract.0.capture_names() {
+                            if let Some(name) = name {
+                                if let Some(value) = caps.name(name) {
+                                    let v = caps.name(name);
+                                    info!(
+                                        "CAP name = {:?} | value = {:?} | v = {:?}",
+                                        name, value, v
+                                    );
+                                }
+                            }
+                        }
+                    }
+
+                    let ff: Vec<_> = self.extract.0.find_iter(&string_value).collect();
+                    info!("FFFFFF {:?}", ff);
+
+                    let captures = self.extract.0.captures(&string_value);
+                    info!("CCCCCCC {:?}", captures);
+
+                    if let Some(caps) = &captures {
+                        let dict: HashMap<String, PicoValue> = self
+                            .extract
+                            .0
+                            .capture_names()
+                            .flatten()
+                            .filter_map(|n| {
+                                Some((
+                                    String::from(n),
+                                    PicoValue::String(caps.name(n)?.as_str().to_string()),
+                                ))
+                            })
+                            .collect();
+                        info!("DICT = {:?}", dict);
+                        return Ok(ExecutionResult::Setting(dict));
+                    }
+                    return Ok(ExecutionResult::Setting(HashMap::new()));
+
+                    for w in self.extract.0.captures_iter(&string_value) {
+                        info!("W = {:?} | {:?}", w, &w[0]);
+                    }
+
+                    let words: Vec<_> = self.extract.0.captures_iter(&string_value).collect();
+                    info!("WWWWWW {:?}", words);
+
+                    let i: Vec<_> = captures.into_iter().collect();
+
+                    info!("IIIIIIII {:?}", i);
+                    for v in i {
+                        info!("VVVVVVVV {:?}", v);
+                    }
+
+                    Ok(ExecutionResult::Stop(None))
+                }
+                _ => Err(PicoError::IncompatibleComparison),
+            },
+            everything_else => Ok(everything_else),
         }
     }
 }

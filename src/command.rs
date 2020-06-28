@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use crate::conditions::Condition;
 use crate::context::{Context, VariablesMap};
 use crate::errors::PicoError;
-use crate::values::{PicoValue, ValueProducer, Var};
+use crate::values::{Extract, PicoValue, ValueProducer, Var};
 //use crate::PicoValue;
 
 use std::option;
@@ -15,6 +15,7 @@ use uuid::Uuid;
 #[derive(Clone, Debug)]
 pub enum ExecutionResult {
     Continue(PicoValue),
+    Setting(HashMap<String, PicoValue>),
     Stop(Option<String>),
     BreakTo(uuid::Uuid),
 }
@@ -106,14 +107,16 @@ impl Execution for DebugLog {
     }
 }
 
-enum SettableValue {
-    String,
-    Number,
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(untagged)]
+pub enum Settable {
+    ValueProducing(String, ValueProducer),
+    Extractor(Extract),
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct SetCommand {
-    set: (String, ValueProducer),
+    set: Settable,
 }
 impl Execution for SetCommand {
     fn name(&self) -> String {
@@ -122,18 +125,38 @@ impl Execution for SetCommand {
     fn run_with_context(&self, ctx: &mut Context) -> FnResult {
         info!("RUNNING SET");
 
-        let produced_value = &self.set.1.run_with_context(ctx)?;
-
-        match produced_value {
-            ExecutionResult::Continue(pv) => match pv {
-                PicoValue::String(v) => ctx.setValue(&self.set.0, PicoValue::String(v.to_string())),
-                PicoValue::Number(val) => ctx.setValue(&self.set.0, PicoValue::Number(*val)),
-                PicoValue::UnsignedNumber(val) => {
-                    ctx.setValue(&self.set.0, PicoValue::UnsignedNumber(*val))
+        match &self.set {
+            Settable::Extractor(extraction) => {
+                let extracted_values = extraction.run_with_context(ctx)?;
+                match extracted_values {
+                    ExecutionResult::Setting(dict) => {
+                        for (key, value) in dict {
+                            ctx.setValue(&key, value);
+                        }
+                    }
+                    _ => {}
                 }
-                PicoValue::Boolean(val) => ctx.setValue(&self.set.0, PicoValue::Boolean(*val)),
-            },
-            _everything_else => {}
+            }
+
+            Settable::ValueProducing(var_name, value_producer) => {
+                let produced_value = value_producer.run_with_context(ctx)?;
+
+                debug!("Produced value = {:?}", produced_value);
+
+                match produced_value {
+                    ExecutionResult::Continue(pv) => match pv {
+                        PicoValue::String(v) => {
+                            ctx.setValue(var_name, PicoValue::String(v.to_string()))
+                        }
+                        PicoValue::Number(val) => ctx.setValue(var_name, PicoValue::Number(val)),
+                        PicoValue::UnsignedNumber(val) => {
+                            ctx.setValue(var_name, PicoValue::UnsignedNumber(val))
+                        }
+                        PicoValue::Boolean(val) => ctx.setValue(var_name, PicoValue::Boolean(val)),
+                    },
+                    _everything_else => {}
+                }
+            }
         }
 
         Ok(ExecutionResult::Continue(PicoValue::Boolean(true)))
@@ -226,6 +249,7 @@ impl Execution for Action {
                             //return Ok(ExecutionResult::Continue(Value::Boolean(true)));
                         }
                         ExecutionResult::Continue(_value) => {}
+                        ExecutionResult::Setting(_value) => {}
                         ExecutionResult::BreakTo(breakto) => {
                             info!("result breaks to {:?}", breakto);
                             return Ok(ExecutionResult::BreakTo(breakto));
@@ -265,6 +289,9 @@ impl Execution for IfThenElse {
         match if_result {
             ExecutionResult::BreakTo(bto) => return Ok(ExecutionResult::BreakTo(bto)),
             ExecutionResult::Stop(stp) => return Ok(ExecutionResult::Stop(stp)),
+            ExecutionResult::Setting(_dict) => {
+                return Err(PicoError::Crash(String::from("cant set dict here")))
+            }
             ExecutionResult::Continue(opt) => match opt {
                 PicoValue::Boolean(b) => {
                     debug!("ITE got boolean back {:?}", b);
