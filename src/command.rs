@@ -2,12 +2,11 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 use crate::conditions::Condition;
-use crate::context::{Context, VariablesMap};
+use crate::context::Context;
 use crate::errors::PicoError;
-use crate::values::{Extract, PicoValue, ValueProducer, Var};
+use crate::values::{Extract, PicoValue, ValueProducer};
 //use crate::PicoValue;
 
-use std::option;
 use std::result;
 use tinytemplate::TinyTemplate;
 use uuid::Uuid;
@@ -131,7 +130,7 @@ impl Execution for SetCommand {
                 match extracted_values {
                     ExecutionResult::Setting(dict) => {
                         for (key, value) in dict {
-                            ctx.setValue(&key, value);
+                            ctx.set_value(&key, value);
                         }
                     }
                     _ => {}
@@ -146,20 +145,20 @@ impl Execution for SetCommand {
                 match produced_value {
                     ExecutionResult::Continue(pv) => match pv {
                         PicoValue::String(v) => {
-                            ctx.setValue(var_name, PicoValue::String(v.to_string()))
+                            ctx.set_value(var_name, PicoValue::String(v.to_string()))
                         }
-                        PicoValue::Number(val) => ctx.setValue(var_name, PicoValue::Number(val)),
+                        PicoValue::Number(val) => ctx.set_value(var_name, PicoValue::Number(val)),
                         PicoValue::UnsignedNumber(val) => {
-                            ctx.setValue(var_name, PicoValue::UnsignedNumber(val))
+                            ctx.set_value(var_name, PicoValue::UnsignedNumber(val))
                         }
-                        PicoValue::Boolean(val) => ctx.setValue(var_name, PicoValue::Boolean(val)),
+                        PicoValue::Boolean(val) => ctx.set_value(var_name, PicoValue::Boolean(val)),
                     },
                     ExecutionResult::Setting(dict) => {
                         // convert dictionary to ctx values prefixed by var_name
 
                         for (key, value) in dict {
                             let new_key = format!("{}_{}", var_name, key);
-                            ctx.setValue(&new_key, value);
+                            ctx.set_value(&new_key, value);
                         }
                     }
                     everything_else => {

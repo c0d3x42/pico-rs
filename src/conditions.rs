@@ -1,10 +1,10 @@
 use serde::{Deserialize, Serialize};
 
 use crate::command::{Execution, ExecutionResult, FnResult};
-use crate::context::{Context, VariablesMap};
+use crate::context::Context;
 use crate::errors::PicoError;
 //use crate::values::{PicoValue, Var};
-use crate::{PicoValue, ValueProducer, Var};
+use crate::{PicoValue, ValueProducer};
 
 use regex::Regex;
 use serde_regex;
@@ -23,7 +23,7 @@ impl Execution for VarExistsCondition {
     }
 
     fn run_with_context(&self, ctx: &mut Context) -> FnResult {
-        if let Some(_v) = ctx.getValue(&self.exists) {
+        if let Some(_v) = ctx.get_value(&self.exists) {
             return Ok(ExecutionResult::Continue(PicoValue::Boolean(true)));
         }
         return Ok(ExecutionResult::Continue(PicoValue::Boolean(false)));
@@ -47,7 +47,7 @@ impl Execution for VarMissingCondition {
     }
 
     fn run_with_context(&self, ctx: &mut Context) -> FnResult {
-        let final_result = match ctx.getValue(&self.missing) {
+        let final_result = match ctx.get_value(&self.missing) {
             Some(_v) => Ok(ExecutionResult::Continue(PicoValue::Boolean(false))),
             None => Ok(ExecutionResult::Continue(PicoValue::Boolean(true))),
         };
@@ -157,6 +157,26 @@ impl Execution for Eq {
             }
 
             _ => return Ok(ExecutionResult::Continue(PicoValue::Boolean(false))),
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct GreaterThan {
+    gt: (ValueProducer, ValueProducer),
+}
+impl Execution for GreaterThan {
+    fn name(&self) -> String {
+        return "less than".to_string();
+    }
+    fn run_with_context(&self, ctx: &mut Context) -> FnResult {
+        let lhs = self.gt.0.run_with_context(ctx)?;
+        let rhs = self.gt.1.run_with_context(ctx)?;
+        match (lhs, rhs) {
+            (ExecutionResult::Continue(left), ExecutionResult::Continue(right)) => {
+                Ok(ExecutionResult::Continue(PicoValue::Boolean(left > right)))
+            }
+            _ => Ok(ExecutionResult::Continue(PicoValue::Boolean(false))),
         }
     }
 }
@@ -327,6 +347,7 @@ pub enum Condition {
     Match(Match),
     RegMatch(RegMatch),
     StartsWith(StartsWith),
+    GreaterThan(GreaterThan),
     LessThan(LessThan),
     VarExists(VarExistsCondition),
     VarMissing(VarMissingCondition),
@@ -349,6 +370,7 @@ impl Execution for Condition {
             Condition::StartsWith(sw) => sw.run_with_context(ctx),
 
             Condition::Eq(eq) => eq.run_with_context(ctx),
+            Condition::GreaterThan(gt) => gt.run_with_context(ctx),
             Condition::LessThan(lt) => lt.run_with_context(ctx),
 
             Condition::VarExists(ve) => ve.run_with_context(ctx),

@@ -1,9 +1,7 @@
 use crate::PicoValue;
 
-use hashcow::CowHashMap;
 use serde::Serialize;
 use std::collections::HashMap;
-use std::sync::Arc;
 
 #[derive(Debug, Clone, Serialize)]
 pub enum StateValue {
@@ -29,11 +27,11 @@ impl Context {
       local_variables: HashMap::new(),
     }
   }
-  pub fn setValue(&mut self, key: &str, value: PicoValue) -> () {
+  pub fn set_value(&mut self, key: &str, value: PicoValue) -> () {
     self.local_variables.insert(key.to_string(), value);
   }
 
-  pub fn getValue(&self, key: &str) -> Option<&PicoValue> {
+  pub fn get_value(&self, key: &str) -> Option<&PicoValue> {
     if let Some(plv) = self.local_variables.get(key) {
       return Some(plv);
     } else if let Some(pv) = self.variables.get(key) {

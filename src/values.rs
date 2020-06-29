@@ -1,17 +1,14 @@
 use serde::{Deserialize, Serialize};
 
 use crate::command::{Execution, ExecutionResult, FnResult};
-use crate::context::{Context, VariablesMap};
+use crate::context::Context;
 use crate::errors::PicoError;
-use itertools::Itertools;
 use regex::Regex;
 use serde_regex;
 use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::fmt;
-
-use unicode_segmentation::UnicodeSegmentation;
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(untagged)]
@@ -94,7 +91,7 @@ impl Execution for VarLookup {
             VarValue::Lookup(s) => {
                 debug!("lookup {:?}", s);
                 // let lookup = ctx.variables.get(s);
-                let lookup = ctx.getValue(s);
+                let lookup = ctx.get_value(s);
                 match lookup {
                     Some(v) => {
                         let r = v.clone();
@@ -103,7 +100,7 @@ impl Execution for VarLookup {
                     None => {
                         info!("Failed to lookup var {:?}", s);
                         // let local_lookup = ctx.local_variables.get(s);
-                        let local_lookup = ctx.getValue(s);
+                        let local_lookup = ctx.get_value(s);
                         match local_lookup {
                             Some(v) => return Ok(ExecutionResult::Continue(v.clone())),
                             None => return Err(PicoError::NoSuchValue),
@@ -115,7 +112,7 @@ impl Execution for VarLookup {
                 debug!("default lookup {:?}, {:?}", varname, fallback);
 
                 //let lookup = ctx.variables.get(varname);
-                let lookup = ctx.getValue(varname);
+                let lookup = ctx.get_value(varname);
                 match lookup {
                     Some(value) => return Ok(ExecutionResult::Continue(value.clone())),
                     None => return Ok(ExecutionResult::Continue(fallback.clone())),
@@ -265,7 +262,7 @@ pub struct Slice {
     slice: (Box<ValueProducer>, isize, Option<isize>),
 }
 
-fn sliceStartsAt(requested_start: isize, vec_length: usize) -> usize {
+fn slice_starts_at(requested_start: isize, vec_length: usize) -> usize {
     if requested_start < 0 {
         // index backwards from the end
         let end_result = usize::try_from(requested_start.abs());
@@ -293,7 +290,7 @@ fn sliceStartsAt(requested_start: isize, vec_length: usize) -> usize {
     }
 }
 
-fn sliceEndsAt(requested_end: isize, vec_length: usize) -> usize {
+fn slice_ends_at(requested_end: isize, vec_length: usize) -> usize {
     if requested_end < 0 {
         let end_result = usize::try_from(requested_end.abs());
         let end_offset = match end_result {
@@ -329,8 +326,8 @@ impl Execution for Slice {
     fn run_with_context(&self, ctx: &mut Context) -> FnResult {
         info!("slicing");
         let s = self.slice.0.run_with_context(ctx)?;
-        let startIndex = self.slice.1;
-        let endIndex = self.slice.2;
+        let start_index = self.slice.1;
+        //let endIndex = self.slice.2;
 
         let final_result = match s {
             ExecutionResult::Continue(r) => match r {
@@ -340,11 +337,11 @@ impl Execution for Slice {
                     let my_vec: Vec<char> = matched_string.chars().collect();
                     trace!("sliced vec {:?}", my_vec);
 
-                    let iistart = sliceStartsAt(startIndex, my_vec.len());
+                    let iistart = slice_starts_at(start_index, my_vec.len());
                     trace!("IIII start {:?}", iistart);
 
                     let end_offset = match self.slice.2 {
-                        Some(ending) => sliceEndsAt(ending, my_vec.len()),
+                        Some(ending) => slice_ends_at(ending, my_vec.len()),
                         None => my_vec.len(),
                     };
 
