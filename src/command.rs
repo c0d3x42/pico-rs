@@ -4,6 +4,7 @@ use std::collections::HashMap;
 use crate::conditions::Condition;
 use crate::context::Context;
 use crate::errors::PicoError;
+use crate::lookups::{LookupTable, Lookups};
 use crate::values::{Extract, PicoValue, ValueProducer};
 //use crate::PicoValue;
 
@@ -357,6 +358,8 @@ impl Execution for IfThenElse {
 pub struct RuleFile {
     pub root: Vec<IfThenElse>,
     version: Option<String>,
+
+    pub lookups: Option<Lookups>,
 }
 
 impl Execution for RuleFile {

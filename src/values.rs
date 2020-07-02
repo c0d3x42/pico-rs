@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use crate::command::{Execution, ExecutionResult, FnResult};
 use crate::context::Context;
 use crate::errors::PicoError;
+use crate::lookups::LookupCommand;
 use regex::Regex;
 use serde_regex;
 use std::cmp::Ordering;
@@ -150,6 +151,7 @@ pub enum ValueProducer {
     Slice(Slice),
     ConCat(ConCat),
     Extract(Box<Extract>),
+    DictionaryLookup(LookupCommand),
 }
 
 impl Execution for ValueProducer {
@@ -165,6 +167,7 @@ impl Execution for ValueProducer {
             ValueProducer::Slice(slice) => slice.run_with_context(ctx),
             ValueProducer::ConCat(concat) => concat.run_with_context(ctx),
             ValueProducer::Extract(extract) => extract.run_with_context(ctx),
+            ValueProducer::DictionaryLookup(dict) => dict.run_with_context(ctx),
         }
     }
 }

@@ -23,7 +23,7 @@ pub fn run(instructions: &Vec<IfThenElse>, context: &mut Context) -> Result<EndR
         let run_result = instruction.run_with_context(context);
         match run_result {
             Ok(_) => {}
-            Err(_bad_thing) => return Err("bad thing".to_string()),
+            Err(_bad_thing) => return Err(format!("bad thing: {}", _bad_thing)),
         }
         info!("<-- {:?}", instruction.name());
     }
