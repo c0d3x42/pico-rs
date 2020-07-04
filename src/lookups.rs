@@ -1,8 +1,8 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-use crate::command::{Execution, FnResult};
-use crate::context::Context;
+use crate::command::{Execution, ExecutionResult, FnResult};
+use crate::context::{Context, PicoState};
 use crate::errors::PicoError;
 use crate::{PicoValue, ValueProducer};
 
@@ -35,7 +35,7 @@ pub type Lookups = HashMap<String, LookupTable>;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct LookupCommand {
-    lookup: String,
+    lookup: (String, String), // table, key
 }
 
 impl Execution for LookupCommand {
@@ -43,8 +43,34 @@ impl Execution for LookupCommand {
         String::from("lookup")
     }
 
-    fn run_with_context(&self, ctx: &mut Context) -> FnResult {
-        info!("Lookup Dictionary not impl");
-        Err(PicoError::Crash(String::from("not done")))
+    fn run_with_context(&self, state: &PicoState, _ctx: &mut Context) -> FnResult {
+        info!(
+            "Lookup Dictionary {:?} -> {:?}",
+            self.lookup.0, self.lookup.1
+        );
+
+        if let Some(t) = state.more_lookups.get(&self.lookup.0) {
+            if let Some(value) = t.entries.get(&self.lookup.1) {
+                match value {
+                    PicoValue::String(s) => {
+                        trace!("Found lookup value {:?}", s);
+                        return Ok(ExecutionResult::Continue(PicoValue::String(s.to_string())));
+                    }
+                    _ => return Err(PicoError::NoSuchValue),
+                }
+            } else {
+                trace!("lookup using default {:?}", t.default);
+                match &t.default {
+                    PicoValue::String(s) => {
+                        return Ok(ExecutionResult::Continue(PicoValue::String(s.to_string())))
+                    }
+                    _ => return Err(PicoError::NoSuchValue),
+                }
+            }
+        }
+
+        info!("Lookup failed for {:?}", self.lookup.0);
+
+        Err(PicoError::NoSuchValue)
     }
 }

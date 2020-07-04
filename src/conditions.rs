@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::command::{Execution, ExecutionResult, FnResult};
-use crate::context::Context;
+use crate::context::{Context, PicoState};
 use crate::errors::PicoError;
 //use crate::values::{PicoValue, Var};
 use crate::{PicoValue, ValueProducer};
@@ -22,7 +22,7 @@ impl Execution for VarExistsCondition {
         return "VarExists".to_string();
     }
 
-    fn run_with_context(&self, ctx: &mut Context) -> FnResult {
+    fn run_with_context(&self, state: &PicoState, ctx: &mut Context) -> FnResult {
         if let Some(_v) = ctx.get_value(&self.exists) {
             return Ok(ExecutionResult::Continue(PicoValue::Boolean(true)));
         }
@@ -46,7 +46,7 @@ impl Execution for VarMissingCondition {
         return "VarMissing".to_string();
     }
 
-    fn run_with_context(&self, ctx: &mut Context) -> FnResult {
+    fn run_with_context(&self, state: &PicoState, ctx: &mut Context) -> FnResult {
         let final_result = match ctx.get_value(&self.missing) {
             Some(_v) => Ok(ExecutionResult::Continue(PicoValue::Boolean(false))),
             None => Ok(ExecutionResult::Continue(PicoValue::Boolean(true))),
@@ -77,9 +77,9 @@ impl Execution for And {
     fn name(&self) -> String {
         return "and".to_string();
     }
-    fn run_with_context(&self, ctx: &mut Context) -> FnResult {
+    fn run_with_context(&self, state: &PicoState, ctx: &mut Context) -> FnResult {
         for condition in &self.and {
-            let condition_result = condition.run_with_context(ctx)?;
+            let condition_result = condition.run_with_context(state, ctx)?;
 
             match condition_result {
                 ExecutionResult::Stop(stopping_reason) => {
@@ -111,12 +111,12 @@ impl Execution for Or {
         return "or".to_string();
     }
 
-    fn run_with_context(&self, ctx: &mut Context) -> FnResult {
+    fn run_with_context(&self, state: &PicoState, ctx: &mut Context) -> FnResult {
         let condition_count = self.or.len();
         debug!("OR ...{:?}", condition_count);
 
         for condition in &self.or {
-            let condition_result = condition.run_with_context(ctx)?;
+            let condition_result = condition.run_with_context(state, ctx)?;
 
             match condition_result {
                 ExecutionResult::Stop(stopping) => return Ok(ExecutionResult::Stop(stopping)),
@@ -144,10 +144,10 @@ impl Execution for Eq {
     fn name(&self) -> String {
         return "equality".to_string();
     }
-    fn run_with_context(&self, ctx: &mut Context) -> FnResult {
+    fn run_with_context(&self, state: &PicoState, ctx: &mut Context) -> FnResult {
         trace!("Eq resolving...");
-        let lhs = self.eq.0.run_with_context(ctx)?;
-        let rhs = self.eq.1.run_with_context(ctx)?;
+        let lhs = self.eq.0.run_with_context(state, ctx)?;
+        let rhs = self.eq.1.run_with_context(state, ctx)?;
         trace!("LHS = {:?}", lhs);
         trace!("RHS = {:?}", rhs);
 
@@ -169,9 +169,9 @@ impl Execution for GreaterThan {
     fn name(&self) -> String {
         return "less than".to_string();
     }
-    fn run_with_context(&self, ctx: &mut Context) -> FnResult {
-        let lhs = self.gt.0.run_with_context(ctx)?;
-        let rhs = self.gt.1.run_with_context(ctx)?;
+    fn run_with_context(&self, state: &PicoState, ctx: &mut Context) -> FnResult {
+        let lhs = self.gt.0.run_with_context(state, ctx)?;
+        let rhs = self.gt.1.run_with_context(state, ctx)?;
         match (lhs, rhs) {
             (ExecutionResult::Continue(left), ExecutionResult::Continue(right)) => {
                 Ok(ExecutionResult::Continue(PicoValue::Boolean(left > right)))
@@ -189,9 +189,9 @@ impl Execution for LessThan {
     fn name(&self) -> String {
         return "less than".to_string();
     }
-    fn run_with_context(&self, ctx: &mut Context) -> FnResult {
-        let lhs = self.lt.0.run_with_context(ctx)?;
-        let rhs = self.lt.1.run_with_context(ctx)?;
+    fn run_with_context(&self, state: &PicoState, ctx: &mut Context) -> FnResult {
+        let lhs = self.lt.0.run_with_context(state, ctx)?;
+        let rhs = self.lt.1.run_with_context(state, ctx)?;
         match (lhs, rhs) {
             (ExecutionResult::Continue(left), ExecutionResult::Continue(right)) => {
                 Ok(ExecutionResult::Continue(PicoValue::Boolean(left < right)))
@@ -216,10 +216,10 @@ impl Execution for RegMatch {
         return "regmatch".to_string();
     }
 
-    fn run_with_context(&self, ctx: &mut Context) -> FnResult {
+    fn run_with_context(&self, state: &PicoState, ctx: &mut Context) -> FnResult {
         debug!("Looking up regmatch/with");
 
-        let with_value = self.regmatch.1.run_with_context(ctx)?;
+        let with_value = self.regmatch.1.run_with_context(state, ctx)?;
 
         match with_value {
             ExecutionResult::Stop(stopping_reason) => {
@@ -254,9 +254,9 @@ impl Execution for StartsWith {
     fn name(&self) -> String {
         return "startswith".to_string();
     }
-    fn run_with_context(&self, ctx: &mut Context) -> FnResult {
-        let needle_ctx = self.match_start.0.run_with_context(ctx)?;
-        let haystack_ctx = self.match_start.1.run_with_context(ctx)?;
+    fn run_with_context(&self, state: &PicoState, ctx: &mut Context) -> FnResult {
+        let needle_ctx = self.match_start.0.run_with_context(state, ctx)?;
+        let haystack_ctx = self.match_start.1.run_with_context(state, ctx)?;
 
         match (needle_ctx, haystack_ctx) {
             (
@@ -289,10 +289,10 @@ impl Execution for Match {
         return "match".to_string();
     }
 
-    fn run_with_context(&self, ctx: &mut Context) -> FnResult {
+    fn run_with_context(&self, state: &PicoState, ctx: &mut Context) -> FnResult {
         info!("running match");
-        let lhs = self.r#match.0.run_with_context(ctx)?;
-        let rhs = self.r#match.1.run_with_context(ctx)?;
+        let lhs = self.r#match.0.run_with_context(state, ctx)?;
+        let rhs = self.r#match.1.run_with_context(state, ctx)?;
 
         match (lhs, rhs) {
             (ExecutionResult::Continue(left), ExecutionResult::Continue(right)) => {
@@ -323,8 +323,8 @@ impl Execution for Not {
         return "not".to_string();
     }
 
-    fn run_with_context(&self, ctx: &mut Context) -> FnResult {
-        let condition_result = self.not.run_with_context(ctx)?;
+    fn run_with_context(&self, state: &PicoState, ctx: &mut Context) -> FnResult {
+        let condition_result = self.not.run_with_context(state, ctx)?;
 
         match condition_result {
             ExecutionResult::Continue(val) => match val {
@@ -359,22 +359,22 @@ impl Execution for Condition {
         "condition".to_string()
     }
 
-    fn run_with_context(&self, ctx: &mut Context) -> FnResult {
+    fn run_with_context(&self, state: &PicoState, ctx: &mut Context) -> FnResult {
         debug!("Checking condition {:?}", self);
         let condition_result = match self {
-            Condition::And(and) => and.run_with_context(ctx),
-            Condition::Or(or) => or.run_with_context(ctx),
-            Condition::Not(not) => not.run_with_context(ctx),
-            Condition::Match(m) => m.run_with_context(ctx),
-            Condition::RegMatch(rm) => rm.run_with_context(ctx),
-            Condition::StartsWith(sw) => sw.run_with_context(ctx),
+            Condition::And(and) => and.run_with_context(state, ctx),
+            Condition::Or(or) => or.run_with_context(state, ctx),
+            Condition::Not(not) => not.run_with_context(state, ctx),
+            Condition::Match(m) => m.run_with_context(state, ctx),
+            Condition::RegMatch(rm) => rm.run_with_context(state, ctx),
+            Condition::StartsWith(sw) => sw.run_with_context(state, ctx),
 
-            Condition::Eq(eq) => eq.run_with_context(ctx),
-            Condition::GreaterThan(gt) => gt.run_with_context(ctx),
-            Condition::LessThan(lt) => lt.run_with_context(ctx),
+            Condition::Eq(eq) => eq.run_with_context(state, ctx),
+            Condition::GreaterThan(gt) => gt.run_with_context(state, ctx),
+            Condition::LessThan(lt) => lt.run_with_context(state, ctx),
 
-            Condition::VarExists(ve) => ve.run_with_context(ctx),
-            Condition::VarMissing(vm) => vm.run_with_context(ctx),
+            Condition::VarExists(ve) => ve.run_with_context(state, ctx),
+            Condition::VarMissing(vm) => vm.run_with_context(state, ctx),
         };
 
         match condition_result {

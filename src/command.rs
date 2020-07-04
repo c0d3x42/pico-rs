@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 use crate::conditions::Condition;
-use crate::context::Context;
+use crate::context::{Context, PicoState};
 use crate::errors::PicoError;
 use crate::lookups::{LookupTable, Lookups};
 use crate::values::{Extract, PicoValue, ValueProducer};
@@ -39,7 +39,7 @@ pub trait Execution {
         */
     }
 
-    fn run_with_context(&self, _ctx: &mut Context) -> FnResult {
+    fn run_with_context(&self, _state: &PicoState, _ctx: &mut Context) -> FnResult {
         trace!("Running with context for: {}", &self.name());
         Err(PicoError::Crash("Not implemented".to_string()))
     }
@@ -53,7 +53,7 @@ impl Execution for Log {
     fn name(&self) -> String {
         return "log".to_string();
     }
-    fn run_with_context(&self, _ctx: &mut Context) -> FnResult {
+    fn run_with_context(&self, _state: &PicoState, _ctx: &mut Context) -> FnResult {
         info!("MSG: {:?}", self.log);
 
         return Ok(ExecutionResult::Continue(PicoValue::Boolean(true)));
@@ -76,7 +76,7 @@ impl Execution for DebugLog {
     fn name(&self) -> String {
         return "debug-log".to_string();
     }
-    fn run_with_context(&self, ctx: &mut Context) -> FnResult {
+    fn run_with_context(&self, _state: &PicoState, ctx: &mut Context) -> FnResult {
         let mut tt = TinyTemplate::new();
         trace!("Building tiny template");
 
@@ -122,12 +122,12 @@ impl Execution for SetCommand {
     fn name(&self) -> String {
         return "Set Command".to_string();
     }
-    fn run_with_context(&self, ctx: &mut Context) -> FnResult {
+    fn run_with_context(&self, state: &PicoState, ctx: &mut Context) -> FnResult {
         info!("RUNNING SET");
 
         match &self.set {
             Settable::Extractor(extraction) => {
-                let extracted_values = extraction.run_with_context(ctx)?;
+                let extracted_values = extraction.run_with_context(state, ctx)?;
                 match extracted_values {
                     ExecutionResult::Setting(dict) => {
                         for (key, value) in dict {
@@ -139,7 +139,7 @@ impl Execution for SetCommand {
             }
 
             Settable::ValueProducing(var_name, value_producer) => {
-                let produced_value = value_producer.run_with_context(ctx)?;
+                let produced_value = value_producer.run_with_context(state, ctx)?;
 
                 debug!("Produced value = {:?}", produced_value);
 
@@ -187,7 +187,7 @@ impl Execution for StopCommand {
     fn name(&self) -> String {
         return "Stop Command".to_string();
     }
-    fn run_with_context(&self, _ctx: &mut Context) -> FnResult {
+    fn run_with_context(&self, _state: &PicoState, _ctx: &mut Context) -> FnResult {
         debug!("stopping because {:?}", self.stop);
         Ok(ExecutionResult::Stop(Some(self.stop.clone())))
     }
@@ -201,7 +201,7 @@ impl Execution for BreakToCommand {
     fn name(&self) -> String {
         return "BreakTo Command".to_string();
     }
-    fn run_with_context(&self, _ctx: &mut Context) -> FnResult {
+    fn run_with_context(&self, _state: &PicoState, _ctx: &mut Context) -> FnResult {
         debug!("breaking to {:?}", self.r#break);
         Ok(ExecutionResult::BreakTo(self.r#break))
     }
@@ -221,15 +221,15 @@ impl Execution for Command {
     fn name(&self) -> String {
         return "Command".to_string();
     }
-    fn run_with_context(&self, ctx: &mut Context) -> FnResult {
+    fn run_with_context(&self, state: &PicoState, ctx: &mut Context) -> FnResult {
         info!("Running command...");
         match self {
-            Command::IfThenElse(ite) => ite.run_with_context(ctx),
-            Command::Log(log) => log.run_with_context(ctx),
-            Command::DebugLog(debug_log) => debug_log.run_with_context(ctx),
-            Command::BreakTo(bto) => bto.run_with_context(ctx),
-            Command::Stop(sto) => sto.run_with_context(ctx),
-            Command::Set(se) => se.run_with_context(ctx),
+            Command::IfThenElse(ite) => ite.run_with_context(state, ctx),
+            Command::Log(log) => log.run_with_context(state, ctx),
+            Command::DebugLog(debug_log) => debug_log.run_with_context(state, ctx),
+            Command::BreakTo(bto) => bto.run_with_context(state, ctx),
+            Command::Stop(sto) => sto.run_with_context(state, ctx),
+            Command::Set(se) => se.run_with_context(state, ctx),
         }
     }
 }
@@ -244,13 +244,13 @@ impl Execution for Action {
     fn name(&self) -> String {
         return "Action".to_string();
     }
-    fn run_with_context(&self, ctx: &mut Context) -> FnResult {
+    fn run_with_context(&self, state: &PicoState, ctx: &mut Context) -> FnResult {
         return match self {
-            Action::Command(command) => command.run_with_context(ctx),
+            Action::Command(command) => command.run_with_context(state, ctx),
             Action::Commands(commands) => {
                 for command in commands {
                     debug!("Running a command {:?}", command);
-                    let result = command.run_with_context(ctx)?;
+                    let result = command.run_with_context(state, ctx)?;
                     debug!("result: {:?}", result);
                     match result {
                         ExecutionResult::Stop(stopping_reason) => {
@@ -293,9 +293,9 @@ impl Execution for IfThenElse {
         return s;
     }
 
-    fn run_with_context(&self, ctx: &mut Context) -> FnResult {
+    fn run_with_context(&self, state: &PicoState, ctx: &mut Context) -> FnResult {
         info!("running ITE -> {:?}", self.uuid);
-        let if_result = self.r#if.run_with_context(ctx)?;
+        let if_result = self.r#if.run_with_context(state, ctx)?;
         match if_result {
             ExecutionResult::BreakTo(bto) => return Ok(ExecutionResult::BreakTo(bto)),
             ExecutionResult::Stop(stp) => return Ok(ExecutionResult::Stop(stp)),
@@ -307,10 +307,10 @@ impl Execution for IfThenElse {
                     debug!("ITE got boolean back {:?}", b);
 
                     let branch_result = match b {
-                        true => self.then.run_with_context(ctx),
+                        true => self.then.run_with_context(state, ctx),
                         false => match &self.r#else {
                             None => Ok(ExecutionResult::Continue(PicoValue::Boolean(true))),
-                            Some(else_branch) => else_branch.run_with_context(ctx),
+                            Some(else_branch) => else_branch.run_with_context(state, ctx),
                         },
                     };
                     // then OR else has run, check the result

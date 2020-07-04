@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::command::{Execution, ExecutionResult, FnResult};
-use crate::context::Context;
+use crate::context::{Context, PicoState};
 use crate::errors::PicoError;
 use crate::lookups::LookupCommand;
 use regex::Regex;
@@ -27,7 +27,7 @@ impl Execution for PicoValue {
         return "PicoValue".to_string();
     }
 
-    fn run_with_context(&self, _ctx: &mut Context) -> FnResult {
+    fn run_with_context(&self, _state: &PicoState, _ctx: &mut Context) -> FnResult {
         trace!("pico cloning");
         return Ok(ExecutionResult::Continue(self.clone()));
     }
@@ -86,7 +86,7 @@ impl Execution for VarLookup {
         return "VarLookup".to_string();
     }
 
-    fn run_with_context(&self, ctx: &mut Context) -> FnResult {
+    fn run_with_context(&self, _state: &PicoState, ctx: &mut Context) -> FnResult {
         match &self.var {
             // Plain lookup in ctx variables
             VarValue::Lookup(s) => {
@@ -135,9 +135,9 @@ impl Execution for Var {
         return "Var".to_string();
     }
 
-    fn run_with_context(&self, ctx: &mut Context) -> FnResult {
+    fn run_with_context(&self, state: &PicoState, ctx: &mut Context) -> FnResult {
         match self {
-            Var::Lookup(lookup) => lookup.run_with_context(ctx),
+            Var::Lookup(lookup) => lookup.run_with_context(state, ctx),
             Var::Literal(literal) => Ok(ExecutionResult::Continue(literal.clone())),
         }
     }
@@ -159,15 +159,15 @@ impl Execution for ValueProducer {
         return "Var".to_string();
     }
 
-    fn run_with_context(&self, ctx: &mut Context) -> FnResult {
+    fn run_with_context(&self, state: &PicoState, ctx: &mut Context) -> FnResult {
         trace!("producer running..");
         match self {
-            ValueProducer::Lookup(lookup) => lookup.run_with_context(ctx),
-            ValueProducer::Literal(literal) => literal.run_with_context(ctx),
-            ValueProducer::Slice(slice) => slice.run_with_context(ctx),
-            ValueProducer::ConCat(concat) => concat.run_with_context(ctx),
-            ValueProducer::Extract(extract) => extract.run_with_context(ctx),
-            ValueProducer::DictionaryLookup(dict) => dict.run_with_context(ctx),
+            ValueProducer::Lookup(lookup) => lookup.run_with_context(state, ctx),
+            ValueProducer::Literal(literal) => literal.run_with_context(state, ctx),
+            ValueProducer::Slice(slice) => slice.run_with_context(state, ctx),
+            ValueProducer::ConCat(concat) => concat.run_with_context(state, ctx),
+            ValueProducer::Extract(extract) => extract.run_with_context(state, ctx),
+            ValueProducer::DictionaryLookup(dict) => dict.run_with_context(state, ctx),
         }
     }
 }
@@ -185,8 +185,8 @@ impl Execution for Extract {
         return String::from("extract");
     }
 
-    fn run_with_context(&self, ctx: &mut Context) -> FnResult {
-        let with_value = self.extract.1.run_with_context(ctx)?;
+    fn run_with_context(&self, state: &PicoState, ctx: &mut Context) -> FnResult {
+        let with_value = self.extract.1.run_with_context(state, ctx)?;
         match with_value {
             ExecutionResult::Continue(continuation) => match continuation {
                 PicoValue::String(string_value) => {
@@ -228,11 +228,11 @@ impl Execution for ConCat {
         return "concat".to_string();
     }
 
-    fn run_with_context(&self, ctx: &mut Context) -> FnResult {
+    fn run_with_context(&self, state: &PicoState, ctx: &mut Context) -> FnResult {
         let words = &self
             .concat
             .iter()
-            .map(|e| e.run_with_context(ctx))
+            .map(|e| e.run_with_context(state, ctx))
             .filter(|x| x.is_ok())
             .filter_map(Result::ok)
             .filter_map(|p| match p {
@@ -326,9 +326,9 @@ impl Execution for Slice {
         return "slice".to_string();
     }
 
-    fn run_with_context(&self, ctx: &mut Context) -> FnResult {
+    fn run_with_context(&self, state: &PicoState, ctx: &mut Context) -> FnResult {
         info!("slicing");
-        let s = self.slice.0.run_with_context(ctx)?;
+        let s = self.slice.0.run_with_context(state, ctx)?;
         let start_index = self.slice.1;
         //let endIndex = self.slice.2;
 

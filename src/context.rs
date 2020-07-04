@@ -60,14 +60,20 @@ impl Context {
   }
 }
 
-pub struct PicoState {
-  lookup_tables: HashMap<String, LookupTable>,
+#[derive(Debug)]
+pub struct PicoState<'a> {
+  lookup_tables: &'a HashMap<String, String>,
+  pub more_lookups: &'a HashMap<String, LookupTable>,
 }
 
-impl PicoState {
-  pub fn new() -> Self {
+impl<'a> PicoState<'a> {
+  pub fn new(
+    plookups: &'a HashMap<String, String>,
+    more: &'a HashMap<String, LookupTable>,
+  ) -> Self {
     Self {
-      lookup_tables: HashMap::new(),
+      lookup_tables: plookups,
+      more_lookups: more,
     }
   }
 
@@ -75,7 +81,7 @@ impl PicoState {
     let mut i = LookupTable::new();
 
     for (key, value) in &table.entries {
-      i.entries.insert(key.to_string(), *value);
+      //i.entries.insert(key.to_string(), *value);
     }
   }
 }

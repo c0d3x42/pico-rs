@@ -7,12 +7,13 @@ extern crate valico;
 #[macro_use]
 extern crate log;
 
+use std::collections::HashMap;
 use std::fs::File;
 
 extern crate picolang;
 
 use picolang::command::RuleFile;
-use picolang::context::Context;
+use picolang::context::{Context, PicoState};
 use picolang::values::PicoValue;
 
 trait Initializable {
@@ -118,7 +119,19 @@ fn main() {
     .variables
     .insert("op".to_string(), PicoValue::String("OP".to_string()));
 
-  let result = picolang::runners::run(&pico_rule.root, &mut ctx);
+  let mut sth: HashMap<String, String> = HashMap::new();
+  sth.insert(String::from("a"), String::from("A"));
+
+  let some_lookups = match pico_rule.lookups {
+    Some(l) => l,
+    None => HashMap::new(),
+  };
+
+  let mut ps = PicoState::new(&sth, &some_lookups);
+
+  info!("PS = {:?}", ps);
+
+  let result = picolang::runners::run(&ps, &pico_rule.root, &mut ctx);
   match result {
     Ok(_) => info!("OK"),
     Err(e) => warn!("oopsie : {}", e),

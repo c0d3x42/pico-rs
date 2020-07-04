@@ -48,7 +48,10 @@
                     "set": [
                         "service",
                         {
-                            "lookup": "localhost"
+                            "lookup": [
+                                "hostname-to-service",
+                                "localhost"
+                            ]
                         }
                     ]
                 },
