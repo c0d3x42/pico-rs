@@ -43,7 +43,7 @@ impl Execution for LookupCommand {
         String::from("lookup")
     }
 
-    fn run_with_context(&self, state: &PicoState, _ctx: &mut Context) -> FnResult {
+    fn run_with_context(&self, state: &mut PicoState, _ctx: &mut Context) -> FnResult {
         info!(
             "Lookup Dictionary {:?} -> {:?}",
             self.lookup.0, self.lookup.1

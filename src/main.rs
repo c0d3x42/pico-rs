@@ -131,7 +131,7 @@ fn main() {
 
   info!("PS = {:?}", ps);
 
-  let result = picolang::runners::run(&ps, &pico_rule.root, &mut ctx);
+  let result = picolang::runners::run(&mut ps, &pico_rule.root, &mut ctx);
   match result {
     Ok(_) => info!("OK"),
     Err(e) => warn!("oopsie : {}", e),
@@ -141,5 +141,6 @@ fn main() {
 
   println!("JSON = {:?}", j);
 
+  info!("PS = {:?}", ps);
   println!("Final CTX {:?}", ctx.local_variables);
 }

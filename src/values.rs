@@ -27,7 +27,7 @@ impl Execution for PicoValue {
         return "PicoValue".to_string();
     }
 
-    fn run_with_context(&self, _state: &PicoState, _ctx: &mut Context) -> FnResult {
+    fn run_with_context(&self, _state: &mut PicoState, _ctx: &mut Context) -> FnResult {
         trace!("pico cloning");
         return Ok(ExecutionResult::Continue(self.clone()));
     }
@@ -86,7 +86,7 @@ impl Execution for VarLookup {
         return "VarLookup".to_string();
     }
 
-    fn run_with_context(&self, _state: &PicoState, ctx: &mut Context) -> FnResult {
+    fn run_with_context(&self, _state: &mut PicoState, ctx: &mut Context) -> FnResult {
         match &self.var {
             // Plain lookup in ctx variables
             VarValue::Lookup(s) => {
@@ -135,7 +135,7 @@ impl Execution for Var {
         return "Var".to_string();
     }
 
-    fn run_with_context(&self, state: &PicoState, ctx: &mut Context) -> FnResult {
+    fn run_with_context(&self, state: &mut PicoState, ctx: &mut Context) -> FnResult {
         match self {
             Var::Lookup(lookup) => lookup.run_with_context(state, ctx),
             Var::Literal(literal) => Ok(ExecutionResult::Continue(literal.clone())),
@@ -159,7 +159,7 @@ impl Execution for ValueProducer {
         return "Var".to_string();
     }
 
-    fn run_with_context(&self, state: &PicoState, ctx: &mut Context) -> FnResult {
+    fn run_with_context(&self, state: &mut PicoState, ctx: &mut Context) -> FnResult {
         trace!("producer running..");
         match self {
             ValueProducer::Lookup(lookup) => lookup.run_with_context(state, ctx),
@@ -185,7 +185,7 @@ impl Execution for Extract {
         return String::from("extract");
     }
 
-    fn run_with_context(&self, state: &PicoState, ctx: &mut Context) -> FnResult {
+    fn run_with_context(&self, state: &mut PicoState, ctx: &mut Context) -> FnResult {
         let with_value = self.extract.1.run_with_context(state, ctx)?;
         match with_value {
             ExecutionResult::Continue(continuation) => match continuation {
@@ -228,7 +228,7 @@ impl Execution for ConCat {
         return "concat".to_string();
     }
 
-    fn run_with_context(&self, state: &PicoState, ctx: &mut Context) -> FnResult {
+    fn run_with_context(&self, state: &mut PicoState, ctx: &mut Context) -> FnResult {
         let words = &self
             .concat
             .iter()
@@ -326,7 +326,7 @@ impl Execution for Slice {
         return "slice".to_string();
     }
 
-    fn run_with_context(&self, state: &PicoState, ctx: &mut Context) -> FnResult {
+    fn run_with_context(&self, state: &mut PicoState, ctx: &mut Context) -> FnResult {
         info!("slicing");
         let s = self.slice.0.run_with_context(state, ctx)?;
         let start_index = self.slice.1;

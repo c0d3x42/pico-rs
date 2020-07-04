@@ -14,7 +14,7 @@ fn _run_instruction(_ite: IfThenElse, _context: Context) -> EndReason {
 }
 
 pub fn run(
-    state: &PicoState,
+    state: &mut PicoState,
     instructions: &Vec<IfThenElse>,
     context: &mut Context,
 ) -> Result<EndReason, String> {

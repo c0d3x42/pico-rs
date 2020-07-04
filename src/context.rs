@@ -3,6 +3,7 @@ use crate::PicoValue;
 
 use serde::Serialize;
 use std::collections::HashMap;
+use uuid::Uuid;
 
 #[derive(Debug, Clone, Serialize)]
 pub enum StateValue {
@@ -16,7 +17,6 @@ pub type VariablesMap = HashMap<String, PicoValue>;
 #[derive(Serialize)]
 pub struct Context {
   pub variables: VariablesMap,
-  pub state: HashMap<String, StateValue>,
   pub local_variables: VariablesMap,
   pub lookup_tables: Lookups,
 }
@@ -24,7 +24,6 @@ pub struct Context {
 impl Context {
   pub fn new() -> Context {
     Context {
-      state: HashMap::new(),
       variables: HashMap::new(),
       local_variables: HashMap::new(),
       lookup_tables: HashMap::new(),
@@ -42,40 +41,27 @@ impl Context {
     }
     None
   }
-
-  pub fn add_table(&mut self, table_name: &String, lookups: &LookupTable) {
-    let lookup_table = self.lookup_tables.get(table_name);
-
-    //self.lookup_tables.insert(table_name.to_string(), lookups.clone());
-  }
-
-  pub fn lookup(&self, table_name: &String, entry_name: &String) -> Option<&PicoValue> {
-    if let Some(table) = self.lookup_tables.get(table_name) {
-      let t = table.lookup(entry_name);
-
-      return Some(t);
-    }
-    return None;
-  }
 }
 
 #[derive(Debug)]
 pub struct PicoState<'a> {
   pub lookup_tables: &'a HashMap<String, LookupTable>,
+  pub branch_hits: HashMap<Uuid, u64>,
 }
 
 impl<'a> PicoState<'a> {
   pub fn new(plookups: &'a HashMap<String, LookupTable>) -> Self {
     Self {
       lookup_tables: plookups,
+      branch_hits: HashMap::new(),
     }
   }
 
-  pub fn add(&self, table_name: &String, table: &LookupTable) {
-    let mut i = LookupTable::new();
-
-    for (key, value) in &table.entries {
-      //i.entries.insert(key.to_string(), *value);
+  pub fn increment_branch_hit(&mut self, uuid: &Uuid) {
+    if let Some(v) = self.branch_hits.get_mut(uuid) {
+      *v += 1;
+    } else {
+      self.branch_hits.insert(uuid.clone(), 1);
     }
   }
 }
