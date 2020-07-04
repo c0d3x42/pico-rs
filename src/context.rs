@@ -1,4 +1,3 @@
-use crate::errors::PicoError;
 use crate::lookups::{LookupTable, Lookups};
 use crate::PicoValue;
 
@@ -62,18 +61,13 @@ impl Context {
 
 #[derive(Debug)]
 pub struct PicoState<'a> {
-  lookup_tables: &'a HashMap<String, String>,
-  pub more_lookups: &'a HashMap<String, LookupTable>,
+  pub lookup_tables: &'a HashMap<String, LookupTable>,
 }
 
 impl<'a> PicoState<'a> {
-  pub fn new(
-    plookups: &'a HashMap<String, String>,
-    more: &'a HashMap<String, LookupTable>,
-  ) -> Self {
+  pub fn new(plookups: &'a HashMap<String, LookupTable>) -> Self {
     Self {
       lookup_tables: plookups,
-      more_lookups: more,
     }
   }
 

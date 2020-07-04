@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use crate::command::{Execution, ExecutionResult, FnResult};
 use crate::context::{Context, PicoState};
 use crate::errors::PicoError;
-use crate::{PicoValue, ValueProducer};
+use crate::PicoValue;
 
 pub type LookupDict = HashMap<String, PicoValue>;
 
@@ -49,7 +49,7 @@ impl Execution for LookupCommand {
             self.lookup.0, self.lookup.1
         );
 
-        if let Some(t) = state.more_lookups.get(&self.lookup.0) {
+        if let Some(t) = state.lookup_tables.get(&self.lookup.0) {
             if let Some(value) = t.entries.get(&self.lookup.1) {
                 match value {
                     PicoValue::String(s) => {

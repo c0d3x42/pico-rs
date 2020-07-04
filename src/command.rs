@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use crate::conditions::Condition;
 use crate::context::{Context, PicoState};
 use crate::errors::PicoError;
-use crate::lookups::{LookupTable, Lookups};
+use crate::lookups::Lookups;
 use crate::values::{Extract, PicoValue, ValueProducer};
 //use crate::PicoValue;
 

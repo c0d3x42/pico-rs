@@ -127,7 +127,7 @@ fn main() {
     None => HashMap::new(),
   };
 
-  let mut ps = PicoState::new(&sth, &some_lookups);
+  let mut ps = PicoState::new(&some_lookups);
 
   info!("PS = {:?}", ps);
 

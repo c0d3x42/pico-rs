@@ -22,7 +22,7 @@ impl Execution for VarExistsCondition {
         return "VarExists".to_string();
     }
 
-    fn run_with_context(&self, state: &PicoState, ctx: &mut Context) -> FnResult {
+    fn run_with_context(&self, _state: &PicoState, ctx: &mut Context) -> FnResult {
         if let Some(_v) = ctx.get_value(&self.exists) {
             return Ok(ExecutionResult::Continue(PicoValue::Boolean(true)));
         }
@@ -46,7 +46,7 @@ impl Execution for VarMissingCondition {
         return "VarMissing".to_string();
     }
 
-    fn run_with_context(&self, state: &PicoState, ctx: &mut Context) -> FnResult {
+    fn run_with_context(&self, _state: &PicoState, ctx: &mut Context) -> FnResult {
         let final_result = match ctx.get_value(&self.missing) {
             Some(_v) => Ok(ExecutionResult::Continue(PicoValue::Boolean(false))),
             None => Ok(ExecutionResult::Continue(PicoValue::Boolean(true))),
