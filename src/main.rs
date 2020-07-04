@@ -131,16 +131,18 @@ fn main() {
 
   info!("PS = {:?}", ps);
 
+  //for _x in 0..100000 {
   let result = picolang::runners::run(&mut ps, &pico_rule.root, &mut ctx);
   match result {
     Ok(_) => info!("OK"),
     Err(e) => warn!("oopsie : {}", e),
   }
+  //}
 
   let j = serde_json::to_string(&pico_rule.root);
 
   println!("JSON = {:?}", j);
 
-  info!("PS = {:?}", ps);
+  println!("PS = {:?}", ps);
   println!("Final CTX {:?}", ctx.local_variables);
 }

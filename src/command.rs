@@ -158,7 +158,7 @@ impl Execution for SetCommand {
                         // convert dictionary to ctx values prefixed by var_name
 
                         for (key, value) in dict {
-                            let new_key = format!("{}_{}", var_name, key);
+                            let new_key = format!("{}{}", var_name, key);
                             ctx.set_value(&new_key, value);
                         }
                     }
