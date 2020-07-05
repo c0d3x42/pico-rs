@@ -1,0 +1,30 @@
+{
+    "version": "1.1",
+    "lookups": {
+        "facility-to-service": {
+            "entries": {
+                "local0": "development",
+                "local1": "production"
+            },
+            "default": "unknown"
+        }
+    },
+    "root": [
+        {
+            "uuid": "ce5b1618-cfb0-4b3d-9dbf-9c3fb3f778de",
+            "if": {
+                "match": [
+                    "x",
+                    {
+                        "var": [
+                            "q",
+                            "x"
+                        ]
+                    }
+                ]
+            },
+            "then": [],
+            "else": []
+        }
+    ]
+}

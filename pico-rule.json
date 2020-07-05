@@ -11,6 +11,9 @@
     },
     "root": [
         {
+            "include": "other-rules.json"
+        },
+        {
             "uuid": "de5b1618-cfb0-4b3d-9dbf-9c3fb3f778de",
             "if": {
                 "match": [

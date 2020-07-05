@@ -4,6 +4,7 @@ use std::collections::HashMap;
 use crate::conditions::Condition;
 use crate::context::{Context, PicoState};
 use crate::errors::PicoError;
+use crate::include::IncludeFile;
 use crate::lookups::Lookups;
 use crate::values::{Extract, PicoValue, ValueProducer};
 //use crate::PicoValue;
@@ -356,8 +357,15 @@ impl Execution for IfThenElse {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
+#[serde(untagged)]
+pub enum RuleFileRoot {
+    IfThenElse(IfThenElse),
+    IncludeFile(IncludeFile),
+}
+
+#[derive(Serialize, Deserialize, Debug)]
 pub struct RuleFile {
-    pub root: Vec<IfThenElse>,
+    pub root: Vec<RuleFileRoot>,
     version: Option<String>,
 
     pub lookups: Option<Lookups>,
