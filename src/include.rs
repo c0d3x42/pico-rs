@@ -9,7 +9,10 @@ use crate::errors::PicoError;
 use crate::values::PicoValue;
 
 #[derive(Serialize, Debug)]
-pub struct IncludeFileDriver(String);
+pub struct IncludeFileDriver {
+    _filename: String,
+    rule: RuleFile,
+}
 
 impl<'de> Deserialize<'de> for IncludeFileDriver {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
@@ -21,10 +24,13 @@ impl<'de> Deserialize<'de> for IncludeFileDriver {
         let s = String::deserialize(deserializer)?;
         debug!("deserializing {:?}", s);
 
-        let nf: RuleFile = serde_json::from_reader(File::open(s).unwrap()).unwrap();
+        let nf: RuleFile = serde_json::from_reader(File::open(&s).unwrap()).unwrap();
         debug!("NEW RULE FILE {:?}", nf);
 
-        Ok(IncludeFileDriver(String::from("lop")))
+        Ok(IncludeFileDriver {
+            _filename: s,
+            rule: nf,
+        })
     }
 }
 
@@ -38,7 +44,9 @@ impl Execution for IncludeFile {
         format!("include [{:?}]", self.include).to_string()
     }
 
-    fn run_with_context(&self, _state: &mut PicoState, _ctx: &mut Context) -> FnResult {
-        Ok(ExecutionResult::Continue(PicoValue::Boolean(true)))
+    fn run_with_context(&self, state: &mut PicoState, ctx: &mut Context) -> FnResult {
+        info!("running included module");
+        self.include.rule.run_with_context(state, ctx)
+        //Ok(ExecutionResult::Continue(PicoValue::Boolean(true)))
     }
 }

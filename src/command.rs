@@ -375,6 +375,35 @@ impl Execution for RuleFile {
     fn name(&self) -> String {
         return "rule-file".to_string();
     }
+
+    fn run_with_context(&self, state: &mut PicoState, context: &mut Context) -> FnResult {
+        for instruction in &self.root {
+            match instruction {
+                RuleFileRoot::IfThenElse(ite) => {
+                    info!("--> {:?}", ite.name());
+                    let run_result = ite.run_with_context(state, context);
+                    match run_result {
+                        Ok(_) => {}
+                        Err(_bad_thing) => {
+                            return Err(PicoError::Crash(format!("bad thing: {}", _bad_thing)))
+                        }
+                    }
+                    info!("<-- {:?}", ite.name());
+                }
+                RuleFileRoot::IncludeFile(inc) => {
+                    info!("Including... {:?}", inc.name());
+                    let include_result = inc.run_with_context(state, context);
+                    match include_result {
+                        Ok(_) => {}
+                        Err(_bad_thing) => {
+                            return Err(PicoError::Crash(format!("bad thing: {}", _bad_thing)))
+                        }
+                    }
+                }
+            }
+        }
+        Ok(ExecutionResult::Continue(PicoValue::Boolean(true)))
+    }
 }
 
 #[test]
