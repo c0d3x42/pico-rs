@@ -1,13 +1,10 @@
-use serde::ser::SerializeStruct;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use serde_json;
 use std::fs::File;
 
 use crate::command::RuleFile;
-use crate::command::{Execution, ExecutionResult, FnResult};
+use crate::command::{Execution, FnResult};
 use crate::context::{Context, PicoState};
-use crate::errors::PicoError;
-use crate::values::PicoValue;
 
 #[derive(Debug)]
 pub struct IncludeFileDriver {
@@ -20,7 +17,7 @@ impl<'de> Deserialize<'de> for IncludeFileDriver {
     where
         D: Deserializer<'de>,
     {
-        use serde::de::Error;
+        // use serde::de::Error;
         debug!("deserializing.1 ");
         let s = String::deserialize(deserializer)?;
         debug!("deserializing {:?}", s);
