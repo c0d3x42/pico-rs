@@ -1,4 +1,5 @@
-use serde::{Deserialize, Deserializer, Serialize};
+use serde::ser::SerializeStruct;
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use serde_json;
 use std::fs::File;
 
@@ -8,7 +9,7 @@ use crate::context::{Context, PicoState};
 use crate::errors::PicoError;
 use crate::values::PicoValue;
 
-#[derive(Serialize, Debug)]
+#[derive(Debug)]
 pub struct IncludeFileDriver {
     _filename: String,
     rule: RuleFile,
@@ -31,6 +32,16 @@ impl<'de> Deserialize<'de> for IncludeFileDriver {
             _filename: s,
             rule: nf,
         })
+    }
+}
+
+impl Serialize for IncludeFileDriver {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        // FIXME: needs to write out the self.rule to self._filename
+        serializer.serialize_str(&self._filename)
     }
 }
 
