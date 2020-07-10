@@ -3,7 +3,10 @@ extern crate serde;
 extern crate serde_json;
 extern crate tinytemplate;
 extern crate valico;
+#[macro_use]
+extern crate serde_derive;
 
+use serde::{de::DeserializeSeed, Deserialize, Deserializer};
 #[macro_use]
 extern crate log;
 
@@ -14,6 +17,9 @@ extern crate picolang;
 
 use picolang::command::RuleFile;
 use picolang::context::{Context, PicoState};
+use picolang::include::{
+  load_file, Annotated, Event, Info, InfoSeed, LoadedCache, RequireFile, RequireSeed,
+};
 use picolang::values::PicoValue;
 
 trait Initializable {
@@ -147,4 +153,27 @@ fn main() {
 
   println!("PS = {:?}", ps);
   println!("Final CTX {:?}", ctx.local_variables);
+
+  let json = r#"{
+        "event_id": "864ee97977bf43ac96d74f7486d138ab"
+    }"#;
+  let mut deserializer = serde_json::Deserializer::from_str(json);
+
+  let mut hm: HashMap<String, String> = HashMap::new();
+
+  let seed = InfoSeed(
+    Info {
+      path: "foo".to_string(),
+      hm: hm,
+    },
+    Default::default(),
+  );
+  seed.blah();
+  let result: Annotated<Event> = seed.deserialize(&mut deserializer).unwrap();
+  println!("{:#?}", result);
+
+  let mut cache: LoadedCache<RuleFile> = HashMap::new();
+  load_file("other-rules.json", &mut cache);
+
+  println!("cache: {:?}", cache);
 }

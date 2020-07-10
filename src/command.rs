@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use crate::conditions::Condition;
 use crate::context::{Context, PicoState};
 use crate::errors::PicoError;
-use crate::include::IncludeFile;
+use crate::include::{Event, IncludeFile, RequireFile};
 use crate::lookups::Lookups;
 use crate::values::{Extract, PicoValue, ValueProducer};
 //use crate::PicoValue;
@@ -361,6 +361,7 @@ impl Execution for IfThenElse {
 pub enum RuleFileRoot {
     IfThenElse(IfThenElse),
     IncludeFile(IncludeFile),
+    //Event(Event),
 }
 
 #[derive(Serialize, Deserialize, Debug)]
