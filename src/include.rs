@@ -189,6 +189,7 @@ pub fn populate_lookups(file_cache: &LoadedCache<RuleFile>) -> HashMap<String, R
 
 pub struct PicoRules {
     rule_cache: LoadedCache<RuleFile>,
+    lookup_cache: HashMap<String, Rc<LookupTable>>,
     entrypoint: String,
 }
 
@@ -200,14 +201,19 @@ impl PicoRules {
         // load the initial rule file
         load_file(filename, &mut rule_cache, &mut lookup_cache);
 
-        let lookups = populate_lookups(&rule_cache);
+        let lookup_cache = populate_lookups(&rule_cache);
 
         // let ps = PicoState::new(&lookups);
 
         PicoRules {
             rule_cache,
+            lookup_cache,
             entrypoint: String::from(filename),
         }
+    }
+    pub fn make_state(&self) -> PicoState {
+        let ps = PicoState::new(&self.lookup_cache);
+        return ps;
     }
 
     pub fn build(&mut self) -> &Self {
@@ -217,6 +223,14 @@ impl PicoRules {
     pub fn run_with_context(&self, context: &mut Context) {
         let loaded_file = self.rule_cache.get(&self.entrypoint).unwrap();
 
+        let mut ps = self.make_state();
+
+        loaded_file
+            .content
+            .as_ref()
+            .unwrap()
+            .run_with_context(&mut ps, context)
+            .expect("something");
         /*
         let mut ps = PicoState::new(&self.lookups);
         loaded_file

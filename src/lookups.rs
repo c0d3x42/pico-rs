@@ -50,23 +50,12 @@ impl Execution for LookupCommand {
             self.lookup.0, self.lookup.1
         );
 
-        if let Some(t) = state.lookup_tables.get(&self.lookup.0) {
-            if let Some(value) = t.entries.get(&self.lookup.1) {
-                match value {
-                    PicoValue::String(s) => {
-                        trace!("Found lookup value {:?}", s);
-                        return Ok(ExecutionResult::Continue(PicoValue::String(s.to_string())));
-                    }
-                    _ => return Err(PicoError::NoSuchValue),
+        if let Some(v) = state.get_lookup_value(&self.lookup.0, &self.lookup.1) {
+            match v {
+                PicoValue::String(s) => {
+                    return Ok(ExecutionResult::Continue(PicoValue::String(s.to_string())))
                 }
-            } else {
-                trace!("lookup using default {:?}", t.default);
-                match &t.default {
-                    PicoValue::String(s) => {
-                        return Ok(ExecutionResult::Continue(PicoValue::String(s.to_string())))
-                    }
-                    _ => return Err(PicoError::NoSuchValue),
-                }
+                _ => return Err(PicoError::NoSuchValue),
             }
         }
 
