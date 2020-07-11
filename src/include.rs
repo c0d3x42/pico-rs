@@ -201,6 +201,7 @@ impl PicoRules {
         // load the initial rule file
         load_file(filename, &mut rule_cache, &mut lookup_cache);
 
+        // populate the lookup tables
         let lookup_cache = populate_lookups(&rule_cache);
 
         // let ps = PicoState::new(&lookups);
@@ -220,16 +221,14 @@ impl PicoRules {
         self
     }
 
-    pub fn run_with_context(&self, context: &mut Context) {
+    pub fn run_with_context(&self, state: &mut PicoState, context: &mut Context) {
         let loaded_file = self.rule_cache.get(&self.entrypoint).unwrap();
-
-        let mut ps = self.make_state();
 
         loaded_file
             .content
             .as_ref()
             .unwrap()
-            .run_with_context(&mut ps, context)
+            .run_with_context(state, context)
             .expect("something");
         /*
         let mut ps = PicoState::new(&self.lookups);
