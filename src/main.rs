@@ -17,7 +17,7 @@ extern crate picolang;
 
 use picolang::command::RuleFile;
 use picolang::context::{Context, PicoState};
-use picolang::include::{load_file, LoadedCache};
+use picolang::include::{load_file, populate_lookups, LoadedCache};
 use picolang::values::PicoValue;
 
 trait Initializable {
@@ -128,12 +128,15 @@ fn main() {
 
   let empty_map = HashMap::new();
 
+  /*
   let some_lookups = match &pico_rule.lookups {
     Some(l) => l,
     None => &empty_map,
   };
+  */
 
-  let mut ps = PicoState::new(&some_lookups);
+  //let mut ps = PicoState::new(&some_lookups);
+  let mut ps = PicoState::new(&empty_map);
 
   info!("PS = {:?}", ps);
 
@@ -153,7 +156,12 @@ fn main() {
   println!("Final CTX {:?}", ctx.local_variables);
 
   let mut cache: LoadedCache<RuleFile> = HashMap::new();
-  load_file("other-rules.json", &mut cache);
+  let mut lookup_cache = HashMap::new();
+  load_file("pico-rule.json", &mut cache, &mut lookup_cache);
 
   println!("cache: {:?}", cache);
+  println!("lookupcache: {:?}", lookup_cache);
+
+  let hm2 = populate_lookups(&cache);
+  println!("\nHM2: {:?} ", hm2);
 }

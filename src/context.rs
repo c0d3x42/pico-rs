@@ -45,12 +45,12 @@ impl Context {
 
 #[derive(Debug)]
 pub struct PicoState<'a> {
-  pub lookup_tables: &'a HashMap<String, LookupTable>,
+  pub lookup_tables: &'a HashMap<String, &'a LookupTable>,
   pub branch_hits: HashMap<Uuid, u64>,
 }
 
 impl<'a> PicoState<'a> {
-  pub fn new(plookups: &'a HashMap<String, LookupTable>) -> Self {
+  pub fn new(plookups: &'a HashMap<String, &LookupTable>) -> Self {
     Self {
       lookup_tables: plookups,
       branch_hits: HashMap::new(),

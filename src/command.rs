@@ -5,8 +5,9 @@ use crate::conditions::Condition;
 use crate::context::{Context, PicoState};
 use crate::errors::PicoError;
 use crate::include::IncludeFile;
-use crate::lookups::Lookups;
+use crate::lookups::{LookupTable, Lookups};
 use crate::values::{Extract, PicoValue, ValueProducer};
+use std::rc::Rc;
 //use crate::PicoValue;
 
 use std::result;
@@ -367,9 +368,17 @@ pub enum RuleFileRoot {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct RuleFile {
     pub root: Vec<RuleFileRoot>,
-    version: Option<String>,
+    #[serde(default = "RuleFile::default_version")]
+    version: String,
 
-    pub lookups: Option<Lookups>,
+    #[serde(default)]
+    pub lookups: Rc<Lookups>,
+}
+
+impl RuleFile {
+    pub fn default_version() -> String {
+        String::from("1.1")
+    }
 }
 
 impl Execution for RuleFile {

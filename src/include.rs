@@ -10,6 +10,7 @@ use std::rc::Rc;
 use crate::command::RuleFile;
 use crate::command::{Execution, ExecutionResult, FnResult, RuleFileRoot};
 use crate::context::{Context, PicoState};
+use crate::lookups::LookupTable;
 use crate::values::PicoValue;
 
 pub struct IncludedFileSeed<T = RuleFile> {
@@ -91,7 +92,11 @@ pub struct LoadedFile<T> {
 
 pub type LoadedCache<T> = HashMap<String, LoadedFile<T>>;
 
-pub fn load_file(filename: &str, cache: &mut LoadedCache<RuleFile>) {
+pub fn load_file(
+    filename: &str,
+    cache: &mut LoadedCache<RuleFile>,
+    lookup_cache: &mut HashMap<String, Rc<LookupTable>>,
+) {
     if cache.contains_key(filename) {
         warn!("circular filename: {}", filename);
         return;
@@ -122,11 +127,16 @@ pub fn load_file(filename: &str, cache: &mut LoadedCache<RuleFile>) {
         })
         .collect();
 
+    let lookup_iter = nf.lookups.iter();
+    for (key, table) in lookup_iter {
+        lookup_cache.insert(key.to_string(), Rc::clone(table));
+    }
+
     println!("values: {:?}", include_filenames);
     for ifilename in include_filenames {
         if ifilename != filename {
             warn!("attempt to include self again");
-            load_file(ifilename, cache);
+            load_file(ifilename, cache, lookup_cache);
         }
     }
 
@@ -136,4 +146,86 @@ pub fn load_file(filename: &str, cache: &mut LoadedCache<RuleFile>) {
     };
 
     cache.insert(String::from(filename), lf);
+}
+
+pub type LookupName = String;
+
+pub fn populate_lookups(file_cache: &LoadedCache<RuleFile>) -> HashMap<String, Rc<LookupTable>> {
+    let lookups: Vec<_> = file_cache
+        .values()
+        .filter_map(|loaded_file| match &loaded_file.content {
+            Some(c) => Some(&c.lookups),
+            None => None,
+        })
+        .collect();
+
+    println!("lookups: {:?}", lookups);
+
+    let mut hm: HashMap<String, Rc<LookupTable>> = HashMap::new();
+
+    for (filename, loaded_file) in file_cache {
+        if let Some(rule_file) = &loaded_file.content {
+            for (lookup_name, lookup_table) in rule_file.lookups.iter() {
+                hm.insert(lookup_name.to_string(), Rc::clone(lookup_table));
+            }
+        }
+    }
+
+    return hm;
+    /*
+    let lookups_with_values: Vec<_> = lookups.iter().filter_map(|v| v.as_ref()).collect();
+
+    println!("lookups values: {:?}", lookups_with_values);
+
+    let mut all_lookups: HashMap<String, &LookupTable> = HashMap::new();
+    for hm in lookups_with_values {
+        for (key, value) in hm {
+            all_lookups.insert(String::from(key), value);
+        }
+    }
+    all_lookups
+    */
+}
+
+pub struct PicoRules {
+    rule_cache: LoadedCache<RuleFile>,
+    entrypoint: String,
+}
+
+impl PicoRules {
+    pub fn new(filename: &str) -> Self {
+        let mut rule_cache = HashMap::new();
+        let mut lookup_cache = HashMap::new();
+
+        // load the initial rule file
+        load_file(filename, &mut rule_cache, &mut lookup_cache);
+
+        let lookups = populate_lookups(&rule_cache);
+
+        // let ps = PicoState::new(&lookups);
+
+        PicoRules {
+            rule_cache,
+            entrypoint: String::from(filename),
+        }
+    }
+
+    pub fn build(&mut self) -> &Self {
+        self
+    }
+
+    pub fn run_with_context(&self, context: &mut Context) {
+        let loaded_file = self.rule_cache.get(&self.entrypoint).unwrap();
+
+        /*
+        let mut ps = PicoState::new(&self.lookups);
+        loaded_file
+            .content
+            .as_ref()
+            .unwrap()
+            .run_with_context(&mut ps, context);
+
+        */
+        return;
+    }
 }
