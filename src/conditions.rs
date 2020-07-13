@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::command::{Execution, ExecutionResult, FnResult};
-use crate::context::{Context, PicoState};
+use crate::context::{PicoContext, PicoState};
 use crate::errors::PicoError;
 //use crate::values::{PicoValue, Var};
 use crate::{PicoValue, ValueProducer};
@@ -22,7 +22,7 @@ impl Execution for VarExistsCondition {
         return "VarExists".to_string();
     }
 
-    fn run_with_context(&self, _state: &mut PicoState, ctx: &mut Context) -> FnResult {
+    fn run_with_context(&self, _state: &mut PicoState, ctx: &mut PicoContext) -> FnResult {
         if let Some(_v) = ctx.get_value(&self.exists) {
             return Ok(ExecutionResult::Continue(PicoValue::Boolean(true)));
         }
@@ -46,7 +46,7 @@ impl Execution for VarMissingCondition {
         return "VarMissing".to_string();
     }
 
-    fn run_with_context(&self, _state: &mut PicoState, ctx: &mut Context) -> FnResult {
+    fn run_with_context(&self, _state: &mut PicoState, ctx: &mut PicoContext) -> FnResult {
         let final_result = match ctx.get_value(&self.missing) {
             Some(_v) => Ok(ExecutionResult::Continue(PicoValue::Boolean(false))),
             None => Ok(ExecutionResult::Continue(PicoValue::Boolean(true))),
@@ -77,7 +77,7 @@ impl Execution for And {
     fn name(&self) -> String {
         return "and".to_string();
     }
-    fn run_with_context(&self, state: &mut PicoState, ctx: &mut Context) -> FnResult {
+    fn run_with_context(&self, state: &mut PicoState, ctx: &mut PicoContext) -> FnResult {
         for condition in &self.and {
             let condition_result = condition.run_with_context(state, ctx)?;
 
@@ -111,7 +111,7 @@ impl Execution for Or {
         return "or".to_string();
     }
 
-    fn run_with_context(&self, state: &mut PicoState, ctx: &mut Context) -> FnResult {
+    fn run_with_context(&self, state: &mut PicoState, ctx: &mut PicoContext) -> FnResult {
         let condition_count = self.or.len();
         debug!("OR ...{:?}", condition_count);
 
@@ -144,7 +144,7 @@ impl Execution for Eq {
     fn name(&self) -> String {
         return "equality".to_string();
     }
-    fn run_with_context(&self, state: &mut PicoState, ctx: &mut Context) -> FnResult {
+    fn run_with_context(&self, state: &mut PicoState, ctx: &mut PicoContext) -> FnResult {
         trace!("Eq resolving...");
         let lhs = self.eq.0.run_with_context(state, ctx)?;
         let rhs = self.eq.1.run_with_context(state, ctx)?;
@@ -169,7 +169,7 @@ impl Execution for GreaterThan {
     fn name(&self) -> String {
         return "less than".to_string();
     }
-    fn run_with_context(&self, state: &mut PicoState, ctx: &mut Context) -> FnResult {
+    fn run_with_context(&self, state: &mut PicoState, ctx: &mut PicoContext) -> FnResult {
         let lhs = self.gt.0.run_with_context(state, ctx)?;
         let rhs = self.gt.1.run_with_context(state, ctx)?;
         match (lhs, rhs) {
@@ -189,7 +189,7 @@ impl Execution for LessThan {
     fn name(&self) -> String {
         return "less than".to_string();
     }
-    fn run_with_context(&self, state: &mut PicoState, ctx: &mut Context) -> FnResult {
+    fn run_with_context(&self, state: &mut PicoState, ctx: &mut PicoContext) -> FnResult {
         let lhs = self.lt.0.run_with_context(state, ctx)?;
         let rhs = self.lt.1.run_with_context(state, ctx)?;
         match (lhs, rhs) {
@@ -216,7 +216,7 @@ impl Execution for RegMatch {
         return "regmatch".to_string();
     }
 
-    fn run_with_context(&self, state: &mut PicoState, ctx: &mut Context) -> FnResult {
+    fn run_with_context(&self, state: &mut PicoState, ctx: &mut PicoContext) -> FnResult {
         debug!("Looking up regmatch/with");
 
         let with_value = self.regmatch.1.run_with_context(state, ctx)?;
@@ -254,7 +254,7 @@ impl Execution for StartsWith {
     fn name(&self) -> String {
         return "startswith".to_string();
     }
-    fn run_with_context(&self, state: &mut PicoState, ctx: &mut Context) -> FnResult {
+    fn run_with_context(&self, state: &mut PicoState, ctx: &mut PicoContext) -> FnResult {
         let needle_ctx = self.match_start.0.run_with_context(state, ctx)?;
         let haystack_ctx = self.match_start.1.run_with_context(state, ctx)?;
 
@@ -289,7 +289,7 @@ impl Execution for Match {
         return "match".to_string();
     }
 
-    fn run_with_context(&self, state: &mut PicoState, ctx: &mut Context) -> FnResult {
+    fn run_with_context(&self, state: &mut PicoState, ctx: &mut PicoContext) -> FnResult {
         info!("running match");
         let lhs = self.r#match.0.run_with_context(state, ctx)?;
         let rhs = self.r#match.1.run_with_context(state, ctx)?;
@@ -323,7 +323,7 @@ impl Execution for Not {
         return "not".to_string();
     }
 
-    fn run_with_context(&self, state: &mut PicoState, ctx: &mut Context) -> FnResult {
+    fn run_with_context(&self, state: &mut PicoState, ctx: &mut PicoContext) -> FnResult {
         let condition_result = self.not.run_with_context(state, ctx)?;
 
         match condition_result {
@@ -359,7 +359,7 @@ impl Execution for Condition {
         "condition".to_string()
     }
 
-    fn run_with_context(&self, state: &mut PicoState, ctx: &mut Context) -> FnResult {
+    fn run_with_context(&self, state: &mut PicoState, ctx: &mut PicoContext) -> FnResult {
         debug!("Checking condition {:?}", self);
         let condition_result = match self {
             Condition::And(and) => and.run_with_context(state, ctx),
@@ -380,7 +380,7 @@ impl Execution for Condition {
         match condition_result {
             Ok(result) => Ok(result),
             Err(error_result) => match error_result {
-                PicoError::NoSuchValue | PicoError::IncompatibleComparison => {
+                PicoError::NoSuchValue(_) | PicoError::IncompatibleComparison => {
                     info!("condition result was bad - mapping to false");
                     return Ok(ExecutionResult::Continue(PicoValue::Boolean(false)));
                 }

@@ -1,5 +1,5 @@
 use crate::command::{Execution, IfThenElse, RuleFile};
-use crate::context::{Context, PicoState};
+use crate::context::{PicoContext, PicoState};
 use crate::values::PicoValue;
 
 #[derive(Debug)]
@@ -9,14 +9,14 @@ pub enum EndReason {
     Crash(String),
 }
 
-fn _run_instruction(_ite: IfThenElse, _context: Context) -> EndReason {
+fn _run_instruction(_ite: IfThenElse, _context: PicoContext) -> EndReason {
     EndReason::Crash(format!("Not implemented"))
 }
 
 pub fn run(
     state: &mut PicoState,
     rule: &RuleFile,
-    context: &mut Context,
+    context: &mut PicoContext,
 ) -> Result<EndReason, String> {
     context
         .local_variables

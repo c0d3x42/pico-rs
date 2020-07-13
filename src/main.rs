@@ -13,10 +13,12 @@ extern crate log;
 use std::collections::HashMap;
 use std::fs::File;
 
+use anyhow::Result;
+
 extern crate picolang;
 
 use picolang::command::RuleFile;
-use picolang::context::{Context, PicoState};
+use picolang::context::{PicoContext, PicoState};
 use picolang::include::{load_file, populate_lookups, LoadedCache, PicoRules};
 use picolang::values::PicoValue;
 
@@ -54,7 +56,7 @@ impl ContextVars {
 }
 */
 
-fn main() {
+fn main() -> Result<()> {
   env_logger::init();
 
   /*
@@ -113,7 +115,7 @@ fn main() {
   info!("Pico rules: {:?}", pico_rule);
   */
 
-  let mut ctx = Context::new();
+  let mut ctx = PicoContext::new();
   ctx
     .variables
     .insert("x".to_string(), PicoValue::String("xxxx".to_string()));
@@ -160,7 +162,7 @@ fn main() {
   */
   let mut cache: LoadedCache<RuleFile> = HashMap::new();
   let mut lookup_cache = HashMap::new();
-  load_file("pico-rule.json", &mut cache, &mut lookup_cache);
+  let lfr = load_file("pico-rule.json", &mut cache, &mut lookup_cache)?;
 
   println!("cache: {:?}", cache);
   println!("lookupcache: {:?}", lookup_cache);
@@ -168,10 +170,13 @@ fn main() {
   let hm2 = populate_lookups(&cache);
   println!("\nHM2: {:?} ", hm2);
 
-  let pr = PicoRules::new("pico-rule.json");
+  let mut pr = PicoRules::new("pico-rule.json");
+  pr.load();
 
   let mut ps = pr.make_state();
   pr.run_with_context(&mut ps, &mut ctx);
 
   println!("\n FINAL FINAL CTX {:?}", ctx.local_variables);
+
+  Ok(())
 }

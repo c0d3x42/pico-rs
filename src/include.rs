@@ -1,3 +1,4 @@
+use anyhow::{anyhow, Context, Result};
 use serde::de::{DeserializeSeed, MapAccess, SeqAccess, Visitor};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use serde_json;
@@ -9,7 +10,8 @@ use std::rc::Rc;
 
 use crate::command::RuleFile;
 use crate::command::{Execution, ExecutionResult, FnResult, RuleFileRoot};
-use crate::context::{Context, PicoState};
+use crate::context::{PicoContext, PicoState};
+use crate::errors::PicoError;
 use crate::lookups::LookupTable;
 use crate::values::PicoValue;
 
@@ -69,7 +71,7 @@ impl Execution for IncludeFile {
         format!("include [{:?}]", self.include).to_string()
     }
 
-    fn run_with_context(&self, state: &mut PicoState, ctx: &mut Context) -> FnResult {
+    fn run_with_context(&self, state: &mut PicoState, ctx: &mut PicoContext) -> FnResult {
         info!("running included module");
         //self.include.rule.run_with_context(state, ctx)
         Ok(ExecutionResult::Continue(PicoValue::Boolean(true)))
@@ -92,32 +94,35 @@ pub struct LoadedFile<T> {
 
 pub type LoadedCache<T> = HashMap<String, LoadedFile<T>>;
 
+pub enum LoaderError {
+    NoSuchFile,
+    ParseFailure,
+}
+
+/*
+pub fn file_loader<T>( filename: &str ) -> Result<T, LoaderError>{
+
+    let file =  File::open(filename).
+
+}
+*/
+
 pub fn load_file(
     filename: &str,
     cache: &mut LoadedCache<RuleFile>,
     lookup_cache: &mut HashMap<String, Rc<LookupTable>>,
-) {
+) -> FnResult {
     if cache.contains_key(filename) {
         warn!("circular filename: {}", filename);
-        return;
+        return Ok(ExecutionResult::Continue(PicoValue::Boolean(true)));
     }
 
-    let f = File::open(filename);
-    if f.is_err() {
-        cache.insert(
-            String::from(filename),
-            LoadedFile {
-                result: LoadResult::NoSuchFile,
-                content: None,
-            },
-        );
-        warn!("failed to open file {}", filename);
-        return;
-    }
+    // errors with anyhow:error
+    let f = File::open(filename).context(format!("CANT READ {}", filename))?;
 
-    let nf: RuleFile = serde_json::from_reader(f.unwrap()).unwrap();
-    //let nf: RuleFile = serde_json::from_reader(File::open(filename).unwrap()).unwrap();
+    let nf: RuleFile = serde_json::from_reader(f)?;
 
+    // find all root level include directives
     let include_filenames: Vec<&String> = nf
         .root
         .iter()
@@ -127,6 +132,7 @@ pub fn load_file(
         })
         .collect();
 
+    // load each lookup table into the cache
     let lookup_iter = nf.lookups.iter();
     for (key, table) in lookup_iter {
         lookup_cache.insert(key.to_string(), Rc::clone(table));
@@ -136,7 +142,19 @@ pub fn load_file(
     for ifilename in include_filenames {
         if ifilename != filename {
             warn!("attempt to include self again");
-            load_file(ifilename, cache, lookup_cache);
+            match load_file(ifilename, cache, lookup_cache) {
+                Ok(_) => {}
+                Err(e) => {
+                    warn!("INSERT error {:?}", e);
+                    cache.insert(
+                        String::from(ifilename),
+                        LoadedFile {
+                            result: LoadResult::NoSuchFile,
+                            content: None,
+                        },
+                    );
+                }
+            }
         }
     }
 
@@ -146,6 +164,8 @@ pub fn load_file(
     };
 
     cache.insert(String::from(filename), lf);
+
+    Ok(ExecutionResult::Continue(PicoValue::Boolean(true)))
 }
 
 pub type LookupName = String;
@@ -163,7 +183,7 @@ pub fn populate_lookups(file_cache: &LoadedCache<RuleFile>) -> HashMap<String, R
 
     let mut hm: HashMap<String, Rc<LookupTable>> = HashMap::new();
 
-    for (filename, loaded_file) in file_cache {
+    for (_filename, loaded_file) in file_cache {
         if let Some(rule_file) = &loaded_file.content {
             for (lookup_name, lookup_table) in rule_file.lookups.iter() {
                 hm.insert(lookup_name.to_string(), Rc::clone(lookup_table));
@@ -172,19 +192,6 @@ pub fn populate_lookups(file_cache: &LoadedCache<RuleFile>) -> HashMap<String, R
     }
 
     return hm;
-    /*
-    let lookups_with_values: Vec<_> = lookups.iter().filter_map(|v| v.as_ref()).collect();
-
-    println!("lookups values: {:?}", lookups_with_values);
-
-    let mut all_lookups: HashMap<String, &LookupTable> = HashMap::new();
-    for hm in lookups_with_values {
-        for (key, value) in hm {
-            all_lookups.insert(String::from(key), value);
-        }
-    }
-    all_lookups
-    */
 }
 
 pub struct PicoRules {
@@ -199,10 +206,10 @@ impl PicoRules {
         let mut lookup_cache = HashMap::new();
 
         // load the initial rule file
-        load_file(filename, &mut rule_cache, &mut lookup_cache);
+        //load_file(filename, &mut rule_cache, &mut lookup_cache);
 
         // populate the lookup tables
-        let lookup_cache = populate_lookups(&rule_cache);
+        //let lookup_cache = populate_lookups(&rule_cache);
 
         // let ps = PicoState::new(&lookups);
 
@@ -212,6 +219,18 @@ impl PicoRules {
             entrypoint: String::from(filename),
         }
     }
+
+    pub fn load(&mut self) -> FnResult {
+        load_file(
+            &self.entrypoint,
+            &mut self.rule_cache,
+            &mut self.lookup_cache,
+        )?;
+        self.lookup_cache = populate_lookups(&mut self.rule_cache);
+
+        Ok(ExecutionResult::Continue(PicoValue::Boolean(true)))
+    }
+
     pub fn make_state(&self) -> PicoState {
         let ps = PicoState::new(&self.lookup_cache);
         return ps;
@@ -221,7 +240,7 @@ impl PicoRules {
         self
     }
 
-    pub fn run_with_context(&self, state: &mut PicoState, context: &mut Context) {
+    pub fn run_with_context(&self, state: &mut PicoState, context: &mut PicoContext) {
         let loaded_file = self.rule_cache.get(&self.entrypoint).unwrap();
 
         loaded_file
@@ -230,15 +249,6 @@ impl PicoRules {
             .unwrap()
             .run_with_context(state, context)
             .expect("something");
-        /*
-        let mut ps = PicoState::new(&self.lookups);
-        loaded_file
-            .content
-            .as_ref()
-            .unwrap()
-            .run_with_context(&mut ps, context);
-
-        */
         return;
     }
 }

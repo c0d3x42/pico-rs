@@ -2,15 +2,16 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 use crate::conditions::Condition;
-use crate::context::{Context, PicoState};
+use crate::context::{PicoContext, PicoState};
 use crate::errors::PicoError;
 use crate::include::IncludeFile;
 use crate::lookups::{LookupTable, Lookups};
 use crate::values::{Extract, PicoValue, ValueProducer};
+use anyhow::{Context as AnyHowContext, Result as AnyHowResult};
 use std::rc::Rc;
 //use crate::PicoValue;
 
-use std::result;
+//use std::result;
 use tinytemplate::TinyTemplate;
 use uuid::Uuid;
 
@@ -22,7 +23,7 @@ pub enum ExecutionResult {
     BreakTo(uuid::Uuid),
 }
 
-pub type MyResult<T> = result::Result<T, PicoError>;
+pub type MyResult<T> = AnyHowResult<T, PicoError>;
 pub type FnResult = MyResult<ExecutionResult>;
 
 // pub type FnResult = Result<ExecutionResult, PicoError>;
@@ -41,7 +42,7 @@ pub trait Execution {
         */
     }
 
-    fn run_with_context(&self, _state: &mut PicoState, _ctx: &mut Context) -> FnResult {
+    fn run_with_context(&self, _state: &mut PicoState, _ctx: &mut PicoContext) -> FnResult {
         trace!("Running with context for: {}", &self.name());
         Err(PicoError::Crash("Not implemented".to_string()))
     }
@@ -55,7 +56,7 @@ impl Execution for Log {
     fn name(&self) -> String {
         return "log".to_string();
     }
-    fn run_with_context(&self, _state: &mut PicoState, _ctx: &mut Context) -> FnResult {
+    fn run_with_context(&self, _state: &mut PicoState, _ctx: &mut PicoContext) -> FnResult {
         info!("MSG: {:?}", self.log);
 
         return Ok(ExecutionResult::Continue(PicoValue::Boolean(true)));
@@ -78,7 +79,7 @@ impl Execution for DebugLog {
     fn name(&self) -> String {
         return "debug-log".to_string();
     }
-    fn run_with_context(&self, _state: &mut PicoState, ctx: &mut Context) -> FnResult {
+    fn run_with_context(&self, _state: &mut PicoState, ctx: &mut PicoContext) -> FnResult {
         let mut tt = TinyTemplate::new();
         trace!("Building tiny template");
 
@@ -124,7 +125,7 @@ impl Execution for SetCommand {
     fn name(&self) -> String {
         return "Set Command".to_string();
     }
-    fn run_with_context(&self, state: &mut PicoState, ctx: &mut Context) -> FnResult {
+    fn run_with_context(&self, state: &mut PicoState, ctx: &mut PicoContext) -> FnResult {
         info!("RUNNING SET");
 
         match &self.set {
@@ -189,7 +190,7 @@ impl Execution for StopCommand {
     fn name(&self) -> String {
         return "Stop Command".to_string();
     }
-    fn run_with_context(&self, _state: &mut PicoState, _ctx: &mut Context) -> FnResult {
+    fn run_with_context(&self, _state: &mut PicoState, _ctx: &mut PicoContext) -> FnResult {
         debug!("stopping because {:?}", self.stop);
         Ok(ExecutionResult::Stop(Some(self.stop.clone())))
     }
@@ -203,7 +204,7 @@ impl Execution for BreakToCommand {
     fn name(&self) -> String {
         return "BreakTo Command".to_string();
     }
-    fn run_with_context(&self, _state: &mut PicoState, _ctx: &mut Context) -> FnResult {
+    fn run_with_context(&self, _state: &mut PicoState, _ctx: &mut PicoContext) -> FnResult {
         debug!("breaking to {:?}", self.r#break);
         Ok(ExecutionResult::BreakTo(self.r#break))
     }
@@ -223,7 +224,7 @@ impl Execution for Command {
     fn name(&self) -> String {
         return "Command".to_string();
     }
-    fn run_with_context(&self, state: &mut PicoState, ctx: &mut Context) -> FnResult {
+    fn run_with_context(&self, state: &mut PicoState, ctx: &mut PicoContext) -> FnResult {
         info!("Running command...");
         match self {
             Command::IfThenElse(ite) => ite.run_with_context(state, ctx),
@@ -246,7 +247,7 @@ impl Execution for Action {
     fn name(&self) -> String {
         return "Action".to_string();
     }
-    fn run_with_context(&self, state: &mut PicoState, ctx: &mut Context) -> FnResult {
+    fn run_with_context(&self, state: &mut PicoState, ctx: &mut PicoContext) -> FnResult {
         return match self {
             Action::Command(command) => command.run_with_context(state, ctx),
             Action::Commands(commands) => {
@@ -295,7 +296,7 @@ impl Execution for IfThenElse {
         return s;
     }
 
-    fn run_with_context(&self, state: &mut PicoState, ctx: &mut Context) -> FnResult {
+    fn run_with_context(&self, state: &mut PicoState, ctx: &mut PicoContext) -> FnResult {
         info!("running ITE -> {:?}", self.uuid);
         let if_result = self.r#if.run_with_context(state, ctx)?;
         state.increment_branch_hit(&self.uuid);
@@ -386,7 +387,7 @@ impl Execution for RuleFile {
         return "rule-file".to_string();
     }
 
-    fn run_with_context(&self, state: &mut PicoState, context: &mut Context) -> FnResult {
+    fn run_with_context(&self, state: &mut PicoState, context: &mut PicoContext) -> FnResult {
         for instruction in &self.root {
             match instruction {
                 RuleFileRoot::IfThenElse(ite) => {

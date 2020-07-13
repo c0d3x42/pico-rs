@@ -16,15 +16,15 @@ pub enum StateValue {
 pub type VariablesMap = HashMap<String, PicoValue>;
 
 #[derive(Serialize)]
-pub struct Context {
+pub struct PicoContext {
     pub variables: VariablesMap,
     pub local_variables: VariablesMap,
     pub lookup_tables: Lookups,
 }
 
-impl Context {
-    pub fn new() -> Context {
-        Context {
+impl PicoContext {
+    pub fn new() -> PicoContext {
+        PicoContext {
             variables: HashMap::new(),
             local_variables: HashMap::new(),
             lookup_tables: HashMap::new(),
@@ -76,25 +76,3 @@ impl<'a> PicoState<'a> {
 }
 
 pub type PicoHashMap = HashMap<String, String>;
-
-#[derive(Debug)]
-pub struct PicoContext {
-    //pub values: HashMap<String,String>
-    pub values: PicoHashMap,
-}
-impl PicoContext {
-    pub fn new() -> Self {
-        let mut t = PicoHashMap::new();
-        t.insert("lop".to_string(), "LOP".to_string());
-        info!("New PicoContext");
-        Self { values: t }
-    }
-
-    pub fn get(&self, name: &str) -> Option<&String> {
-        return self.values.get(name);
-    }
-
-    pub fn put(&mut self, key: &str, value: &str) {
-        self.values.insert(key.to_string(), value.to_string());
-    }
-}

@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use std::rc::Rc;
 
 use crate::command::{Execution, ExecutionResult, FnResult};
-use crate::context::{Context, PicoState};
+use crate::context::{PicoContext, PicoState};
 use crate::errors::PicoError;
 use crate::PicoValue;
 
@@ -44,7 +44,7 @@ impl Execution for LookupCommand {
         String::from("lookup")
     }
 
-    fn run_with_context(&self, state: &mut PicoState, _ctx: &mut Context) -> FnResult {
+    fn run_with_context(&self, state: &mut PicoState, _ctx: &mut PicoContext) -> FnResult {
         info!(
             "Lookup Dictionary {:?} -> {:?}",
             self.lookup.0, self.lookup.1
@@ -55,12 +55,20 @@ impl Execution for LookupCommand {
                 PicoValue::String(s) => {
                     return Ok(ExecutionResult::Continue(PicoValue::String(s.to_string())))
                 }
-                _ => return Err(PicoError::NoSuchValue),
+                _ => {
+                    return Err(PicoError::NoSuchValue(format!(
+                        "{}/{}",
+                        &self.lookup.0, &self.lookup.1
+                    )))
+                }
             }
         }
 
         info!("Lookup failed for {:?}", self.lookup.0);
 
-        Err(PicoError::NoSuchValue)
+        Err(PicoError::NoSuchValue(format!(
+            "No Such table {}",
+            &self.lookup.0
+        )))
     }
 }
