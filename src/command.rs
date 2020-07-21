@@ -286,6 +286,7 @@ pub struct IfThenElse {
 }
 impl IfThenElse {
     fn default_uuid() -> uuid::Uuid {
+        trace!("assigning default uuid");
         return Uuid::new_v4();
     }
 }

@@ -1,5 +1,5 @@
 use anyhow::{anyhow, Context, Result};
-use serde::de::{DeserializeSeed, MapAccess, SeqAccess, Visitor};
+use serde::de::{DeserializeSeed, Error, MapAccess, SeqAccess, Visitor};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use serde_json;
 use std::collections::HashMap;
@@ -15,18 +15,6 @@ use crate::errors::PicoError;
 use crate::lookups::LookupTable;
 use crate::values::PicoValue;
 
-pub struct IncludedFileSeed<T = RuleFile> {
-    lookups: HashMap<String, T>,
-}
-
-impl IncludedFileSeed {
-    fn new() -> Self {
-        IncludedFileSeed {
-            lookups: HashMap::new(),
-        }
-    }
-}
-
 #[derive(Debug)]
 pub struct IncludeFileDriver {
     filename: String,
@@ -39,6 +27,7 @@ impl<'de> Deserialize<'de> for IncludeFileDriver {
     where
         D: Deserializer<'de>,
     {
+        //return Err(serde::de::Error::custom(format!("aaaarg")));
         // use serde::de::Error;
         debug!("deserializing.1 ");
         let s = String::deserialize(deserializer)?;
@@ -112,6 +101,7 @@ pub fn load_file(
     cache: &mut LoadedCache<RuleFile>,
     lookup_cache: &mut HashMap<String, Rc<LookupTable>>,
 ) -> FnResult {
+    trace!("Loading... {}", filename);
     if cache.contains_key(filename) {
         warn!("circular filename: {}", filename);
         return Ok(ExecutionResult::Continue(PicoValue::Boolean(true)));
@@ -120,8 +110,21 @@ pub fn load_file(
     // errors with anyhow:error
     let f = File::open(filename).context(format!("CANT READ {}", filename))?;
 
+    trace!("JSON parsing {}", filename);
+    /*
+        let jd = &mut serde_json::Deserializer::from_reader(&f);
+        let r: Result<RuleFile, _> = serde_path_to_error::deserialize(jd);
+        match r {
+            Ok(_) => {}
+            Err(err) => {
+                let path = err.path().to_string();
+                warn!(" PAAAATTTHHHH {}, {:?}", path, err);
+            }
+        }
+    */
     let nf: RuleFile = serde_json::from_reader(f)?;
 
+    trace!("collecting includes...");
     // find all root level include directives
     let include_filenames: Vec<&String> = nf
         .root
@@ -132,14 +135,16 @@ pub fn load_file(
         })
         .collect();
 
+    trace!("loading included files {:?}", include_filenames);
+
     // load each lookup table into the cache
     let lookup_iter = nf.lookups.iter();
     for (key, table) in lookup_iter {
         lookup_cache.insert(key.to_string(), Rc::clone(table));
     }
 
-    println!("values: {:?}", include_filenames);
     for ifilename in include_filenames {
+        debug!("loading include file {} from {}", ifilename, filename);
         if ifilename != filename {
             warn!("attempt to include self again");
             match load_file(ifilename, cache, lookup_cache) {
@@ -164,6 +169,8 @@ pub fn load_file(
     };
 
     cache.insert(String::from(filename), lf);
+
+    trace!("loading file {} FINISHED", filename);
 
     Ok(ExecutionResult::Continue(PicoValue::Boolean(true)))
 }
@@ -221,11 +228,13 @@ impl PicoRules {
     }
 
     pub fn load(&mut self) -> FnResult {
+        trace!("Loading file");
         load_file(
             &self.entrypoint,
             &mut self.rule_cache,
             &mut self.lookup_cache,
         )?;
+        trace!("populating lookups");
         self.lookup_cache = populate_lookups(&mut self.rule_cache);
 
         Ok(ExecutionResult::Continue(PicoValue::Boolean(true)))
@@ -241,6 +250,8 @@ impl PicoRules {
     }
 
     pub fn run_with_context(&self, state: &mut PicoState, context: &mut PicoContext) {
+        info!("entering at {}", self.entrypoint);
+        trace!("RC {:?}", self.rule_cache);
         let loaded_file = self.rule_cache.get(&self.entrypoint).unwrap();
 
         loaded_file

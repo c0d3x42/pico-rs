@@ -6,11 +6,8 @@ pub enum PicoError {
     #[error("Parse failure in [{filename:?}]")]
     ParseFailure { filename: String },
 
-    #[error("serde failure")]
-    SerDe {
-        #[from]
-        source: serde_json::Error,
-    },
+    #[error(transparent)]
+    SerDe(#[from] serde_json::Error),
 
     #[error("Cant compare apples to oranges")]
     IncompatibleComparison,
