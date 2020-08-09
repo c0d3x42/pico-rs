@@ -22,7 +22,10 @@
                     "kind": "bin"
                 }
             },
-            "args": [],
+            "args": [
+                "--rules",
+                "rule2.json"
+            ],
             "cwd": "${workspaceFolder}"
         },
         {

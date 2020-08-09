@@ -20,7 +20,7 @@ extern crate picolang;
 
 use picolang::command::RuleFile;
 use picolang::context::{PicoContext, PicoState};
-use picolang::include::{load_file, populate_lookups, LoadedCache, PicoRules};
+use picolang::include::{LoadedRuleFile, PicoRules};
 use picolang::values::PicoValue;
 
 trait Initializable {

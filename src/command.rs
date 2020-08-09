@@ -403,7 +403,7 @@ impl Execution for RuleFile {
                     info!("<-- {:?}", ite.name());
                 }
                 RuleFileRoot::IncludeFile(inc) => {
-                    info!("Including... {:?}", inc.name());
+                    info!("Running Included... {:?}", inc.name());
                     let include_result = inc.run_with_context(state, context);
                     match include_result {
                         Ok(_) => {}

@@ -4,7 +4,9 @@
     "root": [
         {
             "if": {
-                "exists": "3x"
+                "exists": [
+                    "k"
+                ]
             },
             "then": [
                 {
