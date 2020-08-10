@@ -97,10 +97,19 @@ pub struct LoadedRuleFile {
 }
 
 impl LoadedRuleFile {
-    pub fn new(filename: &str) -> Self {
+    pub fn new(filename: &str, parent_path: &Vec<String>) -> Self {
+        let mut include_path: Vec<String> = parent_path.iter().map(|s| String::from(s)).collect();
+        include_path.push(String::from(filename));
+
+        // maybe dont need this, its duplicating whats in the Vec
+        let mut include_set: HashSet<&str> = HashSet::new();
+        for i in include_path.iter() {
+            include_set.insert(i);
+        }
+
         LoadedRuleFile {
             filename: String::from(filename),
-            include_path: Vec::new(),
+            include_path,
             result: LoadResult::NotLoaded,
             content: None,
             include_set: HashSet::new(),
@@ -137,7 +146,7 @@ impl LoadedRuleFile {
                 "Recursively including [{}] - from [{}]",
                 included_filename, self.filename
             );
-            let included_file = Self::new(&included_filename);
+            let included_file = Self::new(&included_filename, &self.include_path);
             match included_file.load(root_cache) {
                 Ok(included_result) => {
                     info!("included result: {:?}", included_result);
@@ -329,7 +338,7 @@ impl PicoRules {
 
         */
 
-        let mut lr = LoadedRuleFile::new(&self.entrypoint);
+        let mut lr = LoadedRuleFile::new(&self.entrypoint, &[].to_vec());
 
         trace!("LR : {:?}", lr);
 
