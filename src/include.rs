@@ -65,13 +65,25 @@ impl Execution for IncludeFile {
         match rf_result {
             Some(rf) => {
                 state.put_include_path(&self.include.filename);
-                rf.run_with_context(state, ctx);
+                let include_result = rf.run_with_context(state, ctx);
                 state.pop_include_path();
+                trace!(
+                    "result from included [{}] = {:?}",
+                    &self.include.filename,
+                    include_result
+                );
+                return include_result;
             }
-            None => {}
+            None => {
+                warn!("unusable file XXX");
+
+                Err(PicoError::UnusableFile {
+                    filename: String::from(&self.include.filename),
+                })
+            }
         }
         //self.include.rule.run_with_context(state, ctx)
-        Ok(ExecutionResult::Continue(PicoValue::Boolean(true)))
+        //Ok(ExecutionResult::Continue(PicoValue::Boolean(true)))
     }
 }
 
@@ -134,9 +146,21 @@ impl LoadedRuleFile {
     }
 
     pub fn load(mut self, root_cache: &mut LoadedRuleMap) -> Result<LoadResult> {
-        let f = File::open(&self.filename).context(format!("cant read {}", self.filename))?;
+        /*
+                let opened_file = match File::open(&self.filename) {
+                    Ok(f) => f,
+                    Err(e) => {
+                        error!("failure in {:?}", e);
+                        self.result = LoadResult::NoSuchFile;
+                        root_cache.insert(String::from(&self.filename), self);
 
-        let rule_file: RuleFile = serde_json::from_reader(f)?;
+                        return Ok(LoadResult::NotLoaded);
+                    }
+                };
+        */
+        let opened_file = File::open(&self.filename).context(format!("{}", self.filename))?;
+
+        let rule_file: RuleFile = serde_json::from_reader(opened_file)?;
         self.result = LoadResult::Ok;
         self.content = Some(rule_file);
 
@@ -163,6 +187,15 @@ impl LoadedRuleFile {
     }
 
     pub fn run_with_context(&self, state: &mut PicoState, context: &mut PicoContext) -> FnResult {
+        match self.result {
+            LoadResult::Ok => {}
+            _ => {
+                return Err(PicoError::UnusableFile {
+                    filename: String::from(&self.filename),
+                })
+            }
+        }
+
         match &self.content {
             Some(pico_rule) => pico_rule.run_with_context(state, context),
             None => Err(PicoError::Crash(String::from("no such rule"))),
