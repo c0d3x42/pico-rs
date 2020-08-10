@@ -6,22 +6,18 @@ extern crate valico;
 #[macro_use]
 extern crate serde_derive;
 
-use serde::{de::DeserializeSeed, Deserialize, Deserializer};
 #[macro_use]
 extern crate log;
 
 use std::collections::HashMap;
-use std::fs::File;
 
 use anyhow::Result;
 use clap::{App, Arg};
 
 extern crate picolang;
 
-use picolang::command::RuleFile;
 use picolang::context::PicoContext;
-use picolang::include::{LoadedRuleFile, PicoRules};
-use picolang::state::PicoState;
+use picolang::include::PicoRules;
 use picolang::values::PicoValue;
 
 trait Initializable {

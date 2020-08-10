@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use crate::context::PicoContext;
 use crate::errors::PicoError;
 use crate::state::PicoState;
-use crate::values::{PicoValue, ValueProducer};
+use crate::values::PicoValue;
 use anyhow::Result as AnyHowResult;
 
 #[derive(Clone, Debug)]

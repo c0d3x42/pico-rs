@@ -1,5 +1,7 @@
-use crate::command::{Execution, IfThenElse, RuleFile};
+use crate::commands::execution::Execution;
+use crate::commands::flow_control::IfThenElse;
 use crate::context::PicoContext;
+use crate::rules::RuleFile;
 use crate::state::PicoState;
 use crate::values::PicoValue;
 

@@ -1,10 +1,9 @@
 use crate::include::LoadedRuleMap;
-use crate::lookups::{LookupTable, Lookups};
+use crate::lookups::LookupTable;
 use crate::PicoValue;
 
 use serde::Serialize;
 use std::collections::HashMap;
-use std::rc::Rc;
 use uuid::Uuid;
 
 #[derive(Debug, Clone, Serialize)]
