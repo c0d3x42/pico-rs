@@ -1,5 +1,4 @@
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 
 use crate::commands::execution::{Execution, ExecutionResult, FnResult};
 use crate::commands::Command;
