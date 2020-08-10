@@ -1,3 +1,4 @@
+use crate::include::LoadedRuleMap;
 use crate::lookups::{LookupTable, Lookups};
 use crate::PicoValue;
 
@@ -41,37 +42,6 @@ impl PicoContext {
             return Some(pv);
         }
         None
-    }
-}
-
-#[derive(Debug)]
-pub struct PicoState<'a> {
-    pub branch_hits: HashMap<Uuid, u64>,
-    pub lookup_cache: &'a HashMap<String, Rc<LookupTable>>,
-}
-
-impl<'a> PicoState<'a> {
-    pub fn new(lookups: &'a HashMap<String, Rc<LookupTable>>) -> Self {
-        Self {
-            branch_hits: HashMap::new(),
-            lookup_cache: lookups,
-        }
-    }
-
-    pub fn get_lookup_value(&self, table_name: &str, table_key: &str) -> Option<&PicoValue> {
-        if let Some(lookup_table) = self.lookup_cache.get(table_name) {
-            Some(lookup_table.lookup(&table_key.to_string()))
-        } else {
-            None
-        }
-    }
-
-    pub fn increment_branch_hit(&mut self, uuid: &Uuid) {
-        if let Some(v) = self.branch_hits.get_mut(uuid) {
-            *v += 1;
-        } else {
-            self.branch_hits.insert(uuid.clone(), 1);
-        }
     }
 }
 

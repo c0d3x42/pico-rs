@@ -19,8 +19,9 @@ use clap::{App, Arg};
 extern crate picolang;
 
 use picolang::command::RuleFile;
-use picolang::context::{PicoContext, PicoState};
+use picolang::context::PicoContext;
 use picolang::include::{LoadedRuleFile, PicoRules};
+use picolang::state::PicoState;
 use picolang::values::PicoValue;
 
 trait Initializable {

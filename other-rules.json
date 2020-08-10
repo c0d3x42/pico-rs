@@ -4,7 +4,8 @@
         "facility-to-service": {
             "entries": {
                 "local0": "development",
-                "local1": "production"
+                "local1": "production",
+                "one": "f2s 1"
             },
             "default": "unknown"
         }

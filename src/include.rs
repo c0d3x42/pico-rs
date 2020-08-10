@@ -10,9 +10,10 @@ use std::rc::Rc;
 
 use crate::command::RuleFile;
 use crate::command::{Execution, ExecutionResult, FnResult, RuleFileRoot};
-use crate::context::{PicoContext, PicoState};
+use crate::context::PicoContext;
 use crate::errors::PicoError;
 use crate::lookups::LookupTable;
+use crate::state::PicoState;
 use crate::values::PicoValue;
 
 #[derive(Debug)]
@@ -67,7 +68,9 @@ impl Execution for IncludeFile {
 
         match rf_result {
             Some(rf) => {
+                state.put_include_path(&self.include.filename);
                 rf.run_with_context(state, ctx);
+                state.pop_include_path();
             }
             None => {}
         }
@@ -92,7 +95,7 @@ pub struct LoadedRuleFile {
     filename: String,
     include_path: Vec<String>,
     result: LoadResult,
-    content: Option<RuleFile>,
+    pub content: Option<RuleFile>,
     include_set: HashSet<String>,
 }
 
@@ -100,6 +103,7 @@ impl LoadedRuleFile {
     pub fn new(filename: &str, parent_path: &Vec<String>) -> Self {
         let mut include_path: Vec<String> = parent_path.iter().map(|s| String::from(s)).collect();
         include_path.push(String::from(filename));
+        trace!("LoadedRuleFile::new [{:?}]", include_path);
 
         // maybe dont need this, its duplicating whats in the Vec
         let mut include_set: HashSet<&str> = HashSet::new();
@@ -338,7 +342,7 @@ impl PicoRules {
 
         */
 
-        let mut lr = LoadedRuleFile::new(&self.entrypoint, &[].to_vec());
+        let lr = LoadedRuleFile::new(&self.entrypoint, &[].to_vec());
 
         trace!("LR : {:?}", lr);
 
@@ -362,7 +366,7 @@ impl PicoRules {
     }
 
     pub fn make_state(&self) -> PicoState {
-        let ps = PicoState::new(&self.rulefile_cache);
+        let ps = PicoState::new(&self.rulefile_cache, &self.entrypoint);
 
         debug!("MKAESTATE {:?}", self.rulefile_cache);
         return ps;

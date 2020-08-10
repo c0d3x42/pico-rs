@@ -2,10 +2,11 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 use crate::conditions::Condition;
-use crate::context::{PicoContext, PicoState};
+use crate::context::PicoContext;
 use crate::errors::PicoError;
 use crate::include::IncludeFile;
 use crate::lookups::{LookupTable, Lookups};
+use crate::state::PicoState;
 use crate::values::{Extract, PicoValue, ValueProducer};
 use anyhow::{Context as AnyHowContext, Result as AnyHowResult};
 use std::rc::Rc;
@@ -362,9 +363,8 @@ impl Execution for IfThenElse {
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(untagged)]
 pub enum RuleFileRoot {
-    IfThenElse(IfThenElse),
+    Command(Command),
     IncludeFile(IncludeFile),
-    //Event(Event),
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -389,8 +389,11 @@ impl Execution for RuleFile {
     }
 
     fn run_with_context(&self, state: &mut PicoState, context: &mut PicoContext) -> FnResult {
+        info!("Running rules from {}", state.get_include_path());
+
         for instruction in &self.root {
             match instruction {
+                /*
                 RuleFileRoot::IfThenElse(ite) => {
                     info!("--> {:?}", ite.name());
                     let run_result = ite.run_with_context(state, context);
@@ -402,6 +405,11 @@ impl Execution for RuleFile {
                     }
                     info!("<-- {:?}", ite.name());
                 }
+                */
+                RuleFileRoot::Command(c) => match c.run_with_context(state, context) {
+                    (_) => {}
+                },
+
                 RuleFileRoot::IncludeFile(inc) => {
                     info!("Running Included... {:?}", inc.name());
                     let include_result = inc.run_with_context(state, context);

@@ -2,8 +2,9 @@ use serde::de::Visitor;
 use serde::{Deserialize, Serialize};
 
 use crate::command::{Execution, ExecutionResult, FnResult};
-use crate::context::{PicoContext, PicoState};
+use crate::context::PicoContext;
 use crate::errors::PicoError;
+use crate::state::PicoState;
 //use crate::values::{PicoValue, Var};
 use crate::{PicoValue, ValueProducer};
 

@@ -11,6 +11,7 @@ extern crate valico;
 extern crate serde_derive;
 
 pub use crate::command::Action;
+pub use crate::commands::execution::Execution;
 pub use crate::runners::{run, EndReason};
 pub use crate::values::{PicoValue, ValueProducer, Var};
 
@@ -18,10 +19,12 @@ pub use crate::include::IncludeFile;
 pub use crate::lookups::LookupTable;
 
 pub mod command;
+pub mod commands;
 pub mod conditions;
 pub mod context;
 pub mod errors;
 pub mod include;
 pub mod lookups;
 pub mod runners;
+pub mod state;
 pub mod values;

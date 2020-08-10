@@ -1,5 +1,6 @@
 use crate::command::{Execution, IfThenElse, RuleFile};
-use crate::context::{PicoContext, PicoState};
+use crate::context::PicoContext;
+use crate::state::PicoState;
 use crate::values::PicoValue;
 
 #[derive(Debug)]

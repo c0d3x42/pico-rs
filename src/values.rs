@@ -1,9 +1,10 @@
 use serde::{Deserialize, Serialize};
 
 use crate::command::{Execution, ExecutionResult, FnResult};
-use crate::context::{PicoContext, PicoState};
+use crate::context::PicoContext;
 use crate::errors::PicoError;
 use crate::lookups::LookupCommand;
+use crate::state::PicoState;
 use regex::Regex;
 use serde_regex;
 use std::cmp::Ordering;

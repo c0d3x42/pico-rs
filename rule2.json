@@ -1,11 +1,25 @@
 {
     "version": "1.1",
-    "lookups": {},
+    "lookups": {
+        "blah": {
+            "entries": {
+                "one": 1,
+                "two": 2
+            },
+            "default": 0
+        }
+    },
     "root": [
+        {
+            "set": [
+                "x",
+                1
+            ]
+        },
         {
             "if": {
                 "exists": [
-                    "k"
+                    "x"
                 ]
             },
             "then": [
@@ -14,6 +28,17 @@
                 }
             ],
             "else": [
+                {
+                    "set": [
+                        "num",
+                        {
+                            "lookup": [
+                                "facility-to-service",
+                                "one"
+                            ]
+                        }
+                    ]
+                },
                 {
                     "log": "NO xxx"
                 }

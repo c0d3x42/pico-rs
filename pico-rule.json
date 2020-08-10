@@ -107,6 +107,9 @@
                                 ]
                             }
                         ]
+                    },
+                    {
+                        "exists": "cccccq"
                     }
                 ]
             },
@@ -197,7 +200,10 @@
                 },
                 {
                     "if": {
-                        "exists": "q"
+                        "exists": [
+                            "q",
+                            "x"
+                        ]
                     },
                     "then": {
                         "log": "q exists"
@@ -208,7 +214,9 @@
                 },
                 {
                     "if": {
-                        "exists": "CCCCCq"
+                        "exists": [
+                            "f"
+                        ]
                     },
                     "then": {
                         "log": "CCCCCq exists"

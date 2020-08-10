@@ -3,8 +3,9 @@ use std::collections::HashMap;
 use std::rc::Rc;
 
 use crate::command::{Execution, ExecutionResult, FnResult};
-use crate::context::{PicoContext, PicoState};
+use crate::context::PicoContext;
 use crate::errors::PicoError;
+use crate::state::PicoState;
 use crate::PicoValue;
 
 pub type LookupDict = HashMap<String, PicoValue>;
