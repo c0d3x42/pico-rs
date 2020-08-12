@@ -6,7 +6,7 @@ use std::fs::File;
 
 use crate::commands::execution::{Execution, ExecutionResult, FnResult};
 use crate::context::PicoContext;
-use crate::errors::PicoError;
+use crate::errors::{PicoError, RuleFileError};
 use crate::rules::RuleFile;
 use crate::rules::RuleFileRoot;
 use crate::state::PicoState;
@@ -145,7 +145,47 @@ impl LoadedRuleFile {
         }
     }
 
-    pub fn load(mut self, root_cache: &mut LoadedRuleMap) -> Result<LoadResult> {
+    pub fn require(&mut self) -> Result<&Self, RuleFileError> {
+        let opened_file =
+            File::open(&self.filename).map_err(|source| RuleFileError::ReadError {
+                source,
+                filename: String::from(&self.filename),
+            })?;
+        let rule_file: RuleFile =
+            serde_json::from_reader(opened_file).map_err(|source| RuleFileError::ParseError {
+                source,
+                filename: String::from(&self.filename),
+            })?;
+        self.result = LoadResult::Ok;
+        self.content = Some(rule_file);
+
+        Ok(self)
+    }
+
+    pub fn loader(mut self, root_cache: &mut LoadedRuleMap) {
+        match self.require() {
+            Ok(loaded) => {
+                let files_to_require: Vec<LoadedRuleFile> = loaded
+                    .included_filenames()
+                    .iter()
+                    .map(|s| Self::new(s, &loaded.include_path))
+                    .collect();
+
+                for file in files_to_require {
+                    file.loader(root_cache);
+                }
+                //root_cache.insert(String::from(&loaded.filename), loaded);
+            }
+            Err(e) => {
+                self.result = LoadResult::UnknownError;
+                error!("{}", e);
+                warn!("loader failed {:?}", self);
+            }
+        }
+        root_cache.insert(String::from(&self.filename), self);
+    }
+
+    pub fn load(mut self, root_cache: &mut LoadedRuleMap) -> Result<LoadResult, RuleFileError> {
         /*
                 let opened_file = match File::open(&self.filename) {
                     Ok(f) => f,
@@ -158,9 +198,18 @@ impl LoadedRuleFile {
                     }
                 };
         */
-        let opened_file = File::open(&self.filename).context(format!("{}", self.filename))?;
+        //let opened_file = File::open(&self.filename).context(format!("{}", self.filename)).map_err(|source| RuleFileError::ReadError { source})?;
+        let opened_file =
+            File::open(&self.filename).map_err(|source| RuleFileError::ReadError {
+                source,
+                filename: String::from(&self.filename),
+            })?;
 
-        let rule_file: RuleFile = serde_json::from_reader(opened_file)?;
+        let rule_file: RuleFile =
+            serde_json::from_reader(opened_file).map_err(|source| RuleFileError::ParseError {
+                source,
+                filename: String::from(&self.filename),
+            })?;
         self.result = LoadResult::Ok;
         self.content = Some(rule_file);
 
@@ -171,12 +220,19 @@ impl LoadedRuleFile {
                 included_filename, self.filename
             );
             let included_file = Self::new(&included_filename, &self.include_path);
+            // LoadedRuleFile::load(included_file, root_cache);
+
             match included_file.load(root_cache) {
                 Ok(included_result) => {
                     info!("included result: {:?}", included_result);
                     self.include_set.insert(included_filename);
                 }
                 Err(x) => {
+                    let mut included_file_placeholder =
+                        Self::new(&included_filename, &self.include_path);
+                    included_file_placeholder.result = LoadResult::NotLoaded;
+                    root_cache.insert(String::from(&self.filename), included_file_placeholder);
+
                     warn!("failed to include {:?}", x);
                 }
             }
@@ -375,6 +431,7 @@ impl PicoRules {
 
         trace!("LR : {:?}", lr);
 
+        /*
         match lr.load(&mut self.rulefile_cache) {
             Ok(k) => {
                 //trace!("populating lookups");
@@ -389,15 +446,23 @@ impl PicoRules {
             }
             Err(e) => {
                 error!("BAD thing: {}", e);
-                Err(PicoError::AnyError(e))
+                Err(PicoError::Crash(String::from("BAD INCLUDE")))
             }
         }
+        */
+        lr.loader(&mut self.rulefile_cache);
+        Ok(ExecutionResult::Continue(PicoValue::Boolean(true)))
     }
 
     pub fn make_state(&self) -> PicoState {
         let ps = PicoState::new(&self.rulefile_cache, &self.entrypoint);
 
-        debug!("MKAESTATE {:?}", self.rulefile_cache);
+        //debug!("MKAESTATE {:?}", self.rulefile_cache);
+
+        for (key, value) in &self.rulefile_cache {
+            debug!("RULEFILE: [{}] = {:?}", key, value);
+        }
+
         return ps;
     }
 
