@@ -183,6 +183,9 @@ pub struct Extract {
     extract: ExtractInternal,
 }
 
+/*
+ * Extract - extracts to context variables named from the regex named capture
+ */
 impl Execution for Extract {
     fn name(&self) -> String {
         return String::from("extract");
@@ -246,7 +249,7 @@ impl Execution for ConCat {
 
         info!("TTTTT {:?}", words);
         for word in words {
-            info!("TTTTT word {:?}", word);
+            trace!("concat word {:?}", word);
         }
 
         let tt = words

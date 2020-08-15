@@ -24,7 +24,7 @@
             },
             "args": [
                 "--rules",
-                "rule2.json"
+                "file://rule2.json"
             ],
             "cwd": "${workspaceFolder}"
         },

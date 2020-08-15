@@ -33,7 +33,7 @@ fn main() -> Result<()> {
     .arg(
       Arg::new("rules")
         .long("rules")
-        .default_value("pico-rule.json")
+        .default_value("file://pico-rule.json")
         .value_name("FILE")
         .takes_value(true),
     )

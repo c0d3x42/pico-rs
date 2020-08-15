@@ -46,6 +46,9 @@ pub enum RuleFileError {
         filename: String,
     },
 
+    #[error("Unsuported [{url:?}]")]
+    Unsuported { url: String },
+
     #[error("unknown data store error")]
     Unknown(#[from] anyhow::Error),
 }
