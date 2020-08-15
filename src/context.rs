@@ -13,7 +13,7 @@ pub enum StateValue {
 
 pub type VariablesMap = HashMap<String, PicoValue>;
 
-#[derive(Serialize)]
+#[derive(Serialize, Debug)]
 pub struct PicoContext {
     pub variables: VariablesMap,
     pub local_variables: VariablesMap,

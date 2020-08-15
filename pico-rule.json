@@ -16,18 +16,23 @@
         {
             "uuid": "de5b1618-cfb0-4b3d-9dbf-9c3fb3f778de",
             "if": {
-                "match": [
-                    "x",
+                "eq": [
                     {
-                        "var": [
-                            "q",
-                            "x"
-                        ]
-                    }
+                        "var": "xp"
+                    },
+                    "x1"
                 ]
             },
-            "then": [],
-            "else": []
+            "then": [
+                {
+                    "log": "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+                }
+            ],
+            "else": [
+                {
+                    "log": "PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP"
+                }
+            ]
         },
         {
             "if": {

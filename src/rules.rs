@@ -24,7 +24,7 @@ pub struct RuleFile {
     version: String,
 
     #[serde(default)]
-    pub lookups: Rc<Lookups>,
+    pub lookups: Lookups,
 }
 
 impl RuleFile {

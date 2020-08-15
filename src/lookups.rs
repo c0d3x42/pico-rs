@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::rc::Rc;
+//use std::rc::Rc;
 
 use crate::commands::execution::{Execution, ExecutionResult, FnResult};
 use crate::context::PicoContext;
@@ -33,7 +33,8 @@ impl LookupTable {
     }
 }
 
-pub type Lookups = HashMap<String, Rc<LookupTable>>;
+//pub type Lookups = HashMap<String, Rc<LookupTable>>;
+pub type Lookups = HashMap<String, LookupTable>;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct LookupCommand {
