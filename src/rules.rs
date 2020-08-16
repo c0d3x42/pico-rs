@@ -8,7 +8,6 @@ use crate::include::IncludeFile;
 use crate::lookups::Lookups;
 use crate::state::PicoState;
 use crate::values::PicoValue;
-use std::rc::Rc;
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(untagged)]
@@ -43,21 +42,8 @@ impl Execution for RuleFile {
 
         for instruction in &self.root {
             match instruction {
-                /*
-                RuleFileRoot::IfThenElse(ite) => {
-                    info!("--> {:?}", ite.name());
-                    let run_result = ite.run_with_context(state, context);
-                    match run_result {
-                        Ok(_) => {}
-                        Err(_bad_thing) => {
-                            return Err(PicoError::Crash(format!("bad thing: {}", _bad_thing)))
-                        }
-                    }
-                    info!("<-- {:?}", ite.name());
-                }
-                */
                 RuleFileRoot::Command(c) => match c.run_with_context(state, context) {
-                    (_) => {}
+                    _ => {}
                 },
 
                 RuleFileRoot::IncludeFile(inc) => {

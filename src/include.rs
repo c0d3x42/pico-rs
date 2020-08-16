@@ -11,6 +11,8 @@ use crate::rules::RuleFileRoot;
 use crate::state::PicoState;
 use crate::values::PicoValue;
 
+use valico::json_schema;
+
 #[derive(Debug)]
 pub struct IncludeFileDriver {
     filename: String,
@@ -190,6 +192,7 @@ impl Requireer for FileRequire {
                 source,
                 filename: self.filename.to_string(),
             })?;
+
         Ok(rule_file)
     }
 }
@@ -268,7 +271,6 @@ impl LoadedRuleFile {
                 for file in files_to_require {
                     file.loader(root_cache);
                 }
-                //root_cache.insert(String::from(&loaded.filename), loaded);
             }
             Err(e) => {
                 self.result = LoadResult::UnknownError;

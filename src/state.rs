@@ -48,15 +48,6 @@ impl<'a> PicoState<'a> {
     }
 
     pub fn get_lookup_value(&self, lookup_table: &str, lookup_key: &str) -> Option<&PicoValue> {
-        /*
-        let mut compounded_key: String = String::from(included_file_name);
-        compounded_key.push('/');
-        compounded_key.push_str(lookup_table);
-
-        trace!("Looking up compound value: {}", compounded_key);
-
-        self.lookup_cache.get(&compounded_key)
-        */
         trace!("available lookup file {:?}", self.current_include_path);
 
         for included_filename in self.current_include_path.iter().rev() {
