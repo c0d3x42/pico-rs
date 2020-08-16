@@ -82,7 +82,7 @@ pub struct VarExistsCondition {
 
 impl Execution for VarExistsCondition {
     fn name(&self) -> String {
-        return "VarExists".to_string();
+        "VarExists".to_string()
     }
 
     fn run_with_context(&self, _state: &mut PicoState, ctx: &mut PicoContext) -> FnResult {
@@ -104,7 +104,7 @@ impl Execution for VarExistsCondition {
             }
         }
 
-        return Ok(ExecutionResult::Continue(PicoValue::Boolean(false)));
+        Ok(ExecutionResult::Continue(PicoValue::Boolean(false)))
     }
 }
 
@@ -114,7 +114,7 @@ pub struct VarMissingCondition {
 }
 impl Execution for VarMissingCondition {
     fn name(&self) -> String {
-        return "VarMissing".to_string();
+        "VarMissing".to_string()
     }
 
     fn run_with_context(&self, _state: &mut PicoState, ctx: &mut PicoContext) -> FnResult {
@@ -122,15 +122,6 @@ impl Execution for VarMissingCondition {
             Some(_v) => Ok(ExecutionResult::Continue(PicoValue::Boolean(false))),
             None => Ok(ExecutionResult::Continue(PicoValue::Boolean(true))),
         };
-        return final_result;
-
-        /*
-        if let Some(v) = ctx.getValue(&self.missing){
-        return Ok(ExecutionResult::Continue(PicoValue::Boolean(false)));
-
-        }
-
-        return Ok(ExecutionResult::Continue(PicoValue::Boolean(!t)));
-        */
+        final_result
     }
 }

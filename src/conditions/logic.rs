@@ -19,7 +19,7 @@ pub struct And {
 
 impl Execution for And {
     fn name(&self) -> String {
-        return "and".to_string();
+        "and".to_string()
     }
     fn run_with_context(&self, state: &mut PicoState, ctx: &mut PicoContext) -> FnResult {
         for condition in &self.and {
@@ -52,7 +52,7 @@ pub struct Or {
 }
 impl Execution for Or {
     fn name(&self) -> String {
-        return "or".to_string();
+        "or".to_string()
     }
 
     fn run_with_context(&self, state: &mut PicoState, ctx: &mut PicoContext) -> FnResult {
@@ -86,7 +86,7 @@ pub struct Not {
 }
 impl Execution for Not {
     fn name(&self) -> String {
-        return "not".to_string();
+        "not".to_string()
     }
 
     fn run_with_context(&self, state: &mut PicoState, ctx: &mut PicoContext) -> FnResult {
@@ -94,12 +94,10 @@ impl Execution for Not {
 
         match condition_result {
             ExecutionResult::Continue(val) => match val {
-                PicoValue::Boolean(b) => {
-                    return Ok(ExecutionResult::Continue(PicoValue::Boolean(!b)));
-                }
-                _ => return Err(PicoError::IncompatibleComparison),
+                PicoValue::Boolean(b) => Ok(ExecutionResult::Continue(PicoValue::Boolean(!b))),
+                _ => Err(PicoError::IncompatibleComparison),
             },
-            c => return Ok(c), //ExecutionResult::Stop(s) => return Ok(ExecutionResult::Stop(s)),
+            c => Ok(c), //ExecutionResult::Stop(s) => return Ok(ExecutionResult::Stop(s)),
         }
     }
 }

@@ -16,12 +16,12 @@ pub struct Log {
 }
 impl Execution for Log {
     fn name(&self) -> String {
-        return "log".to_string();
+        "log".to_string()
     }
     fn run_with_context(&self, _state: &mut PicoState, _ctx: &mut PicoContext) -> FnResult {
         info!("MSG: {:?}", self.log);
 
-        return Ok(ExecutionResult::Continue(PicoValue::Boolean(true)));
+        Ok(ExecutionResult::Continue(PicoValue::Boolean(true)))
     }
 }
 
@@ -34,12 +34,12 @@ pub struct DebugLog {
 }
 impl DebugLog {
     fn default_tt() -> String {
-        return "TTT".to_string();
+        "TTT".to_string()
     }
 }
 impl Execution for DebugLog {
     fn name(&self) -> String {
-        return "debug-log".to_string();
+        "debug-log".to_string()
     }
     fn run_with_context(&self, _state: &mut PicoState, ctx: &mut PicoContext) -> FnResult {
         let mut tt = TinyTemplate::new();
@@ -68,6 +68,6 @@ impl Execution for DebugLog {
             Err(e) => error!("{:?}", e),
         }
 
-        return Ok(ExecutionResult::Continue(PicoValue::Boolean(true)));
+        Ok(ExecutionResult::Continue(PicoValue::Boolean(true)))
     }
 }

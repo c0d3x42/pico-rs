@@ -13,7 +13,7 @@ pub enum EndReason {
 }
 
 fn _run_instruction(_ite: IfThenElse, _context: PicoContext) -> EndReason {
-    EndReason::Crash(format!("Not implemented"))
+    EndReason::Crash("Not implemented".to_string())
 }
 
 pub fn run(

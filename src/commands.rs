@@ -25,7 +25,7 @@ pub enum Command {
 }
 impl Execution for Command {
     fn name(&self) -> String {
-        return "Command".to_string();
+        String::from("Command")
     }
     fn run_with_context(&self, state: &mut PicoState, ctx: &mut PicoContext) -> FnResult {
         info!("Running command...");

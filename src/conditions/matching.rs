@@ -22,7 +22,7 @@ pub struct RegMatch {
 
 impl Execution for RegMatch {
     fn name(&self) -> String {
-        return "regmatch".to_string();
+        "regmatch".to_string()
     }
 
     fn run_with_context(&self, state: &mut PicoState, ctx: &mut PicoContext) -> FnResult {
@@ -31,9 +31,7 @@ impl Execution for RegMatch {
         let with_value = self.regmatch.1.run_with_context(state, ctx)?;
 
         match with_value {
-            ExecutionResult::Stop(stopping_reason) => {
-                return Ok(ExecutionResult::Stop(stopping_reason))
-            }
+            ExecutionResult::Stop(stopping_reason) => Ok(ExecutionResult::Stop(stopping_reason)),
             ExecutionResult::Continue(continuation) => match continuation {
                 PicoValue::String(string_value) => {
                     let match_result = self.regmatch.0.is_match(&string_value);
@@ -46,11 +44,11 @@ impl Execution for RegMatch {
                     let re_captures = self.regmatch.0.captures(&string_value);
                     debug!("LOC {:?}", re_captures);
 
-                    return Ok(ExecutionResult::Continue(PicoValue::Boolean(match_result)));
+                    Ok(ExecutionResult::Continue(PicoValue::Boolean(match_result)))
                 }
-                _ => return Err(PicoError::IncompatibleComparison),
+                _ => Err(PicoError::IncompatibleComparison),
             },
-            c => return Ok(c),
+            c => Ok(c),
         }
     }
 }
@@ -61,7 +59,7 @@ pub struct StartsWith {
 }
 impl Execution for StartsWith {
     fn name(&self) -> String {
-        return "startswith".to_string();
+        "startswith".to_string()
     }
     fn run_with_context(&self, state: &mut PicoState, ctx: &mut PicoContext) -> FnResult {
         let needle_ctx = self.match_start.0.run_with_context(state, ctx)?;
@@ -79,12 +77,12 @@ impl Execution for StartsWith {
                         let haystack_str = haystack.as_str();
 
                         let b = haystack_str.starts_with(needle_str);
-                        return Ok(ExecutionResult::Continue(PicoValue::Boolean(b)));
+                        Ok(ExecutionResult::Continue(PicoValue::Boolean(b)))
                     }
-                    _ => return Err(PicoError::IncompatibleComparison),
+                    _ => Err(PicoError::IncompatibleComparison),
                 }
             }
-            _ => return Ok(ExecutionResult::Stop(Some("Stopping".to_string()))),
+            _ => Ok(ExecutionResult::Stop(Some("Stopping".to_string()))),
         }
     }
 }
@@ -95,7 +93,7 @@ pub struct Match {
 }
 impl Execution for Match {
     fn name(&self) -> String {
-        return "match".to_string();
+        "match".to_string()
     }
 
     fn run_with_context(&self, state: &mut PicoState, ctx: &mut PicoContext) -> FnResult {
@@ -109,16 +107,14 @@ impl Execution for Match {
                     (PicoValue::String(ls), PicoValue::String(rs)) => {
                         let re = Regex::new(&rs).unwrap();
                         let b = re.is_match(&ls);
-                        return Ok(ExecutionResult::Continue(PicoValue::Boolean(b)));
+                        Ok(ExecutionResult::Continue(PicoValue::Boolean(b)))
                     }
-                    _ => return Err(PicoError::IncompatibleComparison),
+                    _ => Err(PicoError::IncompatibleComparison),
                 }
             }
-            _ => {
-                return Ok(ExecutionResult::Stop(Some(
-                    "match requested stop".to_string(),
-                )))
-            }
+            _ => Ok(ExecutionResult::Stop(Some(
+                "match requested stop".to_string(),
+            ))),
         }
     }
 }

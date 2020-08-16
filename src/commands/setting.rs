@@ -18,7 +18,7 @@ pub struct SetCommand {
 }
 impl Execution for SetCommand {
     fn name(&self) -> String {
-        return "Set Command".to_string();
+        "Set Command".to_string()
     }
     fn run_with_context(&self, state: &mut PicoState, ctx: &mut PicoContext) -> FnResult {
         info!("RUNNING SET");

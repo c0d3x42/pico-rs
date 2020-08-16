@@ -101,7 +101,7 @@ impl<'a> PicoState<'a> {
         if let Some(v) = self.branch_hits.get_mut(uuid) {
             *v += 1;
         } else {
-            self.branch_hits.insert(uuid.clone(), 1);
+            self.branch_hits.insert(*uuid, 1);
         }
     }
 }

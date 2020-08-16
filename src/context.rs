@@ -20,15 +20,21 @@ pub struct PicoContext {
     pub lookup_tables: Lookups,
 }
 
-impl PicoContext {
-    pub fn new() -> PicoContext {
-        PicoContext {
+impl Default for PicoContext {
+    fn default() -> Self {
+        Self {
             variables: HashMap::new(),
             local_variables: HashMap::new(),
             lookup_tables: HashMap::new(),
         }
     }
-    pub fn set_value(&mut self, key: &str, value: PicoValue) -> () {
+}
+
+impl PicoContext {
+    pub fn new() -> PicoContext {
+        Default::default()
+    }
+    pub fn set_value(&mut self, key: &str, value: PicoValue) {
         self.local_variables.insert(key.to_string(), value);
     }
 

@@ -1,6 +1,5 @@
 use anyhow::Result;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
-use serde_json;
 use std::collections::{HashMap, HashSet};
 use std::fs::File;
 
@@ -198,7 +197,7 @@ impl Requireer for FileRequire {
 }
 
 impl LoadedRuleFile {
-    pub fn new(filename: &str, parent_path: &Vec<String>) -> Self {
+    pub fn new(filename: &str, parent_path: &[String]) -> Self {
         let mut include_path: Vec<String> = parent_path.iter().map(|s| String::from(s)).collect();
         include_path.push(String::from(filename));
         trace!("LoadedRuleFile::new [{:?}]", include_path);
@@ -341,7 +340,7 @@ impl PicoRules {
             debug!("RULEFILE: [{}] = {:?}", key, value);
         }
 
-        return ps;
+        ps
     }
 
     pub fn build(&mut self) -> &Self {

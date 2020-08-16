@@ -1,3 +1,4 @@
+#![warn(clippy::all)]
 #[macro_use]
 extern crate log;
 extern crate env_logger;
@@ -22,6 +23,7 @@ pub mod conditions;
 pub mod context;
 pub mod errors;
 pub mod include;
+pub mod invar;
 pub mod lookups;
 pub mod rules;
 pub mod runners;

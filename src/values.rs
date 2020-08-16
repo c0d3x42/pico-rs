@@ -15,8 +15,8 @@ use std::fmt;
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(untagged)]
 pub enum PicoValue {
-    UnsignedNumber(usize),
-    Number(isize),
+    UnsignedNumber(u64),
+    Number(i64),
     String(String),
     Boolean(bool),
     //Array(Vec<PicoValue>),
@@ -25,12 +25,12 @@ pub enum PicoValue {
 
 impl Execution for PicoValue {
     fn name(&self) -> String {
-        return "PicoValue".to_string();
+        "PicoValue".to_string()
     }
 
     fn run_with_context(&self, _state: &mut PicoState, _ctx: &mut PicoContext) -> FnResult {
         trace!("pico cloning");
-        return Ok(ExecutionResult::Continue(self.clone()));
+        Ok(ExecutionResult::Continue(self.clone()))
     }
 }
 
@@ -84,7 +84,7 @@ pub struct VarLookup {
 
 impl Execution for VarLookup {
     fn name(&self) -> String {
-        return "VarLookup".to_string();
+        "VarLookup".to_string()
     }
 
     fn run_with_context(&self, _state: &mut PicoState, ctx: &mut PicoContext) -> FnResult {
@@ -118,8 +118,8 @@ impl Execution for VarLookup {
                 //let lookup = ctx.variables.get(varname);
                 let lookup = ctx.get_value(varname);
                 match lookup {
-                    Some(value) => return Ok(ExecutionResult::Continue(value.clone())),
-                    None => return Ok(ExecutionResult::Continue(fallback.clone())),
+                    Some(value) => Ok(ExecutionResult::Continue(value.clone())),
+                    None => Ok(ExecutionResult::Continue(fallback.clone())),
                 }
             }
         }
@@ -135,7 +135,7 @@ pub enum Var {
 
 impl Execution for Var {
     fn name(&self) -> String {
-        return "Var".to_string();
+        "Var".to_string()
     }
 
     fn run_with_context(&self, state: &mut PicoState, ctx: &mut PicoContext) -> FnResult {
@@ -159,7 +159,7 @@ pub enum ValueProducer {
 
 impl Execution for ValueProducer {
     fn name(&self) -> String {
-        return "Var".to_string();
+        "Var".to_string()
     }
 
     fn run_with_context(&self, state: &mut PicoState, ctx: &mut PicoContext) -> FnResult {
@@ -215,7 +215,7 @@ impl Execution for Extract {
                         info!("DICT = {:?}", dict);
                         return Ok(ExecutionResult::Setting(dict));
                     }
-                    return Ok(ExecutionResult::Setting(HashMap::new()));
+                    Ok(ExecutionResult::Setting(HashMap::new()))
                 }
                 _ => Err(PicoError::IncompatibleComparison),
             },
@@ -231,7 +231,7 @@ pub struct ConCat {
 
 impl Execution for ConCat {
     fn name(&self) -> String {
-        return "concat".to_string();
+        "concat".to_string()
     }
 
     fn run_with_context(&self, state: &mut PicoState, ctx: &mut PicoContext) -> FnResult {
@@ -262,7 +262,7 @@ impl Execution for ConCat {
 
         info!("TT {:?}", tt.join(""));
 
-        return Ok(ExecutionResult::Continue(PicoValue::String(tt.join(""))));
+        Ok(ExecutionResult::Continue(PicoValue::String(tt.join(""))))
     }
 }
 
@@ -280,9 +280,9 @@ fn slice_starts_at(requested_start: isize, vec_length: usize) -> usize {
             Err(_e) => usize::max_value(),
         };
         if end_pos < vec_length {
-            return vec_length - end_pos;
+            vec_length - end_pos
         } else {
-            return 0;
+            0
         }
     } else {
         let start_result = usize::try_from(requested_start);
@@ -292,9 +292,9 @@ fn slice_starts_at(requested_start: isize, vec_length: usize) -> usize {
         };
 
         if start_offset > vec_length {
-            return vec_length;
+            vec_length
         } else {
-            return start_offset;
+            start_offset
         }
     }
 }
@@ -308,9 +308,9 @@ fn slice_ends_at(requested_end: isize, vec_length: usize) -> usize {
         };
 
         if end_offset < vec_length {
-            return vec_length - end_offset;
+            vec_length - end_offset
         } else {
-            return vec_length;
+            vec_length
         }
     } else {
         let end_result = usize::try_from(requested_end);
@@ -320,16 +320,16 @@ fn slice_ends_at(requested_end: isize, vec_length: usize) -> usize {
         };
 
         if end_offset > vec_length {
-            return vec_length;
+            vec_length
         } else {
-            return vec_length;
+            vec_length
         }
     }
 }
 
 impl Execution for Slice {
     fn name(&self) -> String {
-        return "slice".to_string();
+        "slice".to_string()
     }
 
     fn run_with_context(&self, state: &mut PicoState, ctx: &mut PicoContext) -> FnResult {

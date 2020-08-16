@@ -35,7 +35,7 @@ impl RuleFile {
 
 impl Execution for RuleFile {
     fn name(&self) -> String {
-        return "rule-file".to_string();
+        "rule-file".to_string()
     }
 
     fn run_with_context(&self, state: &mut PicoState, context: &mut PicoContext) -> FnResult {

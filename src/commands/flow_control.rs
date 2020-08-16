@@ -16,7 +16,7 @@ pub struct StopCommand {
 }
 impl Execution for StopCommand {
     fn name(&self) -> String {
-        return "Stop Command".to_string();
+        "Stop Command".to_string()
     }
     fn run_with_context(&self, _state: &mut PicoState, _ctx: &mut PicoContext) -> FnResult {
         debug!("stopping because {:?}", self.stop);
@@ -30,7 +30,7 @@ pub struct BreakToCommand {
 }
 impl Execution for BreakToCommand {
     fn name(&self) -> String {
-        return "BreakTo Command".to_string();
+        "BreakTo Command".to_string()
     }
     fn run_with_context(&self, _state: &mut PicoState, _ctx: &mut PicoContext) -> FnResult {
         debug!("breaking to {:?}", self.r#break);
@@ -50,14 +50,14 @@ pub struct IfThenElse {
 impl IfThenElse {
     fn default_uuid() -> uuid::Uuid {
         trace!("assigning default uuid");
-        return Uuid::new_v4();
+        Uuid::new_v4()
     }
 }
 
 impl Execution for IfThenElse {
     fn name(&self) -> String {
-        let s = format!("ifthenelse [{:?}]", self.uuid);
-        return s;
+        let s: String = format!("ifthenelse [{:?}]", self.uuid);
+        s
     }
 
     fn run_with_context(&self, state: &mut PicoState, ctx: &mut PicoContext) -> FnResult {

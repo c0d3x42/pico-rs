@@ -12,7 +12,7 @@ pub struct Eq {
 }
 impl Execution for Eq {
     fn name(&self) -> String {
-        return "equality".to_string();
+        "equality".to_string()
     }
     fn run_with_context(&self, state: &mut PicoState, ctx: &mut PicoContext) -> FnResult {
         trace!("Eq resolving...");
@@ -37,7 +37,7 @@ pub struct GreaterThan {
 }
 impl Execution for GreaterThan {
     fn name(&self) -> String {
-        return "less than".to_string();
+        "less than".to_string()
     }
     fn run_with_context(&self, state: &mut PicoState, ctx: &mut PicoContext) -> FnResult {
         let lhs = self.gt.0.run_with_context(state, ctx)?;
@@ -57,7 +57,7 @@ pub struct LessThan {
 }
 impl Execution for LessThan {
     fn name(&self) -> String {
-        return "less than".to_string();
+        "less than".to_string()
     }
     fn run_with_context(&self, state: &mut PicoState, ctx: &mut PicoContext) -> FnResult {
         let lhs = self.lt.0.run_with_context(state, ctx)?;

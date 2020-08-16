@@ -16,19 +16,25 @@ pub struct LookupTable {
     pub default: PicoValue,
 }
 
-impl LookupTable {
-    pub fn new() -> LookupTable {
-        LookupTable {
+impl Default for LookupTable {
+    fn default() -> Self {
+        Self {
             default: PicoValue::String("unknown".to_string()),
             entries: HashMap::new(),
         }
     }
+}
 
-    pub fn lookup(&self, key: &String) -> &PicoValue {
+impl LookupTable {
+    pub fn new() -> LookupTable {
+        Default::default()
+    }
+
+    pub fn lookup(&self, key: &str) -> &PicoValue {
         if let Some(value) = self.entries.get(key) {
-            return value;
+            value
         } else {
-            return &self.default;
+            &self.default
         }
     }
 }
