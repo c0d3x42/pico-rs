@@ -43,7 +43,7 @@ pub struct HealthResponse {
 #[tokio::main]
 async fn main() -> Result<()> {
     env_logger::init();
-    let matches = App::new("Pico Lang")
+    let matches: clap::ArgMatches = App::new("Pico Lang")
         .version("0.1")
         .arg(
             Arg::new("rules")
@@ -61,43 +61,10 @@ async fn main() -> Result<()> {
 
     debug!("Hello, world! ");
 
-    let mut ctx = PicoContext::new();
-    ctx.variables
-        .insert("x".to_string(), PicoValue::String("xxxx".to_string()));
-    ctx.variables
-        .insert("q".to_string(), PicoValue::String("QQQQ".to_string()));
-    ctx.variables.insert("n".to_string(), PicoValue::Number(42));
-    ctx.variables
-        .insert("op".to_string(), PicoValue::String("OP".to_string()));
-
-    let mut sth: HashMap<String, String> = HashMap::new();
-    sth.insert(String::from("a"), String::from("A"));
-
     let file = matches.value_of("rules").unwrap();
     let mut pr = PicoRules::new(file);
-    let x = pr.load().unwrap();
+    let _x: picolang::commands::execution::ExecutionResult = pr.load().unwrap();
     let pico: Arc<RwLock<PicoRules>> = Arc::new(RwLock::new(pr));
-
-    /*
-    if let Some(ref file) = matches.value_of("rules") {
-      let mut pr = PicoRules::new(file);
-      let x = pr.load().unwrap();
-      pico = Arc::new(RwLock::new(pr));
-
-          match x {
-            Ok(y) => {
-              info!("GOT y ");
-              let mut ps = pr.make_state();
-              pr.run_with_context(&mut ps, &mut ctx);
-            }
-            Err(e) => {
-              warn!("OOPS {}", e);
-            }
-          }
-
-      println!("\n FINAL FINAL CTX {:?}", ctx.local_variables);
-    }
-      */
 
     let register = warp::path("register");
     let register_route = register
@@ -149,7 +116,7 @@ pub struct SubmitResponse {
 }
 
 pub async fn submit_handler(body: InVars, pico: Arc<RwLock<PicoRules>>) -> Result<impl Reply> {
-    let mut re = pico.read().await;
+    let re = pico.read().await;
     let mut state = re.make_state();
 
     let mut ctx = PicoContext::new();
@@ -189,9 +156,12 @@ pub async fn submit_handler(body: InVars, pico: Arc<RwLock<PicoRules>>) -> Resul
     re.run_with_context(&mut state, &mut ctx);
     println!("\n FINAL FINAL CTX {:?}", ctx);
 
+    Ok(json(&ctx))
+    /*
     Ok(json(&SubmitResponse {
         output: "lop".to_string(),
     }))
+    */
 }
 
 pub fn with_pico(
