@@ -30,4 +30,5 @@ pub mod runners;
 pub mod state;
 pub mod values;
 
+pub mod nats;
 pub mod server;

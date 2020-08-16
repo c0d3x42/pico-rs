@@ -9,6 +9,10 @@ homepage = "https://github.com/c0d3x42/pico-rs"
 repository = "https://github.com/c0d3x42/pico-rs"
 readme = "README.md"
 
+[features]
+default = []
+srv_nats = []
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [lib]
 name = "picolang"

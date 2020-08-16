@@ -1,3 +1,11 @@
+
+# build
+
+**enable nats**
+```bash
+cargo run --features srv_nats
+```
+
 # lookups
 
 lookup tables should be scoped to the rule file inclusion hierarchy.

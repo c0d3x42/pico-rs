@@ -15,14 +15,18 @@ use clap::{App, Arg};
 extern crate picolang;
 
 use picolang::include::PicoRules;
+
+#[cfg(feature = "srv_nats")]
+use picolang::nats::start_nats;
+
+#[cfg(not(feature = "srv_nats"))]
+async fn start_nats() {}
+
 use picolang::server::serve;
 use picolang::values::PicoValue;
-use serde::{Deserialize, Serialize};
-use std::convert::Infallible;
+use serde::Serialize;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use uuid::Uuid;
-use warp::{reply::json, Filter, Rejection, Reply};
 
 //type Result<T> = std::result::Result<T, Rejection>;
 
@@ -58,15 +62,7 @@ async fn main() -> Result<()> {
 
     debug!("Hello, world! ");
 
-    let nc = nats::connect("localhost").unwrap();
-    let sub = nc
-        .subscribe("my.subject")
-        .unwrap()
-        .with_handler(move |msg| {
-            println!("Received {}", &msg);
-            Ok(())
-        });
-    nc.publish("my.subject", "Hello World!");
+    start_nats();
 
     let file = matches.value_of("rules").unwrap();
     let mut pr = PicoRules::new(file);
