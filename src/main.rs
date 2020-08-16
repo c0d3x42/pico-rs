@@ -9,8 +9,6 @@ extern crate serde_derive;
 #[macro_use]
 extern crate log;
 
-use std::collections::HashMap;
-
 //use anyhow::Result;
 use clap::{App, Arg};
 
@@ -60,6 +58,16 @@ async fn main() -> Result<()> {
     }
 
     debug!("Hello, world! ");
+
+    let nc = nats::connect("localhost").unwrap();
+    let sub = nc
+        .subscribe("my.subject")
+        .unwrap()
+        .with_handler(move |msg| {
+            println!("Received {}", &msg);
+            Ok(())
+        });
+    nc.publish("my.subject", "Hello World!");
 
     let file = matches.value_of("rules").unwrap();
     let mut pr = PicoRules::new(file);

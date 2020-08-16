@@ -1,8 +1,13 @@
 [package]
 name = "pico-lang"
-version = "0.1.0"
-authors = ["Vince <vince@openanswers.co.uk>"]
+version = "0.0.1"
+authors = ["Vince <c0d3x42@gmail.com>"]
 edition = "2018"
+license = "MIT OR Apache-2.0"
+description = "JSON Logic like language"
+homepage = "https://github.com/c0d3x42/pico-rs"
+repository = "https://github.com/c0d3x42/pico-rs"
+readme = "README.md"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [lib]
@@ -31,3 +36,4 @@ serde_regex="0"
 hashcow = "0.2"
 unicode-segmentation = "1"
 itertools = "0"
+nats = "0.7"
