@@ -65,10 +65,10 @@ impl Execution for IfThenElse {
         let if_result = self.r#if.run_with_context(state, ctx)?;
         state.increment_branch_hit(&self.uuid);
         match if_result {
-            ExecutionResult::BreakTo(bto) => return Ok(ExecutionResult::BreakTo(bto)),
-            ExecutionResult::Stop(stp) => return Ok(ExecutionResult::Stop(stp)),
+            ExecutionResult::BreakTo(bto) => Ok(ExecutionResult::BreakTo(bto)),
+            ExecutionResult::Stop(stp) => Ok(ExecutionResult::Stop(stp)),
             ExecutionResult::Setting(_dict) => {
-                return Err(PicoError::Crash(String::from("cant set dict here")))
+                Err(PicoError::Crash(String::from("cant set dict here")))
             }
             ExecutionResult::Continue(opt) => match opt {
                 PicoValue::Boolean(b) => {
@@ -82,7 +82,7 @@ impl Execution for IfThenElse {
                         },
                     };
                     // then OR else has run, check the result
-                    let command_result = match branch_result {
+                    match branch_result {
                         Err(unhappy) => Err(unhappy),
                         Ok(happy_result) => match happy_result {
                             ExecutionResult::BreakTo(bto_uuid) => {
@@ -91,33 +91,14 @@ impl Execution for IfThenElse {
                                     debug!("breakto stopping");
                                     return Ok(ExecutionResult::Stop(None));
                                 }
-                                return Ok(ExecutionResult::BreakTo(bto_uuid));
+                                Ok(ExecutionResult::BreakTo(bto_uuid))
                             }
                             c => Ok(c), // passback everything else as is
                         },
-                    };
-
-                    return command_result;
-                    /*
-                    if b {
-                        info!("ITE: then branch");
-                        return self.then.run_with_context(variables);
-                    } else {
-                        info!("ITE: else branch");
-                        match &self.r#else {
-                            None => {
-                                debug!("else branch taken but nothing here");
-                                return Ok(ExecutionResult::Continue(Value::Boolean(true)));
-                            }
-                            Some(else_branch) => return else_branch.run_with_context(variables),
-                        }
                     }
-                    */
                 }
-                _ => return Ok(ExecutionResult::Stop(None)),
+                _ => Ok(ExecutionResult::Stop(None)),
             },
-        };
-
-        //return if_result;
+        }
     }
 }

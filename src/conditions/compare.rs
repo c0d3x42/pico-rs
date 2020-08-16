@@ -23,10 +23,10 @@ impl Execution for Eq {
 
         match (lhs, rhs) {
             (ExecutionResult::Continue(left), ExecutionResult::Continue(right)) => {
-                return Ok(ExecutionResult::Continue(PicoValue::Boolean(left == right)))
+                Ok(ExecutionResult::Continue(PicoValue::Boolean(left == right)))
             }
 
-            _ => return Ok(ExecutionResult::Continue(PicoValue::Boolean(false))),
+            _ => Ok(ExecutionResult::Continue(PicoValue::Boolean(false))),
         }
     }
 }
