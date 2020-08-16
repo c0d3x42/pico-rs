@@ -16,10 +16,10 @@ pub enum Action {
 }
 impl Execution for Action {
     fn name(&self) -> String {
-        return "Action".to_string();
+        "Action".to_string()
     }
     fn run_with_context(&self, state: &mut PicoState, ctx: &mut PicoContext) -> FnResult {
-        return match self {
+        match self {
             Action::Command(command) => command.run_with_context(state, ctx),
             Action::Commands(commands) => {
                 for command in commands {
@@ -30,7 +30,6 @@ impl Execution for Action {
                         ExecutionResult::Stop(stopping_reason) => {
                             info!("Action collection terminated {:?}", stopping_reason);
                             return Ok(ExecutionResult::Stop(stopping_reason));
-                            //return Ok(ExecutionResult::Continue(Value::Boolean(true)));
                         }
                         ExecutionResult::Continue(_value) => {}
                         ExecutionResult::Setting(_value) => {}
@@ -40,8 +39,8 @@ impl Execution for Action {
                         }
                     }
                 }
-                return Ok(ExecutionResult::Continue(PicoValue::Boolean(true)));
+                Ok(ExecutionResult::Continue(PicoValue::Boolean(true)))
             }
-        };
+        }
     }
 }

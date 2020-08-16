@@ -1,5 +1,4 @@
 //use std::fmt;
-use std::io;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -46,11 +45,11 @@ pub enum RuleFileError {
         filename: String,
     },
 
-    #[error("Unsuported [{url:?}]")]
-    Unsuported { url: String },
-
     #[error("unknown data store error")]
     Unknown(#[from] anyhow::Error),
+
+    #[error("Unsuported [{url:?}]")]
+    Unsuported { url: String },
 }
 
 /*impl fmt::Display for PicoError {

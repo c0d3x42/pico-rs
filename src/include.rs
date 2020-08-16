@@ -71,7 +71,7 @@ impl Execution for IncludeFile {
                     &self.include.filename,
                     include_result
                 );
-                return include_result;
+                include_result
             }
             None => {
                 warn!("unusable file XXX");
@@ -81,8 +81,6 @@ impl Execution for IncludeFile {
                 })
             }
         }
-        //self.include.rule.run_with_context(state, ctx)
-        //Ok(ExecutionResult::Continue(PicoValue::Boolean(true)))
     }
 }
 
@@ -229,7 +227,7 @@ impl LoadedRuleFile {
                         _ => None,
                     })
                     .collect();
-                return included_filenames;
+                included_filenames
             }
         }
     }

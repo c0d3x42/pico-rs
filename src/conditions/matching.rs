@@ -8,7 +8,6 @@ use crate::state::PicoState;
 use crate::{PicoValue, ValueProducer};
 
 use regex::Regex;
-use serde_regex;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct RegMatchInternal(#[serde(with = "serde_regex")] Regex, ValueProducer);

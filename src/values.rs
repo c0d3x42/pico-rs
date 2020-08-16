@@ -6,7 +6,6 @@ use crate::errors::PicoError;
 use crate::lookups::LookupCommand;
 use crate::state::PicoState;
 use regex::Regex;
-use serde_regex;
 use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::convert::TryFrom;
@@ -97,20 +96,18 @@ impl Execution for VarLookup {
                 match lookup {
                     Some(v) => {
                         let r = v.clone();
-                        return Ok(ExecutionResult::Continue(r));
+                        Ok(ExecutionResult::Continue(r))
                     }
                     None => {
                         info!("Failed to lookup var {:?}", s);
                         // let local_lookup = ctx.local_variables.get(s);
                         let local_lookup = ctx.get_value(s);
                         match local_lookup {
-                            Some(v) => return Ok(ExecutionResult::Continue(v.clone())),
-                            None => {
-                                return Err(PicoError::NoSuchValue(format!("no such var {}", s)))
-                            }
+                            Some(v) => Ok(ExecutionResult::Continue(v.clone())),
+                            None => Err(PicoError::NoSuchValue(format!("no such var {}", s))),
                         }
                     }
-                };
+                }
             }
             VarValue::DefaultLookup(varname, fallback) => {
                 debug!("default lookup {:?}, {:?}", varname, fallback);
