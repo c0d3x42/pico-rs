@@ -60,8 +60,9 @@ impl MyState<LoadedFile> for PicoStateNew<'_> {
 
 #[derive(Debug)]
 pub struct PicoRules {
-    rulefile_cache: HashMap<String, LoadedFile>,
+    rulefile_cache: HashMap<String, PicoRules>,
     entrypoint: String,
+    rulefile: LoadedFile,
 }
 
 impl Default for PicoRules {
@@ -69,6 +70,7 @@ impl Default for PicoRules {
         Self {
             rulefile_cache: HashMap::new(),
             entrypoint: String::new(),
+            rulefile: LoadedFile::new(),
         }
     }
 }
@@ -83,23 +85,61 @@ impl PicoRules {
         self
     }
 
+    pub fn load_rulefile(mut self, rulefile_name: &str) -> Self {
+        match File::open(&rulefile_name) {
+            Ok(opened_file) => {
+                let rule_file: RuleFile = serde_json::from_reader(opened_file).unwrap();
+                self.rulefile.content = Some(rule_file);
+                self.rulefile.status = FileStatus::Loaded;
+            }
+            Err(x) => {
+                error!("failed to open: {:?}", x);
+                self.rulefile.status = FileStatus::Missing;
+            }
+        }
+        self.set_entry(rulefile_name)
+    }
+
+    fn included_filenames(&self) -> Vec<String> {
+        match &self.rulefile.content {
+            Some(rf) => {}
+            None => {}
+        }
+    }
+
+    pub fn initialise_includes(mut self) -> Self {
+        match &self.rulefile.content {
+            Some(rule_file) => {
+                let including_filenames: Vec<String> = rule_file
+                    .root
+                    .iter()
+                    .filter_map(|r| match r {
+                        RuleFileRoot::IncludeFile(f) => Some(f.include.filename.clone()),
+                        _ => None,
+                    })
+                    .collect();
+            }
+            None => {}
+        }
+    }
+
     /*
      * add a filename to the cache
      * not read in
-     */
-    pub fn add_file(mut self, filename: &str) -> Self {
+    fn add_file(mut self, filename: &str) -> Self {
         let loaded_file = LoadedFile::new();
         self.rulefile_cache
             .insert(filename.to_string(), loaded_file);
         self
     }
+     */
 
     /*
-     * load all unloaded files into the cache
+     * load all included but unloaded files into the cache
      */
     pub fn load(mut self) -> Self {
-        for (filename, loaded_file) in self.rulefile_cache.iter_mut() {
-            if let FileStatus::Loaded = loaded_file.status {
+        for (filename, pico_rule) in self.rulefile_cache.iter_mut() {
+            if let FileStatus::Loaded = pico_rule.rulefile.status {
                 continue;
             }
 
