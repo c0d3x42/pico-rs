@@ -1,0 +1,13 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+		"lldb.launch.sourceLanguages": [
+			"cpp",
+			"rust"
+		]
+	}
+}

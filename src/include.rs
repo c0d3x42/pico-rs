@@ -316,8 +316,12 @@ impl PicoRules {
         PicoRules {
             rulefile_names: HashSet::new(),
             rulefile_cache: HashMap::new(),
-            entrypoint: String::from(filename), // set the initial entrypoint filename
+            entrypoint: filename.to_string(), // set the initial entrypoint filename
         }
+    }
+
+    pub fn load_file(mut self, filename: &str) -> Self {
+        self
     }
 
     pub fn load(&mut self) -> FnResult {

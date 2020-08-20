@@ -24,6 +24,7 @@ pub mod context;
 pub mod errors;
 pub mod include;
 pub mod invar;
+pub mod loader;
 pub mod lookups;
 pub mod rules;
 pub mod runners;

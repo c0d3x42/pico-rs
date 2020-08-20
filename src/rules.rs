@@ -5,6 +5,7 @@ use crate::commands::Command;
 use crate::context::PicoContext;
 use crate::errors::PicoError;
 use crate::include::IncludeFile;
+use crate::loader::PicoStateNew;
 use crate::lookups::Lookups;
 use crate::state::PicoState;
 use crate::values::PicoValue;
@@ -29,6 +30,19 @@ pub struct RuleFile {
 impl RuleFile {
     pub fn default_version() -> String {
         String::from("1.1")
+    }
+
+    pub fn run_with_context_new(
+        &self,
+        state: &mut PicoStateNew,
+        ctx: &mut PicoContext,
+    ) -> FnResult {
+        for instruction in &self.root {
+            match instruction {
+                x => debug!("ROOT value {:?}", x),
+            }
+        }
+        Ok(ExecutionResult::Continue(PicoValue::Boolean(true)))
     }
 }
 

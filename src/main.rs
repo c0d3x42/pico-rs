@@ -14,7 +14,9 @@ use clap::{App, Arg};
 
 extern crate picolang;
 
+use picolang::context::PicoContext;
 use picolang::include::PicoRules;
+use picolang::loader::PicoRules as NewRules;
 
 #[cfg(feature = "srv_nats")]
 use picolang::nats::start_nats;
@@ -61,6 +63,18 @@ async fn main() -> Result<()> {
     }
 
     debug!("Hello, world! ");
+
+    let nr = NewRules::new()
+        .add_file("other-rules.json")
+        .add_file("rule2.json")
+        .load()
+        .set_entry("rule2.json");
+    debug!("NR = {:?}", nr);
+
+    let mut st = nr.make_state();
+
+    let mut ctx = PicoContext::new();
+    nr.run_with_context(&mut st, &mut ctx);
 
     start_nats();
 
