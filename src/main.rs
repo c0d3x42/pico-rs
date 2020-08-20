@@ -64,11 +64,7 @@ async fn main() -> Result<()> {
 
     debug!("Hello, world! ");
 
-    let nr = NewRules::new()
-        .add_file("other-rules.json")
-        .add_file("rule2.json")
-        .load()
-        .set_entry("rule2.json");
+    let nr = NewRules::new().load_rulefile("rule2.json");
     debug!("NR = {:?}", nr);
 
     let mut st = nr.make_state();

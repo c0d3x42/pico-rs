@@ -33,27 +33,27 @@ impl LoadedFile {
     }
 }
 
-pub trait MyState<T = LoadedFile> {
+pub trait MyState<T = PicoRules> {
     fn set(self, filetype: T) -> Self;
 
     fn get(&self, filename: &str) -> &T;
 }
 
-pub struct PicoStateNew<'a, T = LoadedFile> {
+pub struct PicoStateNew<'a, T = PicoRules> {
     rulefile_cache: &'a HashMap<String, T>,
 }
 impl<'a> PicoStateNew<'a> {
-    fn new(rulefile_cache: &'a HashMap<String, LoadedFile>) -> Self {
+    fn new(rulefile_cache: &'a HashMap<String, PicoRules>) -> Self {
         PicoStateNew { rulefile_cache }
     }
 }
 
-impl MyState<LoadedFile> for PicoStateNew<'_> {
-    fn set(self, filetype: LoadedFile) -> Self {
+impl MyState<PicoRules> for PicoStateNew<'_> {
+    fn set(self, filetype: PicoRules) -> Self {
         self
     }
 
-    fn get(&self, filename: &str) -> &LoadedFile {
+    fn get(&self, filename: &str) -> &PicoRules {
         self.rulefile_cache.get(filename).unwrap()
     }
 }
@@ -114,39 +114,19 @@ impl PicoRules {
         }
     }
 
-    /*
-     * add a filename to the cache
-     * not read in
-    fn add_file(mut self, filename: &str) -> Self {
-        let loaded_file = LoadedFile::new();
-        self.rulefile_cache
-            .insert(filename.to_string(), loaded_file);
+    pub fn load_includes(mut self) -> Self {
+        for filename in &self.included_filenames() {
+            let pr = PicoRules::new().load_rulefile(&filename).load_includes();
+
+            self.rulefile_cache.insert(filename.to_string(), pr);
+        }
+
         self
     }
-     */
 
     /*
      * load all included but unloaded files into the cache
      */
-    pub fn load(mut self) -> Self {
-        for (filename, pico_rule) in self.rulefile_cache.iter_mut() {
-            if let FileStatus::Loaded = pico_rule.rulefile.status {
-                continue;
-            }
-
-            match File::open(&filename) {
-                Ok(opened_file) => {
-                    let rule_file: RuleFile = serde_json::from_reader(opened_file).unwrap();
-                    loaded_file.content = Some(rule_file);
-                    loaded_file.status = FileStatus::Loaded;
-                }
-                Err(x) => {
-                    loaded_file.status = FileStatus::Missing;
-                }
-            }
-        }
-        self
-    }
 
     pub fn make_state(&self) -> PicoStateNew {
         let ps = PicoStateNew::new(&self.rulefile_cache);
@@ -154,17 +134,12 @@ impl PicoRules {
     }
 
     pub fn run_with_context(&self, state: &mut PicoStateNew, ctx: &mut PicoContext) {
-        if let cache_entry = self.rulefile_cache.get(&self.entrypoint) {
-            match cache_entry {
-                Some(loaded_file) => match &loaded_file.content {
-                    Some(rule_file) => {
-                        rule_file.run_with_context_new(state, ctx);
-                    }
-                    None => {
-                        trace!("Cache-miss");
-                    }
-                },
-                None => {}
+        match &self.rulefile.content {
+            Some(rule_file) => {
+                rule_file.run_with_context_new(state, ctx);
+            }
+            None => {
+                trace!("Cache-miss");
             }
         }
     }
