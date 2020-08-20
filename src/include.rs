@@ -15,7 +15,7 @@ use valico::json_schema;
 
 #[derive(Debug)]
 pub struct IncludeFileDriver {
-    filename: String,
+    pub filename: String,
 }
 
 impl<'de> Deserialize<'de> for IncludeFileDriver {
@@ -50,7 +50,7 @@ impl Serialize for IncludeFileDriver {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct IncludeFile {
-    include: IncludeFileDriver,
+    pub include: IncludeFileDriver,
 }
 
 impl Execution for IncludeFile {

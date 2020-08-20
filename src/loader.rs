@@ -1,6 +1,6 @@
 use crate::commands::execution::Execution;
 use crate::context::PicoContext;
-use crate::rules::RuleFile;
+use crate::rules::{RuleFile, RuleFileRoot};
 use crate::state::PicoState;
 use std::collections::HashMap;
 use std::fs::File;
@@ -102,24 +102,15 @@ impl PicoRules {
 
     fn included_filenames(&self) -> Vec<String> {
         match &self.rulefile.content {
-            Some(rf) => {}
-            None => {}
-        }
-    }
-
-    pub fn initialise_includes(mut self) -> Self {
-        match &self.rulefile.content {
-            Some(rule_file) => {
-                let including_filenames: Vec<String> = rule_file
-                    .root
-                    .iter()
-                    .filter_map(|r| match r {
-                        RuleFileRoot::IncludeFile(f) => Some(f.include.filename.clone()),
-                        _ => None,
-                    })
-                    .collect();
-            }
-            None => {}
+            Some(rf) => rf
+                .root
+                .iter()
+                .filter_map(|r| match r {
+                    RuleFileRoot::IncludeFile(f) => Some(f.include.filename.clone()),
+                    _ => None,
+                })
+                .collect(),
+            None => Vec::new(),
         }
     }
 
