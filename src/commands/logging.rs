@@ -4,7 +4,9 @@ use std::collections::HashMap;
 use crate::commands::execution::{Execution, ExecutionResult, FnResult};
 use crate::context::PicoContext;
 use crate::errors::PicoError;
-use crate::state::PicoState;
+//use crate::state::PicoState;
+use crate::loader::PicoRules;
+use crate::loader::PicoRuntime as PicoState;
 use crate::values::PicoValue;
 
 //use std::result;
@@ -18,7 +20,12 @@ impl Execution for Log {
     fn name(&self) -> String {
         "log".to_string()
     }
-    fn run_with_context(&self, _state: &mut PicoState, _ctx: &mut PicoContext) -> FnResult {
+    fn run_with_context(
+        &self,
+        _pico_rules: &PicoRules,
+        _state: &mut PicoState,
+        _ctx: &mut PicoContext,
+    ) -> FnResult {
         info!("MSG: {:?}", self.log);
 
         Ok(ExecutionResult::Continue(PicoValue::Boolean(true)))
@@ -41,7 +48,12 @@ impl Execution for DebugLog {
     fn name(&self) -> String {
         "debug-log".to_string()
     }
-    fn run_with_context(&self, _state: &mut PicoState, ctx: &mut PicoContext) -> FnResult {
+    fn run_with_context(
+        &self,
+        _pico_rules: &PicoRules,
+        _state: &mut PicoState,
+        ctx: &mut PicoContext,
+    ) -> FnResult {
         let mut tt = TinyTemplate::new();
         trace!("Building tiny template");
 

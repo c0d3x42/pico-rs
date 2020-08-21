@@ -3,7 +3,9 @@ use serde::{Deserialize, Serialize};
 
 use crate::commands::execution::{Execution, ExecutionResult, FnResult};
 use crate::context::PicoContext;
-use crate::state::PicoState;
+//use crate::state::PicoState;
+use crate::loader::PicoRules;
+use crate::loader::PicoRuntime as PicoState;
 //use crate::values::{PicoValue, Var};
 use crate::PicoValue;
 
@@ -85,7 +87,12 @@ impl Execution for VarExistsCondition {
         "VarExists".to_string()
     }
 
-    fn run_with_context(&self, _state: &mut PicoState, ctx: &mut PicoContext) -> FnResult {
+    fn run_with_context(
+        &self,
+        pico_rules: &PicoRules,
+        _state: &mut PicoState,
+        ctx: &mut PicoContext,
+    ) -> FnResult {
         match &self.exists {
             VarExistence::SingleVar(s) => {
                 if let Some(_v) = ctx.get_value(s) {
@@ -117,7 +124,12 @@ impl Execution for VarMissingCondition {
         "VarMissing".to_string()
     }
 
-    fn run_with_context(&self, _state: &mut PicoState, ctx: &mut PicoContext) -> FnResult {
+    fn run_with_context(
+        &self,
+        _pico_rules: &PicoRules,
+        _state: &mut PicoState,
+        ctx: &mut PicoContext,
+    ) -> FnResult {
         let final_result = match ctx.get_value(&self.missing) {
             Some(_v) => Ok(ExecutionResult::Continue(PicoValue::Boolean(false))),
             None => Ok(ExecutionResult::Continue(PicoValue::Boolean(true))),

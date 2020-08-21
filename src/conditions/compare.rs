@@ -2,7 +2,9 @@ use serde::{Deserialize, Serialize};
 
 use crate::commands::execution::{Execution, ExecutionResult, FnResult};
 use crate::context::PicoContext;
-use crate::state::PicoState;
+//use crate::state::PicoState;
+use crate::loader::PicoRules;
+use crate::loader::PicoRuntime as PicoState;
 //use crate::values::{PicoValue, Var};
 use crate::{PicoValue, ValueProducer};
 
@@ -14,10 +16,15 @@ impl Execution for Eq {
     fn name(&self) -> String {
         "equality".to_string()
     }
-    fn run_with_context(&self, state: &mut PicoState, ctx: &mut PicoContext) -> FnResult {
+    fn run_with_context(
+        &self,
+        pico_rules: &PicoRules,
+        state: &mut PicoState,
+        ctx: &mut PicoContext,
+    ) -> FnResult {
         trace!("Eq resolving...");
-        let lhs = self.eq.0.run_with_context(state, ctx)?;
-        let rhs = self.eq.1.run_with_context(state, ctx)?;
+        let lhs = self.eq.0.run_with_context(pico_rules, state, ctx)?;
+        let rhs = self.eq.1.run_with_context(pico_rules, state, ctx)?;
         trace!("LHS = {:?}", lhs);
         trace!("RHS = {:?}", rhs);
 
@@ -39,9 +46,14 @@ impl Execution for GreaterThan {
     fn name(&self) -> String {
         "less than".to_string()
     }
-    fn run_with_context(&self, state: &mut PicoState, ctx: &mut PicoContext) -> FnResult {
-        let lhs = self.gt.0.run_with_context(state, ctx)?;
-        let rhs = self.gt.1.run_with_context(state, ctx)?;
+    fn run_with_context(
+        &self,
+        pico_rules: &PicoRules,
+        state: &mut PicoState,
+        ctx: &mut PicoContext,
+    ) -> FnResult {
+        let lhs = self.gt.0.run_with_context(pico_rules, state, ctx)?;
+        let rhs = self.gt.1.run_with_context(pico_rules, state, ctx)?;
         match (lhs, rhs) {
             (ExecutionResult::Continue(left), ExecutionResult::Continue(right)) => {
                 Ok(ExecutionResult::Continue(PicoValue::Boolean(left > right)))
@@ -59,9 +71,14 @@ impl Execution for LessThan {
     fn name(&self) -> String {
         "less than".to_string()
     }
-    fn run_with_context(&self, state: &mut PicoState, ctx: &mut PicoContext) -> FnResult {
-        let lhs = self.lt.0.run_with_context(state, ctx)?;
-        let rhs = self.lt.1.run_with_context(state, ctx)?;
+    fn run_with_context(
+        &self,
+        pico_rules: &PicoRules,
+        state: &mut PicoState,
+        ctx: &mut PicoContext,
+    ) -> FnResult {
+        let lhs = self.lt.0.run_with_context(pico_rules, state, ctx)?;
+        let rhs = self.lt.1.run_with_context(pico_rules, state, ctx)?;
         match (lhs, rhs) {
             (ExecutionResult::Continue(left), ExecutionResult::Continue(right)) => {
                 Ok(ExecutionResult::Continue(PicoValue::Boolean(left < right)))

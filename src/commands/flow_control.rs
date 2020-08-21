@@ -5,7 +5,9 @@ use crate::commands::execution::{Execution, ExecutionResult, FnResult};
 use crate::conditions::Condition;
 use crate::context::PicoContext;
 use crate::errors::PicoError;
-use crate::state::PicoState;
+//use crate::state::PicoState;
+use crate::loader::PicoRules;
+use crate::loader::PicoRuntime as PicoState;
 use crate::values::PicoValue;
 
 use uuid::Uuid;
@@ -18,7 +20,12 @@ impl Execution for StopCommand {
     fn name(&self) -> String {
         "Stop Command".to_string()
     }
-    fn run_with_context(&self, _state: &mut PicoState, _ctx: &mut PicoContext) -> FnResult {
+    fn run_with_context(
+        &self,
+        _pico_rules: &PicoRules,
+        _state: &mut PicoState,
+        _ctx: &mut PicoContext,
+    ) -> FnResult {
         debug!("stopping because {:?}", self.stop);
         Ok(ExecutionResult::Stop(Some(self.stop.clone())))
     }
@@ -32,7 +39,12 @@ impl Execution for BreakToCommand {
     fn name(&self) -> String {
         "BreakTo Command".to_string()
     }
-    fn run_with_context(&self, _state: &mut PicoState, _ctx: &mut PicoContext) -> FnResult {
+    fn run_with_context(
+        &self,
+        _pico_rules: &PicoRules,
+        _state: &mut PicoState,
+        _ctx: &mut PicoContext,
+    ) -> FnResult {
         debug!("breaking to {:?}", self.r#break);
         Ok(ExecutionResult::BreakTo(self.r#break))
     }
@@ -60,10 +72,15 @@ impl Execution for IfThenElse {
         s
     }
 
-    fn run_with_context(&self, state: &mut PicoState, ctx: &mut PicoContext) -> FnResult {
+    fn run_with_context(
+        &self,
+        pico_rules: &PicoRules,
+        state: &mut PicoState,
+        ctx: &mut PicoContext,
+    ) -> FnResult {
         info!("running ITE -> {:?}", self.uuid);
-        let if_result = self.r#if.run_with_context(state, ctx)?;
-        state.increment_branch_hit(&self.uuid);
+        let if_result = self.r#if.run_with_context(pico_rules, state, ctx)?;
+        //state.increment_branch_hit(&self.uuid);
         match if_result {
             ExecutionResult::BreakTo(bto) => Ok(ExecutionResult::BreakTo(bto)),
             ExecutionResult::Stop(stp) => Ok(ExecutionResult::Stop(stp)),
@@ -75,10 +92,12 @@ impl Execution for IfThenElse {
                     debug!("ITE got boolean back {:?}", b);
 
                     let branch_result = match b {
-                        true => self.then.run_with_context(state, ctx),
+                        true => self.then.run_with_context(pico_rules, state, ctx),
                         false => match &self.r#else {
                             None => Ok(ExecutionResult::Continue(PicoValue::Boolean(true))),
-                            Some(else_branch) => else_branch.run_with_context(state, ctx),
+                            Some(else_branch) => {
+                                else_branch.run_with_context(pico_rules, state, ctx)
+                            }
                         },
                     };
                     // then OR else has run, check the result

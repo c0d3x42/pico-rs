@@ -2,7 +2,8 @@ use crate::commands::execution::Execution;
 use crate::commands::flow_control::IfThenElse;
 use crate::context::PicoContext;
 use crate::rules::RuleFile;
-use crate::state::PicoState;
+//use crate::state::PicoState;
+use crate::loader::PicoRuntime as PicoState;
 use crate::values::PicoValue;
 
 #[derive(Debug)]

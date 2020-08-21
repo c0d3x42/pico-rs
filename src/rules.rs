@@ -4,11 +4,17 @@ use crate::commands::execution::{Execution, ExecutionResult, FnResult};
 use crate::commands::Command;
 use crate::context::PicoContext;
 use crate::errors::PicoError;
-use crate::include::IncludeFile;
+//use crate::include::IncludeFile;
 use crate::loader::PicoStateNew;
 use crate::lookups::Lookups;
-use crate::state::PicoState;
+//use crate::state::PicoState;
+use crate::loader::PicoRuntime as PicoState;
 use crate::values::PicoValue;
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct IncludeFile {
+    pub include: String,
+}
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(untagged)]
@@ -45,14 +51,14 @@ impl RuleFile {
         Ok(ExecutionResult::Continue(PicoValue::Boolean(true)))
     }
 }
-
+/*
 impl Execution for RuleFile {
     fn name(&self) -> String {
         "rule-file".to_string()
     }
 
     fn run_with_context(&self, state: &mut PicoState, context: &mut PicoContext) -> FnResult {
-        info!("Running rules from {}", state.get_include_path());
+        //info!("Running rules from {}", state.get_include_path());
 
         for instruction in &self.root {
             match instruction {
@@ -75,3 +81,4 @@ impl Execution for RuleFile {
         Ok(ExecutionResult::Continue(PicoValue::Boolean(true)))
     }
 }
+*/

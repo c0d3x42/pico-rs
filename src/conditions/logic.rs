@@ -4,7 +4,9 @@ use crate::commands::execution::{Execution, ExecutionResult, FnResult};
 use crate::conditions::Condition;
 use crate::context::PicoContext;
 use crate::errors::PicoError;
-use crate::state::PicoState;
+//use crate::state::PicoState;
+use crate::loader::PicoRules;
+use crate::loader::PicoRuntime as PicoState;
 //use crate::values::{PicoValue, Var};
 use crate::PicoValue;
 
@@ -21,9 +23,14 @@ impl Execution for And {
     fn name(&self) -> String {
         "and".to_string()
     }
-    fn run_with_context(&self, state: &mut PicoState, ctx: &mut PicoContext) -> FnResult {
+    fn run_with_context(
+        &self,
+        pico_rules: &PicoRules,
+        state: &mut PicoState,
+        ctx: &mut PicoContext,
+    ) -> FnResult {
         for condition in &self.and {
-            let condition_result = condition.run_with_context(state, ctx)?;
+            let condition_result = condition.run_with_context(pico_rules, state, ctx)?;
 
             match condition_result {
                 ExecutionResult::Stop(stopping_reason) => {
@@ -55,12 +62,17 @@ impl Execution for Or {
         "or".to_string()
     }
 
-    fn run_with_context(&self, state: &mut PicoState, ctx: &mut PicoContext) -> FnResult {
+    fn run_with_context(
+        &self,
+        pico_rules: &PicoRules,
+        state: &mut PicoState,
+        ctx: &mut PicoContext,
+    ) -> FnResult {
         let condition_count = self.or.len();
         debug!("OR ...{:?}", condition_count);
 
         for condition in &self.or {
-            let condition_result = condition.run_with_context(state, ctx)?;
+            let condition_result = condition.run_with_context(pico_rules, state, ctx)?;
 
             match condition_result {
                 ExecutionResult::Stop(stopping) => return Ok(ExecutionResult::Stop(stopping)),
@@ -89,8 +101,13 @@ impl Execution for Not {
         "not".to_string()
     }
 
-    fn run_with_context(&self, state: &mut PicoState, ctx: &mut PicoContext) -> FnResult {
-        let condition_result = self.not.run_with_context(state, ctx)?;
+    fn run_with_context(
+        &self,
+        pico_rules: &PicoRules,
+        state: &mut PicoState,
+        ctx: &mut PicoContext,
+    ) -> FnResult {
+        let condition_result = self.not.run_with_context(pico_rules, state, ctx)?;
 
         match condition_result {
             ExecutionResult::Continue(val) => match val {

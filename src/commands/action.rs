@@ -3,7 +3,9 @@ use serde::{Deserialize, Serialize};
 use crate::commands::execution::{Execution, ExecutionResult, FnResult};
 use crate::commands::Command;
 use crate::context::PicoContext;
-use crate::state::PicoState;
+//use crate::state::PicoState;
+use crate::loader::PicoRules;
+use crate::loader::PicoRuntime as PicoState;
 use crate::values::PicoValue;
 
 //use std::result;
@@ -18,13 +20,18 @@ impl Execution for Action {
     fn name(&self) -> String {
         "Action".to_string()
     }
-    fn run_with_context(&self, state: &mut PicoState, ctx: &mut PicoContext) -> FnResult {
+    fn run_with_context(
+        &self,
+        pico_rules: &PicoRules,
+        state: &mut PicoState,
+        ctx: &mut PicoContext,
+    ) -> FnResult {
         match self {
-            Action::Command(command) => command.run_with_context(state, ctx),
+            Action::Command(command) => command.run_with_context(pico_rules, state, ctx),
             Action::Commands(commands) => {
                 for command in commands {
                     debug!("Running a command {:?}", command);
-                    let result = command.run_with_context(state, ctx)?;
+                    let result = command.run_with_context(pico_rules, state, ctx)?;
                     debug!("result: {:?}", result);
                     match result {
                         ExecutionResult::Stop(stopping_reason) => {

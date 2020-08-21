@@ -12,7 +12,7 @@
     },
     "root": [
         {
-            "include": "file://rule2.json"
+            "include": "rule2.json"
         },
         {
             "uuid": "ce5b1618-cfb0-4b3d-9dbf-9c3fb3f778de",

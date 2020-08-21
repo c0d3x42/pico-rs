@@ -8,7 +8,8 @@ use crate::context::PicoContext;
 use crate::errors::{PicoError, RuleFileError};
 use crate::rules::RuleFile;
 use crate::rules::RuleFileRoot;
-use crate::state::PicoState;
+//use crate::state::PicoState;
+use crate::loader::PicoRuntime as PicoState;
 use crate::values::PicoValue;
 
 use valico::json_schema;

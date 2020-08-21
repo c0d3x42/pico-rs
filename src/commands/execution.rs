@@ -2,7 +2,9 @@ use std::collections::HashMap;
 
 use crate::context::PicoContext;
 use crate::errors::PicoError;
-use crate::state::PicoState;
+//use crate::state::PicoState;
+use crate::loader::PicoRules;
+use crate::loader::PicoRuntime as PicoState;
 use crate::values::PicoValue;
 use anyhow::Result as AnyHowResult;
 
@@ -33,7 +35,16 @@ pub trait Execution {
         */
     }
 
-    fn run_with_context(&self, _state: &mut PicoState, _ctx: &mut PicoContext) -> FnResult {
+    fn run_with_context(
+        &self,
+        pico_rule: &PicoRules,
+        state: &mut PicoState,
+        ctx: &mut PicoContext,
+    ) -> FnResult {
+        Err(PicoError::Crash("Not implemented".to_string()))
+    }
+
+    fn Xrun_with_context(&self, _state: &mut PicoState, _ctx: &mut PicoContext) -> FnResult {
         trace!("Running with context for: {}", &self.name());
         Err(PicoError::Crash("Not implemented".to_string()))
     }
