@@ -4,6 +4,7 @@ use crate::rules::{RuleFile, RuleFileRoot};
 use crate::state::PicoState;
 use std::collections::HashMap;
 use std::fs::File;
+use std::sync::Arc;
 
 #[derive(Debug)]
 enum FileStatus {
@@ -142,5 +143,32 @@ impl PicoRules {
                 trace!("Cache-miss");
             }
         }
+    }
+}
+
+pub struct PicoFileRunner {
+    locals: Vec<Arc<HashMap<String, String>>>,
+}
+
+impl PicoFileRunner {
+    pub fn new() -> Self {
+        let mut locals = Vec::new();
+        locals.push(Arc::new(HashMap::new()));
+        Self { locals }
+    }
+
+    pub fn add_locals(mut self, parent_locals: Arc<HashMap<String, String>>) -> Self {
+        let p = Arc::clone(&parent_locals);
+        self.locals.push(p);
+        self
+    }
+
+    pub fn get_local(&self, key: &str) -> Option<&String> {
+        let found: Option<&String> = self.locals.iter().find_map(|d| d.get(key));
+        found
+    }
+
+    pub fn set_local(&mut self, key &str, value &str) {
+        self.locals.
     }
 }
