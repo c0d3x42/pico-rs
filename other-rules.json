@@ -27,8 +27,16 @@
                     }
                 ]
             },
-            "then": [],
-            "else": []
+            "then": [
+                {
+                    "log": "in rule2.json matched x"
+                }
+            ],
+            "else": [
+                {
+                    "log": "in rule2.json NOT matched x"
+                }
+            ]
         }
     ]
 }

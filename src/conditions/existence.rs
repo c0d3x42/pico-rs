@@ -96,22 +96,22 @@ impl Execution for VarExistsCondition {
         match &self.exists {
             VarExistence::SingleVar(s) => {
                 if let Some(_v) = ctx.get_value(s) {
-                    return Ok(ExecutionResult::Continue(PicoValue::Boolean(true)));
+                    return Ok(ExecutionResult::Continue(PicoValue::Bool(true)));
                 }
             }
             VarExistence::ManyVar(vs) => {
                 for v in vs {
                     match ctx.get_value(v) {
-                        None => return Ok(ExecutionResult::Continue(PicoValue::Boolean(false))),
+                        None => return Ok(ExecutionResult::Continue(PicoValue::Bool(false))),
                         Some(_) => {}
                     }
                 }
                 // not yet exited early, all vars existed
-                return Ok(ExecutionResult::Continue(PicoValue::Boolean(true)));
+                return Ok(ExecutionResult::Continue(PicoValue::Bool(true)));
             }
         }
 
-        Ok(ExecutionResult::Continue(PicoValue::Boolean(false)))
+        Ok(ExecutionResult::Continue(PicoValue::Bool(false)))
     }
 }
 
@@ -131,8 +131,8 @@ impl Execution for VarMissingCondition {
         ctx: &mut PicoContext,
     ) -> FnResult {
         let final_result = match ctx.get_value(&self.missing) {
-            Some(_v) => Ok(ExecutionResult::Continue(PicoValue::Boolean(false))),
-            None => Ok(ExecutionResult::Continue(PicoValue::Boolean(true))),
+            Some(_v) => Ok(ExecutionResult::Continue(PicoValue::Bool(false))),
+            None => Ok(ExecutionResult::Continue(PicoValue::Bool(true))),
         };
         final_result
     }

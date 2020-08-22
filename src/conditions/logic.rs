@@ -37,10 +37,10 @@ impl Execution for And {
                     return Ok(ExecutionResult::Stop(stopping_reason))
                 }
                 ExecutionResult::Continue(continuation) => match continuation {
-                    PicoValue::Boolean(b) => {
+                    PicoValue::Bool(b) => {
                         if !b {
                             // AND exits as soon as one condition returns boolean false
-                            return Ok(ExecutionResult::Continue(PicoValue::Boolean(false)));
+                            return Ok(ExecutionResult::Continue(PicoValue::Bool(false)));
                         }
                     }
                     _ => return Err(PicoError::Crash("non boolean".to_string())),
@@ -49,7 +49,7 @@ impl Execution for And {
             }
         }
         // all conditions returned boolean true
-        Ok(ExecutionResult::Continue(PicoValue::Boolean(true)))
+        Ok(ExecutionResult::Continue(PicoValue::Bool(true)))
     }
 }
 
@@ -77,10 +77,10 @@ impl Execution for Or {
             match condition_result {
                 ExecutionResult::Stop(stopping) => return Ok(ExecutionResult::Stop(stopping)),
                 ExecutionResult::Continue(continuation) => match continuation {
-                    PicoValue::Boolean(b) => {
+                    PicoValue::Bool(b) => {
                         if b {
                             // OR completes succesfully on the first boolean true
-                            return Ok(ExecutionResult::Continue(PicoValue::Boolean(true)));
+                            return Ok(ExecutionResult::Continue(PicoValue::Bool(true)));
                         }
                     }
                     _ => return Err(PicoError::Crash("Non boolean".to_string())),
@@ -88,7 +88,7 @@ impl Execution for Or {
                 c => return Ok(c),
             }
         }
-        Ok(ExecutionResult::Continue(PicoValue::Boolean(false)))
+        Ok(ExecutionResult::Continue(PicoValue::Bool(false)))
     }
 }
 
@@ -111,7 +111,7 @@ impl Execution for Not {
 
         match condition_result {
             ExecutionResult::Continue(val) => match val {
-                PicoValue::Boolean(b) => Ok(ExecutionResult::Continue(PicoValue::Boolean(!b))),
+                PicoValue::Bool(b) => Ok(ExecutionResult::Continue(PicoValue::Bool(!b))),
                 _ => Err(PicoError::IncompatibleComparison),
             },
             c => Ok(c), //ExecutionResult::Stop(s) => return Ok(ExecutionResult::Stop(s)),

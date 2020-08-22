@@ -44,6 +44,12 @@ impl Execution for SetCommand {
             }
 
             Settable::ValueProducing(var_name, value_producer) => {
+                trace!(
+                    "Setting from valueproducer [{}] with {:?}",
+                    var_name,
+                    value_producer
+                );
+
                 let produced_value = value_producer.run_with_context(pico_rules, runtime, ctx)?;
 
                 debug!("Produced value = {:?}", produced_value);
@@ -55,10 +61,14 @@ impl Execution for SetCommand {
                             ctx.set_value(var_name, PicoValue::String(v.to_string()))
                         }
                         PicoValue::Number(val) => ctx.set_value(var_name, PicoValue::Number(val)),
-                        PicoValue::UnsignedNumber(val) => {
-                            ctx.set_value(var_name, PicoValue::UnsignedNumber(val))
+                        //PicoValue::UnsignedNumber(val) => {
+                        //    ctx.set_value(var_name, PicoValue::UnsignedNumber(val))
+                        //}
+                        PicoValue::Bool(val) => ctx.set_value(var_name, PicoValue::Bool(val)),
+
+                        _ => {
+                            warn!("Cant set complex types");
                         }
-                        PicoValue::Boolean(val) => ctx.set_value(var_name, PicoValue::Boolean(val)),
                     },
                     ExecutionResult::Setting(dict) => {
                         // convert dictionary to ctx values prefixed by var_name
@@ -75,6 +85,6 @@ impl Execution for SetCommand {
             }
         }
 
-        Ok(ExecutionResult::Continue(PicoValue::Boolean(true)))
+        Ok(ExecutionResult::Continue(PicoValue::Bool(true)))
     }
 }

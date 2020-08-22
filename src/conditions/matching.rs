@@ -50,7 +50,7 @@ impl Execution for RegMatch {
                     let re_captures = self.regmatch.0.captures(&string_value);
                     debug!("LOC {:?}", re_captures);
 
-                    Ok(ExecutionResult::Continue(PicoValue::Boolean(match_result)))
+                    Ok(ExecutionResult::Continue(PicoValue::Bool(match_result)))
                 }
                 _ => Err(PicoError::IncompatibleComparison),
             },
@@ -94,7 +94,7 @@ impl Execution for StartsWith {
                         let haystack_str = haystack.as_str();
 
                         let b = haystack_str.starts_with(needle_str);
-                        Ok(ExecutionResult::Continue(PicoValue::Boolean(b)))
+                        Ok(ExecutionResult::Continue(PicoValue::Bool(b)))
                     }
                     _ => Err(PicoError::IncompatibleComparison),
                 }
@@ -129,7 +129,7 @@ impl Execution for Match {
                     (PicoValue::String(ls), PicoValue::String(rs)) => {
                         let re = Regex::new(&rs).unwrap();
                         let b = re.is_match(&ls);
-                        Ok(ExecutionResult::Continue(PicoValue::Boolean(b)))
+                        Ok(ExecutionResult::Continue(PicoValue::Bool(b)))
                     }
                     _ => Err(PicoError::IncompatibleComparison),
                 }

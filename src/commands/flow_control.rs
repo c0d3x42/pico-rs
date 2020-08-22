@@ -88,13 +88,13 @@ impl Execution for IfThenElse {
                 Err(PicoError::Crash(String::from("cant set dict here")))
             }
             ExecutionResult::Continue(opt) => match opt {
-                PicoValue::Boolean(b) => {
+                PicoValue::Bool(b) => {
                     debug!("ITE got boolean back {:?}", b);
 
                     let branch_result = match b {
                         true => self.then.run_with_context(pico_rules, runtime, ctx),
                         false => match &self.r#else {
-                            None => Ok(ExecutionResult::Continue(PicoValue::Boolean(true))),
+                            None => Ok(ExecutionResult::Continue(PicoValue::Bool(true))),
                             Some(else_branch) => {
                                 else_branch.run_with_context(pico_rules, runtime, ctx)
                             }

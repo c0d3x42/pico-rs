@@ -6,7 +6,9 @@ use crate::context::PicoContext;
 //use crate::state::PicoState;
 use crate::rules::PicoRules;
 use crate::runtime::PicoRuntime;
-use crate::values::PicoValue;
+//use crate::values::PicoValue;
+
+use serde_json::Value as PicoValue;
 
 //use std::result;
 
@@ -46,7 +48,7 @@ impl Execution for Action {
                         }
                     }
                 }
-                Ok(ExecutionResult::Continue(PicoValue::Boolean(true)))
+                Ok(ExecutionResult::Continue(PicoValue::Bool(true)))
             }
         }
     }

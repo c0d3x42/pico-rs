@@ -5,8 +5,9 @@ use crate::errors::PicoError;
 //use crate::state::PicoState;
 use crate::rules::PicoRules;
 use crate::runtime::PicoRuntime;
-use crate::values::PicoValue;
+//use crate::values::PicoValue;
 use anyhow::Result as AnyHowResult;
+use serde_json::Value as PicoValue;
 
 #[derive(Clone, Debug)]
 pub enum ExecutionResult {

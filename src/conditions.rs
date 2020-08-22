@@ -68,7 +68,7 @@ impl Execution for Condition {
             Err(error_result) => match error_result {
                 PicoError::NoSuchValue(_) | PicoError::IncompatibleComparison => {
                     info!("condition result was bad - mapping to false");
-                    Ok(ExecutionResult::Continue(PicoValue::Boolean(false)))
+                    Ok(ExecutionResult::Continue(PicoValue::Bool(false)))
                 }
                 err => Err(err),
             },

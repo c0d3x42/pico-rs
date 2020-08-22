@@ -30,10 +30,10 @@ impl Execution for Eq {
 
         match (lhs, rhs) {
             (ExecutionResult::Continue(left), ExecutionResult::Continue(right)) => {
-                Ok(ExecutionResult::Continue(PicoValue::Boolean(left == right)))
+                Ok(ExecutionResult::Continue(PicoValue::Bool(left == right)))
             }
 
-            _ => Ok(ExecutionResult::Continue(PicoValue::Boolean(false))),
+            _ => Ok(ExecutionResult::Continue(PicoValue::Bool(false))),
         }
     }
 }
@@ -55,10 +55,10 @@ impl Execution for GreaterThan {
         let lhs = self.gt.0.run_with_context(pico_rules, runtime, ctx)?;
         let rhs = self.gt.1.run_with_context(pico_rules, runtime, ctx)?;
         match (lhs, rhs) {
-            (ExecutionResult::Continue(left), ExecutionResult::Continue(right)) => {
-                Ok(ExecutionResult::Continue(PicoValue::Boolean(left > right)))
-            }
-            _ => Ok(ExecutionResult::Continue(PicoValue::Boolean(false))),
+            //(ExecutionResult::Continue(left), ExecutionResult::Continue(right)) => {
+            //    Ok(ExecutionResult::Continue(PicoValue::Bool(left > right)))
+            //}
+            _ => Ok(ExecutionResult::Continue(PicoValue::Bool(false))),
         }
     }
 }
@@ -80,10 +80,10 @@ impl Execution for LessThan {
         let lhs = self.lt.0.run_with_context(pico_rules, runtime, ctx)?;
         let rhs = self.lt.1.run_with_context(pico_rules, runtime, ctx)?;
         match (lhs, rhs) {
-            (ExecutionResult::Continue(left), ExecutionResult::Continue(right)) => {
-                Ok(ExecutionResult::Continue(PicoValue::Boolean(left < right)))
-            }
-            _ => Ok(ExecutionResult::Continue(PicoValue::Boolean(false))),
+            //(ExecutionResult::Continue(left), ExecutionResult::Continue(right)) => {
+            //    Ok(ExecutionResult::Continue(PicoValue::Bool(left < right)))
+            // }
+            _ => Ok(ExecutionResult::Continue(PicoValue::Bool(false))),
         }
     }
 }

@@ -28,7 +28,7 @@ impl Execution for Log {
     ) -> FnResult {
         info!("MSG: {:?}", self.log);
 
-        Ok(ExecutionResult::Continue(PicoValue::Boolean(true)))
+        Ok(ExecutionResult::Continue(PicoValue::Bool(true)))
     }
 }
 
@@ -80,6 +80,6 @@ impl Execution for DebugLog {
             Err(e) => error!("{:?}", e),
         }
 
-        Ok(ExecutionResult::Continue(PicoValue::Boolean(true)))
+        Ok(ExecutionResult::Continue(PicoValue::Bool(true)))
     }
 }

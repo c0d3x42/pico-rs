@@ -1,4 +1,9 @@
 use serde::{Deserialize, Serialize};
+use serde_json::json;
+use serde_json::Number;
+use serde_json::Value;
+
+pub type PicoValue = Value;
 
 use crate::commands::execution::{Execution, ExecutionResult, FnResult};
 use crate::context::PicoContext;
@@ -15,7 +20,7 @@ use std::fmt;
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(untagged)]
-pub enum PicoValue {
+pub enum PicoValueOld {
     UnsignedNumber(u64),
     Number(i64),
     String(String),
@@ -23,6 +28,24 @@ pub enum PicoValue {
     //Array(Vec<PicoValue>),
     //Dictionary(HashMap<String, PicoValue>),
 }
+
+/*
+impl Execution for PicoValueOld {
+    fn name(&self) -> String {
+        "PicoValue".to_string()
+    }
+
+    fn run_with_context(
+        &self,
+        _pico_rules: &PicoRules,
+        _runtime: &mut PicoRuntime,
+        _ctx: &mut PicoContext,
+    ) -> FnResult {
+        trace!("pico cloning");
+        Ok(ExecutionResult::Continue(self.clone()))
+    }
+}
+*/
 
 impl Execution for PicoValue {
     fn name(&self) -> String {
@@ -40,31 +63,31 @@ impl Execution for PicoValue {
     }
 }
 
-impl fmt::Display for PicoValue {
+impl fmt::Display for PicoValueOld {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         info!("PicoValue::Display {}, {:?}", self, self);
         return write!(f, "{}", self);
     }
 }
 
-impl PartialEq for PicoValue {
+impl PartialEq for PicoValueOld {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
-            (&PicoValue::Boolean(a), &PicoValue::Boolean(b)) => a == b,
-            (&PicoValue::UnsignedNumber(a), &PicoValue::UnsignedNumber(b)) => a == b,
-            (&PicoValue::Number(a), &PicoValue::Number(b)) => a == b,
-            (&PicoValue::String(ref a), &PicoValue::String(ref b)) => a == b,
+            (&PicoValueOld::Boolean(a), &PicoValueOld::Boolean(b)) => a == b,
+            (&PicoValueOld::UnsignedNumber(a), &PicoValueOld::UnsignedNumber(b)) => a == b,
+            (&PicoValueOld::Number(a), &PicoValueOld::Number(b)) => a == b,
+            (&PicoValueOld::String(ref a), &PicoValueOld::String(ref b)) => a == b,
             _ => false,
         }
     }
 }
 
-impl PartialOrd for PicoValue {
+impl PartialOrd for PicoValueOld {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         match (self, other) {
-            (&PicoValue::UnsignedNumber(a), &PicoValue::UnsignedNumber(b)) => Some(a.cmp(&b)),
-            (&PicoValue::Number(a), &PicoValue::Number(b)) => Some(a.cmp(&b)),
-            (&PicoValue::String(ref a), &PicoValue::String(ref b)) => Some(a.cmp(b)),
+            (&PicoValueOld::UnsignedNumber(a), &PicoValueOld::UnsignedNumber(b)) => Some(a.cmp(&b)),
+            (&PicoValueOld::Number(a), &PicoValueOld::Number(b)) => Some(a.cmp(&b)),
+            (&PicoValueOld::String(ref a), &PicoValueOld::String(ref b)) => Some(a.cmp(b)),
             _ => None,
         }
     }
@@ -72,8 +95,8 @@ impl PartialOrd for PicoValue {
 
 #[test]
 fn eq9() {
-    let v = PicoValue::Number(9);
-    assert_eq!(v.eq(&PicoValue::Number(9)), true);
+    let v = json!(9);
+    //assert_eq!(v.eq(&PicoValue::Number(9.0)), true);
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -138,6 +161,7 @@ impl Execution for VarLookup {
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(untagged)]
 pub enum Var {
+    String(String),
     Literal(PicoValue),
     Lookup(VarLookup),
 }
@@ -154,6 +178,7 @@ impl Execution for Var {
         ctx: &mut PicoContext,
     ) -> FnResult {
         match self {
+            Var::String(s) => Ok(ExecutionResult::Continue(PicoValue::String(s.to_string()))),
             Var::Lookup(lookup) => lookup.run_with_context(pico_rules, runtime, ctx),
             Var::Literal(literal) => Ok(ExecutionResult::Continue(literal.clone())),
         }
@@ -163,13 +188,15 @@ impl Execution for Var {
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(untagged)]
 pub enum ValueProducer {
-    Literal(PicoValue),
     Pointer(Pointer),
     Lookup(VarLookup),
     Slice(Slice),
     ConCat(ConCat),
     Extract(Box<Extract>),
     DictionaryLookup(LookupCommand),
+    LiteralString(LiteralString),
+
+    UnsupportedObject(PicoValue),
 }
 
 impl Execution for ValueProducer {
@@ -186,11 +213,14 @@ impl Execution for ValueProducer {
         trace!("producer running..");
         match self {
             ValueProducer::Lookup(lookup) => lookup.run_with_context(pico_rules, runtime, ctx),
-            ValueProducer::Literal(literal) => literal.run_with_context(pico_rules, runtime, ctx),
             ValueProducer::Pointer(pointer) => pointer.run_with_context(pico_rules, runtime, ctx),
             ValueProducer::Slice(slice) => slice.run_with_context(pico_rules, runtime, ctx),
             ValueProducer::ConCat(concat) => concat.run_with_context(pico_rules, runtime, ctx),
             ValueProducer::Extract(extract) => extract.run_with_context(pico_rules, runtime, ctx),
+            ValueProducer::LiteralString(ls) => ls.run_with_context(pico_rules, runtime, ctx),
+            ValueProducer::UnsupportedObject(literal) => {
+                literal.run_with_context(pico_rules, runtime, ctx)
+            }
             ValueProducer::DictionaryLookup(dict) => {
                 dict.run_with_context(pico_rules, runtime, ctx)
             }
@@ -425,14 +455,61 @@ impl Execution for Pointer {
         runtime: &mut PicoRuntime,
         ctx: &mut PicoContext,
     ) -> FnResult {
+        info!("consulting pointer");
         if let Some(json) = &ctx.json {
+            trace!("we have some json, checking pointer {}", self.pointer);
             if let Some(value) = json.pointer(&self.pointer) {
+                trace!("found some value {}", value);
                 return Ok(ExecutionResult::Continue(PicoValue::String(
                     value.to_string(),
                 )));
             }
         }
 
-        Ok(ExecutionResult::Continue(PicoValue::Boolean(true)))
+        Ok(ExecutionResult::Continue(PicoValue::Bool(true)))
     }
 }
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct LiteralString(String);
+
+impl Execution for LiteralString {
+    fn name(&self) -> String {
+        "literalstring".to_string()
+    }
+
+    fn run_with_context(
+        &self,
+        pico_rules: &PicoRules,
+        runtime: &mut PicoRuntime,
+        ctx: &mut PicoContext,
+    ) -> FnResult {
+        info!("HIT a literal string {}", self.0);
+
+        Ok(ExecutionResult::Continue(PicoValue::String(
+            self.0.to_string(),
+        )))
+    }
+}
+
+/*
+#[derive(Serialize, Deserialize, Debug)]
+pub struct LiteralNumber(Number);
+
+impl Execution for LiteralNumber {
+    fn name(&self) -> String {
+        "liternalnumber".to_string()
+    }
+
+    fn run_with_context(
+        &self,
+        pico_rules: &PicoRules,
+        runtime: &mut PicoRuntime,
+        ctx: &mut PicoContext,
+    ) -> FnResult {
+        info!("HIT a literal number {}", self.0);
+
+        Ok(ExecutionResult::Continue(PicoValue::Number(json!(self.0))))
+    }
+}
+*/
