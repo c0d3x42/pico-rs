@@ -68,9 +68,9 @@ pub async fn submit_handler(
 
     trace!("INITIAL CTX = {:?}", ctx);
 
-    let mut runtime = PicoRuntime::new();
+    let mut runtime = PicoRuntime::new(&re);
     re.run_with_context(&mut runtime, &mut ctx);
-    println!("\n FINAL FINAL CTX {:?}", ctx);
+    info!("\n FINAL FINAL CTX {:?}", ctx);
 
     Ok(json(&ctx))
     /*

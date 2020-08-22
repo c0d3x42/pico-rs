@@ -73,8 +73,9 @@ async fn main() -> Result<()> {
     let mut st = nr.make_state();
 
     let mut ctx = PicoContext::new();
-    let mut runtime = PicoRuntime::new();
-    nr.run_with_context(&mut runtime, &mut ctx);
+    let mut runtime = PicoRuntime::new(&nr);
+    runtime.exec_root_with_context(&mut ctx);
+    //nr.run_with_context(&mut runtime, &mut ctx);
 
     info!("DONE");
     start_nats();

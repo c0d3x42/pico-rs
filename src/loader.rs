@@ -163,10 +163,6 @@ impl PicoRules {
                             let filename = i.include.clone();
                             let pico_rule = self.rulefile_cache.get(&filename).unwrap();
 
-                            match runtime.get(&"key".to_string()) {
-                                Some(p) => info!("P = {}", p),
-                                None => info!("NO P"),
-                            }
                             pico_rule.run_with_context(runtime, ctx);
                             //let runner = PicoFileRunner::new(Parent::Parent(Rc::new(&runtime)));
                             //pico_rule.run_with_context(state, runner, ctx);
@@ -186,14 +182,36 @@ impl PicoRules {
     }
 }
 
-pub struct PicoRuntime {
+pub struct PicoRuntime<'a> {
     variables: Vec<HashMap<String, String>>,
+    current_rules: Vec<&'a PicoRules>,
+    root_rule: &'a PicoRules, // borrowed reference of the top level rulefile
 }
-impl PicoRuntime {
-    pub fn new() -> Self {
+impl<'a> PicoRuntime<'a> {
+    pub fn new(root_rule: &'a PicoRules) -> Self {
         Self {
             variables: Vec::new(),
+            current_rules: Vec::new(),
+            root_rule,
         }
+    }
+
+    pub fn exec_root_with_context(&mut self, ctx: &mut PicoContext) {
+        self.root_rule.run_with_context(self, ctx)
+    }
+
+    /*
+     * Maybe...
+     * when switching to an included file,
+     *  push the include onto current_rules
+     *   exec the last current_rules
+     *  pop off current rules
+     */
+    pub fn exec_current_with_context(&mut self, ctx: &mut PicoContext) {
+        self.current_rules
+            .last_mut()
+            .unwrap()
+            .run_with_context(self, ctx);
     }
 
     pub fn add(&mut self) {
