@@ -38,51 +38,8 @@ impl RuleFile {
     pub fn default_version() -> String {
         String::from("1.1")
     }
-
-    pub fn run_with_context_new(
-        &self,
-        runtime: &mut PicoRuntime,
-        ctx: &mut PicoContext,
-    ) -> FnResult {
-        for instruction in &self.root {
-            match instruction {
-                x => debug!("ROOT value {:?}", x),
-            }
-        }
-        Ok(ExecutionResult::Continue(PicoValue::Boolean(true)))
-    }
 }
-/*
-impl Execution for RuleFile {
-    fn name(&self) -> String {
-        "rule-file".to_string()
-    }
 
-    fn run_with_context(&self, state: &mut PicoState, context: &mut PicoContext) -> FnResult {
-        //info!("Running rules from {}", state.get_include_path());
-
-        for instruction in &self.root {
-            match instruction {
-                RuleFileRoot::Command(c) => match c.run_with_context(state, context) {
-                    _ => {}
-                },
-
-                RuleFileRoot::IncludeFile(inc) => {
-                    info!("Running Included... {:?}", inc.name());
-                    let include_result = inc.run_with_context(state, context);
-                    match include_result {
-                        Ok(_) => {}
-                        Err(_bad_thing) => {
-                            return Err(PicoError::Crash(format!("bad thing: {}", _bad_thing)))
-                        }
-                    }
-                }
-            }
-        }
-        Ok(ExecutionResult::Continue(PicoValue::Boolean(true)))
-    }
-}
-*/
 #[derive(Debug)]
 pub struct LoadedFile {
     content: Option<RuleFile>,
@@ -193,12 +150,9 @@ impl PicoRules {
                     match command {
                         RuleFileRoot::IncludeFile(i) => {
                             trace!("command include {:?}", i);
-                            let filename = i.include.clone();
-                            let pico_rule = self.rulefile_cache.get(&filename).unwrap();
+                            let pico_rule = self.rulefile_cache.get(&i.include).unwrap();
 
                             pico_rule.run_with_context(runtime, ctx);
-                            //let runner = PicoFileRunner::new(Parent::Parent(Rc::new(&runtime)));
-                            //pico_rule.run_with_context(state, runner, ctx);
                         }
                         RuleFileRoot::Command(c) => match c.run_with_context(&self, runtime, ctx) {
                             _ => {}
