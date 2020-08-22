@@ -1,4 +1,17 @@
 
+# Pico-Lang
+
+A minimal and safe programming language expressed in `JSON`
+
+
+
+# Install
+
+```bash
+cargo install pico-lang
+```
+
+
 # build
 
 **enable nats**
@@ -18,4 +31,10 @@ the root level RuleFile **onl** has access to the lookups defined in it
 
 ```bash
 curl -v -X POST localhost:8000/submit -d '{"xp": "x1xxx", "y": "y2"}' -H 'Content-Type: application/json'
+```
+
+# benchmark
+
+```bash
+wrk -t 5 -c 40 -s bench/sub.lua http://localhost:8000/submit
 ```
