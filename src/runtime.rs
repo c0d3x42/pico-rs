@@ -3,10 +3,12 @@ use serde_json::Value as JsonValue;
 use std::collections::HashMap;
 
 use crate::context::PicoContext;
+use crate::values::PicoValue;
 
 #[derive(Debug)]
 pub struct PicoRuntime<'a> {
   pub variables: Vec<HashMap<String, String>>,
+  pub globals: HashMap<String, PicoValue>,
   pub json_variables: Vec<HashMap<String, JsonValue>>,
   current_rules: Vec<&'a PicoRules>,
   root_rule: &'a PicoRules, // borrowed reference of the top level rulefile
@@ -15,6 +17,7 @@ impl<'a> PicoRuntime<'a> {
   pub fn new(root_rule: &'a PicoRules) -> Self {
     Self {
       variables: Vec::new(),
+      globals: HashMap::new(),
       json_variables: Vec::new(),
       current_rules: Vec::new(),
       root_rule,
@@ -65,6 +68,13 @@ impl<'a> PicoRuntime<'a> {
     }
   }
 
+  pub fn json_pop(&mut self) -> HashMap<String, JsonValue> {
+    match self.json_variables.pop() {
+      Some(hm) => hm,
+      None => HashMap::new(),
+    }
+  }
+
   pub fn get(&self, key: &str) -> Option<&String> {
     for variable in self.variables.iter() {
       match variable.get(key) {
@@ -80,5 +90,13 @@ impl<'a> PicoRuntime<'a> {
       hm.insert(key.to_string(), value.to_string());
       self.variables.push(hm);
     }
+  }
+
+  pub fn global_get(&self, key: &str) -> Option<&PicoValue> {
+    self.globals.get(key)
+  }
+
+  pub fn global_set(&mut self, key: &str, value: &PicoValue) {
+    self.globals.insert(key.to_string(), value.clone());
   }
 }

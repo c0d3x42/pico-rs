@@ -9,12 +9,18 @@
             "default": 0
         }
     },
+    "fini": [
+        {
+            "pop_locals": true
+        }
+    ],
     "root": [
         {
             "set": [
                 "x",
-                1
-            ]
+                "varx1"
+            ],
+            "global": true
         },
         {
             "if": {

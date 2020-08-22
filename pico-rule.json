@@ -9,6 +9,7 @@
             "default": "unknown"
         }
     },
+    "fini": [],
     "root": [
         {
             "set": [

@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use std::fs::File;
 
 use crate::commands::execution::{Execution, ExecutionResult, FnResult};
-use crate::commands::Command;
+use crate::commands::{Command, FiniCommand};
 use crate::context::PicoContext;
 use crate::errors::PicoError;
 //use crate::include::IncludeFile;
@@ -25,13 +25,22 @@ pub enum RuleFileRoot {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
+#[serde(untagged)]
+pub enum RuleFileFini {
+    FiniCommand(FiniCommand),
+}
+
+#[derive(Serialize, Deserialize, Debug)]
 pub struct RuleFile {
-    pub root: Vec<RuleFileRoot>,
     #[serde(default = "RuleFile::default_version")]
     version: String,
 
     #[serde(default)]
     pub lookups: Lookups,
+
+    pub root: Vec<RuleFileRoot>,
+
+    pub fini: Vec<RuleFileFini>,
 }
 
 impl RuleFile {
@@ -157,6 +166,16 @@ impl PicoRules {
                         RuleFileRoot::Command(c) => match c.run_with_context(&self, runtime, ctx) {
                             _ => {}
                         },
+                    }
+                }
+                for fini_command in &rule_file.fini {
+                    match fini_command {
+                        RuleFileFini::FiniCommand(fc) => {
+                            match fc.run_with_context(&self, runtime, ctx) {
+                                Ok(data) => info!("returned data {:?}", data),
+                                Err(e) => {}
+                            }
+                        }
                     }
                 }
                 //rule_file.run_with_context_new(state, ctx);

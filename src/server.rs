@@ -98,7 +98,8 @@ pub async fn submit_handler(
 
     let mut runtime = PicoRuntime::new(&re);
     re.run_with_context(&mut runtime, &mut ctx);
-    info!("\n FINAL FINAL CTX {:?}", ctx);
+    info!("\n FINAL CTX {:?}", ctx);
+    info!("\n FINAL runtime globals {:?}", runtime.globals);
 
     Ok(json(&ctx))
     /*

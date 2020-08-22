@@ -17,6 +17,8 @@ pub enum Settable {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct SetCommand {
     set: Settable,
+    global: Option<bool>,
+    local: Option<bool>,
 }
 impl Execution for SetCommand {
     fn name(&self) -> String {
@@ -55,9 +57,25 @@ impl Execution for SetCommand {
                 debug!("Produced value = {:?}", produced_value);
 
                 match produced_value {
+                    ExecutionResult::Continue(pv) => {
+                        if let Some(true) = self.global {
+                            runtime.global_set(var_name, &pv)
+                        }
+                        runtime.json_set(var_name, &pv);
+                        ctx.set_value(var_name, pv);
+                    }
+                    everything_else => {
+                        warn!("can't set with the produced values {:?}", everything_else);
+                    }
+                }
+
+                /*
+                match produced_value {
                     ExecutionResult::Continue(pv) => match pv {
                         PicoValue::String(v) => {
                             runtime.json_set(var_name, &serde_json::Value::String(v.clone()));
+                            if let Some(true) = self.global {
+                            }
                             ctx.set_value(var_name, PicoValue::String(v.to_string()))
                         }
                         PicoValue::Number(val) => ctx.set_value(var_name, PicoValue::Number(val)),
@@ -82,6 +100,7 @@ impl Execution for SetCommand {
                         info!("produced value ignored {:?}", everything_else);
                     }
                 }
+                */
             }
         }
 
