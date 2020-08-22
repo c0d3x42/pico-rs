@@ -1,7 +1,8 @@
 use crate::context::PicoContext;
 //use crate::include::PicoRules;
 use crate::invar::InVars;
-use crate::loader::{PicoRules, PicoRuntime};
+use crate::rules::PicoRules;
+use crate::runtime::PicoRuntime;
 use crate::values::PicoValue;
 use std::convert::Infallible;
 use std::result::Result;
@@ -32,7 +33,6 @@ pub async fn submit_handler(
     pico: Arc<RwLock<PicoRules>>,
 ) -> Result<impl Reply, Rejection> {
     let re = pico.read().await;
-    let mut state = re.make_state();
 
     let mut ctx = PicoContext::new();
 

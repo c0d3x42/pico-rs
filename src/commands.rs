@@ -12,8 +12,8 @@ use crate::commands::logging::{DebugLog, Log};
 use crate::commands::setting::SetCommand;
 use crate::context::PicoContext;
 //use crate::state::PicoState;
-use crate::loader::PicoRules;
-use crate::loader::PicoRuntime as PicoState;
+use crate::rules::PicoRules;
+use crate::runtime::PicoRuntime;
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(untagged)]
@@ -32,17 +32,17 @@ impl Execution for Command {
     fn run_with_context(
         &self,
         pico_rules: &PicoRules,
-        state: &mut PicoState,
+        runtime: &mut PicoRuntime,
         ctx: &mut PicoContext,
     ) -> FnResult {
         info!("Running command...");
         match self {
-            Command::IfThenElse(ite) => ite.run_with_context(pico_rules, state, ctx),
-            Command::Log(log) => log.run_with_context(pico_rules, state, ctx),
-            Command::DebugLog(debug_log) => debug_log.run_with_context(pico_rules, state, ctx),
-            Command::BreakTo(bto) => bto.run_with_context(pico_rules, state, ctx),
-            Command::Stop(sto) => sto.run_with_context(pico_rules, state, ctx),
-            Command::Set(se) => se.run_with_context(pico_rules, state, ctx),
+            Command::IfThenElse(ite) => ite.run_with_context(pico_rules, runtime, ctx),
+            Command::Log(log) => log.run_with_context(pico_rules, runtime, ctx),
+            Command::DebugLog(debug_log) => debug_log.run_with_context(pico_rules, runtime, ctx),
+            Command::BreakTo(bto) => bto.run_with_context(pico_rules, runtime, ctx),
+            Command::Stop(sto) => sto.run_with_context(pico_rules, runtime, ctx),
+            Command::Set(se) => se.run_with_context(pico_rules, runtime, ctx),
         }
     }
 }

@@ -6,8 +6,8 @@ use crate::commands::execution::{Execution, ExecutionResult, FnResult};
 use crate::context::PicoContext;
 use crate::errors::PicoError;
 //use crate::state::PicoState;
-use crate::loader::PicoRules;
-use crate::loader::PicoRuntime as PicoState;
+use crate::rules::PicoRules;
+use crate::runtime::PicoRuntime;
 use crate::PicoValue;
 
 pub type LookupDict = HashMap<String, PicoValue>;
@@ -57,7 +57,7 @@ impl Execution for LookupCommand {
     fn run_with_context(
         &self,
         pico_rules: &PicoRules,
-        state: &mut PicoState,
+        runtime: &mut PicoRuntime,
         _ctx: &mut PicoContext,
     ) -> FnResult {
         info!(

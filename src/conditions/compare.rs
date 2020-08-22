@@ -3,8 +3,8 @@ use serde::{Deserialize, Serialize};
 use crate::commands::execution::{Execution, ExecutionResult, FnResult};
 use crate::context::PicoContext;
 //use crate::state::PicoState;
-use crate::loader::PicoRules;
-use crate::loader::PicoRuntime as PicoState;
+use crate::rules::PicoRules;
+use crate::runtime::PicoRuntime;
 //use crate::values::{PicoValue, Var};
 use crate::{PicoValue, ValueProducer};
 
@@ -19,12 +19,12 @@ impl Execution for Eq {
     fn run_with_context(
         &self,
         pico_rules: &PicoRules,
-        state: &mut PicoState,
+        runtime: &mut PicoRuntime,
         ctx: &mut PicoContext,
     ) -> FnResult {
         trace!("Eq resolving...");
-        let lhs = self.eq.0.run_with_context(pico_rules, state, ctx)?;
-        let rhs = self.eq.1.run_with_context(pico_rules, state, ctx)?;
+        let lhs = self.eq.0.run_with_context(pico_rules, runtime, ctx)?;
+        let rhs = self.eq.1.run_with_context(pico_rules, runtime, ctx)?;
         trace!("LHS = {:?}", lhs);
         trace!("RHS = {:?}", rhs);
 
@@ -49,11 +49,11 @@ impl Execution for GreaterThan {
     fn run_with_context(
         &self,
         pico_rules: &PicoRules,
-        state: &mut PicoState,
+        runtime: &mut PicoRuntime,
         ctx: &mut PicoContext,
     ) -> FnResult {
-        let lhs = self.gt.0.run_with_context(pico_rules, state, ctx)?;
-        let rhs = self.gt.1.run_with_context(pico_rules, state, ctx)?;
+        let lhs = self.gt.0.run_with_context(pico_rules, runtime, ctx)?;
+        let rhs = self.gt.1.run_with_context(pico_rules, runtime, ctx)?;
         match (lhs, rhs) {
             (ExecutionResult::Continue(left), ExecutionResult::Continue(right)) => {
                 Ok(ExecutionResult::Continue(PicoValue::Boolean(left > right)))
@@ -74,11 +74,11 @@ impl Execution for LessThan {
     fn run_with_context(
         &self,
         pico_rules: &PicoRules,
-        state: &mut PicoState,
+        runtime: &mut PicoRuntime,
         ctx: &mut PicoContext,
     ) -> FnResult {
-        let lhs = self.lt.0.run_with_context(pico_rules, state, ctx)?;
-        let rhs = self.lt.1.run_with_context(pico_rules, state, ctx)?;
+        let lhs = self.lt.0.run_with_context(pico_rules, runtime, ctx)?;
+        let rhs = self.lt.1.run_with_context(pico_rules, runtime, ctx)?;
         match (lhs, rhs) {
             (ExecutionResult::Continue(left), ExecutionResult::Continue(right)) => {
                 Ok(ExecutionResult::Continue(PicoValue::Boolean(left < right)))

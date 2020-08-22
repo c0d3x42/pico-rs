@@ -6,8 +6,8 @@ use crate::conditions::Condition;
 use crate::context::PicoContext;
 use crate::errors::PicoError;
 //use crate::state::PicoState;
-use crate::loader::PicoRules;
-use crate::loader::PicoRuntime as PicoState;
+use crate::rules::PicoRules;
+use crate::runtime::PicoRuntime;
 use crate::values::PicoValue;
 
 use uuid::Uuid;
@@ -23,7 +23,7 @@ impl Execution for StopCommand {
     fn run_with_context(
         &self,
         _pico_rules: &PicoRules,
-        _state: &mut PicoState,
+        _runtime: &mut PicoRuntime,
         _ctx: &mut PicoContext,
     ) -> FnResult {
         debug!("stopping because {:?}", self.stop);
@@ -42,7 +42,7 @@ impl Execution for BreakToCommand {
     fn run_with_context(
         &self,
         _pico_rules: &PicoRules,
-        _state: &mut PicoState,
+        _runtime: &mut PicoRuntime,
         _ctx: &mut PicoContext,
     ) -> FnResult {
         debug!("breaking to {:?}", self.r#break);
@@ -75,11 +75,11 @@ impl Execution for IfThenElse {
     fn run_with_context(
         &self,
         pico_rules: &PicoRules,
-        state: &mut PicoState,
+        runtime: &mut PicoRuntime,
         ctx: &mut PicoContext,
     ) -> FnResult {
         info!("running ITE -> {:?}", self.uuid);
-        let if_result = self.r#if.run_with_context(pico_rules, state, ctx)?;
+        let if_result = self.r#if.run_with_context(pico_rules, runtime, ctx)?;
         //state.increment_branch_hit(&self.uuid);
         match if_result {
             ExecutionResult::BreakTo(bto) => Ok(ExecutionResult::BreakTo(bto)),
@@ -92,11 +92,11 @@ impl Execution for IfThenElse {
                     debug!("ITE got boolean back {:?}", b);
 
                     let branch_result = match b {
-                        true => self.then.run_with_context(pico_rules, state, ctx),
+                        true => self.then.run_with_context(pico_rules, runtime, ctx),
                         false => match &self.r#else {
                             None => Ok(ExecutionResult::Continue(PicoValue::Boolean(true))),
                             Some(else_branch) => {
-                                else_branch.run_with_context(pico_rules, state, ctx)
+                                else_branch.run_with_context(pico_rules, runtime, ctx)
                             }
                         },
                     };

@@ -5,8 +5,8 @@ use crate::commands::execution::{Execution, ExecutionResult, FnResult};
 use crate::context::PicoContext;
 use crate::errors::PicoError;
 //use crate::state::PicoState;
-use crate::loader::PicoRules;
-use crate::loader::PicoRuntime as PicoState;
+use crate::rules::PicoRules;
+use crate::runtime::PicoRuntime;
 use crate::values::PicoValue;
 
 //use std::result;
@@ -23,7 +23,7 @@ impl Execution for Log {
     fn run_with_context(
         &self,
         _pico_rules: &PicoRules,
-        _state: &mut PicoState,
+        _runtime: &mut PicoRuntime,
         _ctx: &mut PicoContext,
     ) -> FnResult {
         info!("MSG: {:?}", self.log);
@@ -51,7 +51,7 @@ impl Execution for DebugLog {
     fn run_with_context(
         &self,
         _pico_rules: &PicoRules,
-        _state: &mut PicoState,
+        _runtime: &mut PicoRuntime,
         ctx: &mut PicoContext,
     ) -> FnResult {
         let mut tt = TinyTemplate::new();

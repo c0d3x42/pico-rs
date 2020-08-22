@@ -5,8 +5,8 @@ use crate::context::PicoContext;
 use crate::errors::PicoError;
 use crate::lookups::LookupCommand;
 //use crate::state::PicoState;
-use crate::loader::PicoRules;
-use crate::loader::PicoRuntime as PicoState;
+use crate::rules::PicoRules;
+use crate::runtime::PicoRuntime;
 use regex::Regex;
 use std::cmp::Ordering;
 use std::collections::HashMap;
@@ -32,7 +32,7 @@ impl Execution for PicoValue {
     fn run_with_context(
         &self,
         _pico_rules: &PicoRules,
-        _state: &mut PicoState,
+        _runtime: &mut PicoRuntime,
         _ctx: &mut PicoContext,
     ) -> FnResult {
         trace!("pico cloning");
@@ -96,7 +96,7 @@ impl Execution for VarLookup {
     fn run_with_context(
         &self,
         pico_rules: &PicoRules,
-        _state: &mut PicoState,
+        _runtime: &mut PicoRuntime,
         ctx: &mut PicoContext,
     ) -> FnResult {
         match &self.var {
@@ -150,11 +150,11 @@ impl Execution for Var {
     fn run_with_context(
         &self,
         pico_rules: &PicoRules,
-        state: &mut PicoState,
+        runtime: &mut PicoRuntime,
         ctx: &mut PicoContext,
     ) -> FnResult {
         match self {
-            Var::Lookup(lookup) => lookup.run_with_context(pico_rules, state, ctx),
+            Var::Lookup(lookup) => lookup.run_with_context(pico_rules, runtime, ctx),
             Var::Literal(literal) => Ok(ExecutionResult::Continue(literal.clone())),
         }
     }
@@ -179,17 +179,19 @@ impl Execution for ValueProducer {
     fn run_with_context(
         &self,
         pico_rules: &PicoRules,
-        state: &mut PicoState,
+        runtime: &mut PicoRuntime,
         ctx: &mut PicoContext,
     ) -> FnResult {
         trace!("producer running..");
         match self {
-            ValueProducer::Lookup(lookup) => lookup.run_with_context(pico_rules, state, ctx),
-            ValueProducer::Literal(literal) => literal.run_with_context(pico_rules, state, ctx),
-            ValueProducer::Slice(slice) => slice.run_with_context(pico_rules, state, ctx),
-            ValueProducer::ConCat(concat) => concat.run_with_context(pico_rules, state, ctx),
-            ValueProducer::Extract(extract) => extract.run_with_context(pico_rules, state, ctx),
-            ValueProducer::DictionaryLookup(dict) => dict.run_with_context(pico_rules, state, ctx),
+            ValueProducer::Lookup(lookup) => lookup.run_with_context(pico_rules, runtime, ctx),
+            ValueProducer::Literal(literal) => literal.run_with_context(pico_rules, runtime, ctx),
+            ValueProducer::Slice(slice) => slice.run_with_context(pico_rules, runtime, ctx),
+            ValueProducer::ConCat(concat) => concat.run_with_context(pico_rules, runtime, ctx),
+            ValueProducer::Extract(extract) => extract.run_with_context(pico_rules, runtime, ctx),
+            ValueProducer::DictionaryLookup(dict) => {
+                dict.run_with_context(pico_rules, runtime, ctx)
+            }
         }
     }
 }
@@ -213,10 +215,10 @@ impl Execution for Extract {
     fn run_with_context(
         &self,
         pico_rules: &PicoRules,
-        state: &mut PicoState,
+        runtime: &mut PicoRuntime,
         ctx: &mut PicoContext,
     ) -> FnResult {
-        let with_value = self.extract.1.run_with_context(pico_rules, state, ctx)?;
+        let with_value = self.extract.1.run_with_context(pico_rules, runtime, ctx)?;
         match with_value {
             ExecutionResult::Continue(continuation) => match continuation {
                 PicoValue::String(string_value) => {
@@ -261,13 +263,13 @@ impl Execution for ConCat {
     fn run_with_context(
         &self,
         pico_rules: &PicoRules,
-        state: &mut PicoState,
+        runtime: &mut PicoRuntime,
         ctx: &mut PicoContext,
     ) -> FnResult {
         let words = &self
             .concat
             .iter()
-            .map(|e| e.run_with_context(pico_rules, state, ctx))
+            .map(|e| e.run_with_context(pico_rules, runtime, ctx))
             .filter(|x| x.is_ok())
             .filter_map(Result::ok)
             .filter_map(|p| match p {
@@ -364,11 +366,11 @@ impl Execution for Slice {
     fn run_with_context(
         &self,
         pico_rules: &PicoRules,
-        state: &mut PicoState,
+        runtime: &mut PicoRuntime,
         ctx: &mut PicoContext,
     ) -> FnResult {
         info!("slicing");
-        let s = self.slice.0.run_with_context(pico_rules, state, ctx)?;
+        let s = self.slice.0.run_with_context(pico_rules, runtime, ctx)?;
         let start_index = self.slice.1;
         //let endIndex = self.slice.2;
 

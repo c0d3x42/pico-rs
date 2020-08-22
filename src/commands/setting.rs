@@ -3,8 +3,8 @@ use serde::{Deserialize, Serialize};
 use crate::commands::execution::{Execution, ExecutionResult, FnResult};
 use crate::context::PicoContext;
 //use crate::state::PicoState;
-use crate::loader::PicoRules;
-use crate::loader::PicoRuntime as PicoState;
+use crate::rules::PicoRules;
+use crate::runtime::PicoRuntime;
 use crate::values::{Extract, PicoValue, ValueProducer};
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -25,14 +25,14 @@ impl Execution for SetCommand {
     fn run_with_context(
         &self,
         pico_rules: &PicoRules,
-        state: &mut PicoState,
+        runtime: &mut PicoRuntime,
         ctx: &mut PicoContext,
     ) -> FnResult {
         info!("RUNNING SET");
 
         match &self.set {
             Settable::Extractor(extraction) => {
-                let extracted_values = extraction.run_with_context(pico_rules, state, ctx)?;
+                let extracted_values = extraction.run_with_context(pico_rules, runtime, ctx)?;
                 match extracted_values {
                     ExecutionResult::Setting(dict) => {
                         for (key, value) in dict {
@@ -44,7 +44,7 @@ impl Execution for SetCommand {
             }
 
             Settable::ValueProducing(var_name, value_producer) => {
-                let produced_value = value_producer.run_with_context(pico_rules, state, ctx)?;
+                let produced_value = value_producer.run_with_context(pico_rules, runtime, ctx)?;
 
                 debug!("Produced value = {:?}", produced_value);
 

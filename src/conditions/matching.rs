@@ -4,8 +4,8 @@ use crate::commands::execution::{Execution, ExecutionResult, FnResult};
 use crate::context::PicoContext;
 use crate::errors::PicoError;
 //use crate::state::PicoState;
-use crate::loader::PicoRules;
-use crate::loader::PicoRuntime as PicoState;
+use crate::rules::PicoRules;
+use crate::runtime::PicoRuntime;
 //use crate::values::{PicoValue, Var};
 use crate::{PicoValue, ValueProducer};
 
@@ -29,12 +29,12 @@ impl Execution for RegMatch {
     fn run_with_context(
         &self,
         pico_rules: &PicoRules,
-        state: &mut PicoState,
+        runtime: &mut PicoRuntime,
         ctx: &mut PicoContext,
     ) -> FnResult {
         debug!("Looking up regmatch/with");
 
-        let with_value = self.regmatch.1.run_with_context(pico_rules, state, ctx)?;
+        let with_value = self.regmatch.1.run_with_context(pico_rules, runtime, ctx)?;
 
         match with_value {
             ExecutionResult::Stop(stopping_reason) => Ok(ExecutionResult::Stop(stopping_reason)),
@@ -70,17 +70,17 @@ impl Execution for StartsWith {
     fn run_with_context(
         &self,
         pico_rules: &PicoRules,
-        state: &mut PicoState,
+        runtime: &mut PicoRuntime,
         ctx: &mut PicoContext,
     ) -> FnResult {
         let needle_ctx = self
             .match_start
             .0
-            .run_with_context(pico_rules, state, ctx)?;
+            .run_with_context(pico_rules, runtime, ctx)?;
         let haystack_ctx = self
             .match_start
             .1
-            .run_with_context(pico_rules, state, ctx)?;
+            .run_with_context(pico_rules, runtime, ctx)?;
 
         match (needle_ctx, haystack_ctx) {
             (
@@ -116,12 +116,12 @@ impl Execution for Match {
     fn run_with_context(
         &self,
         pico_rules: &PicoRules,
-        state: &mut PicoState,
+        runtime: &mut PicoRuntime,
         ctx: &mut PicoContext,
     ) -> FnResult {
         info!("running match");
-        let lhs = self.r#match.0.run_with_context(pico_rules, state, ctx)?;
-        let rhs = self.r#match.1.run_with_context(pico_rules, state, ctx)?;
+        let lhs = self.r#match.0.run_with_context(pico_rules, runtime, ctx)?;
+        let rhs = self.r#match.1.run_with_context(pico_rules, runtime, ctx)?;
 
         match (lhs, rhs) {
             (ExecutionResult::Continue(left), ExecutionResult::Continue(right)) => {

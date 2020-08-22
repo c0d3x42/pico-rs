@@ -16,8 +16,8 @@ extern crate picolang;
 
 use picolang::context::PicoContext;
 //use picolang::include::PicoRules;
-use picolang::loader::PicoRules as NewRules;
-use picolang::loader::PicoRuntime;
+use picolang::rules::PicoRules;
+use picolang::runtime::PicoRuntime;
 
 #[cfg(feature = "srv_nats")]
 use picolang::nats::start_nats;
@@ -65,12 +65,10 @@ async fn main() -> Result<()> {
 
     debug!("Hello, world! ");
 
-    let nr = NewRules::new()
+    let nr = PicoRules::new()
         .load_rulefile("pico-rule.json")
         .load_includes();
     debug!("NR = {:?}", nr);
-
-    let mut st = nr.make_state();
 
     let mut ctx = PicoContext::new();
     let mut runtime = PicoRuntime::new(&nr);
@@ -83,7 +81,7 @@ async fn main() -> Result<()> {
     let file = matches.value_of("rules").unwrap();
     //let mut pr = PicoRules::new(file);
     //let _x: picolang::commands::execution::ExecutionResult = pr.load().unwrap();
-    let pico: Arc<RwLock<NewRules>> = Arc::new(RwLock::new(nr));
+    let pico: Arc<RwLock<PicoRules>> = Arc::new(RwLock::new(nr));
 
     serve(pico).await;
     Ok(())
