@@ -75,6 +75,7 @@ async fn main() -> Result<()> {
     runtime.exec_root_with_context(&mut ctx);
     //nr.run_with_context(&mut runtime, &mut ctx);
 
+    warn!("RUNTIME {:?}", runtime);
     info!("DONE");
     start_nats();
 

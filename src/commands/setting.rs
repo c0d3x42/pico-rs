@@ -51,6 +51,7 @@ impl Execution for SetCommand {
                 match produced_value {
                     ExecutionResult::Continue(pv) => match pv {
                         PicoValue::String(v) => {
+                            runtime.json_set(var_name, &serde_json::Value::String(v.clone()));
                             ctx.set_value(var_name, PicoValue::String(v.to_string()))
                         }
                         PicoValue::Number(val) => ctx.set_value(var_name, PicoValue::Number(val)),

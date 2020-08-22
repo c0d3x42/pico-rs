@@ -33,6 +33,10 @@ the root level RuleFile **onl** has access to the lookups defined in it
 curl -v -X POST localhost:8000/submit -d '{"xp": "x1xxx", "y": "y2"}' -H 'Content-Type: application/json'
 ```
 
+```bash
+curl -v -X POST localhost:8000/submit -d '{"xp": "x1xxx", "y": "y2", "json": {"ja": "rules}}' -H 'Content-Type: application/json'
+```
+
 # benchmark
 
 ```bash

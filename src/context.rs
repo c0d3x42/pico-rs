@@ -1,5 +1,6 @@
 use crate::lookups::Lookups;
 use crate::PicoValue;
+use serde_json::Value;
 
 use serde::Serialize;
 use std::collections::HashMap;
@@ -18,6 +19,7 @@ pub struct PicoContext {
     pub variables: VariablesMap,
     pub local_variables: VariablesMap,
     pub lookup_tables: Lookups,
+    pub json: Option<serde_json::Value>,
 }
 
 impl Default for PicoContext {
@@ -26,6 +28,7 @@ impl Default for PicoContext {
             variables: HashMap::new(),
             local_variables: HashMap::new(),
             lookup_tables: HashMap::new(),
+            json: None,
         }
     }
 }
@@ -34,6 +37,12 @@ impl PicoContext {
     pub fn new() -> PicoContext {
         Default::default()
     }
+
+    pub fn set_json(mut self, json: serde_json::Value) -> Self {
+        self.json = Some(json);
+        self
+    }
+
     pub fn set_value(&mut self, key: &str, value: PicoValue) {
         self.local_variables.insert(key.to_string(), value);
     }

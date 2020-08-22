@@ -164,6 +164,7 @@ impl Execution for Var {
 #[serde(untagged)]
 pub enum ValueProducer {
     Literal(PicoValue),
+    Pointer(Pointer),
     Lookup(VarLookup),
     Slice(Slice),
     ConCat(ConCat),
@@ -186,6 +187,7 @@ impl Execution for ValueProducer {
         match self {
             ValueProducer::Lookup(lookup) => lookup.run_with_context(pico_rules, runtime, ctx),
             ValueProducer::Literal(literal) => literal.run_with_context(pico_rules, runtime, ctx),
+            ValueProducer::Pointer(pointer) => pointer.run_with_context(pico_rules, runtime, ctx),
             ValueProducer::Slice(slice) => slice.run_with_context(pico_rules, runtime, ctx),
             ValueProducer::ConCat(concat) => concat.run_with_context(pico_rules, runtime, ctx),
             ValueProducer::Extract(extract) => extract.run_with_context(pico_rules, runtime, ctx),
@@ -404,5 +406,33 @@ impl Execution for Slice {
         };
 
         return final_result;
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Pointer {
+    pointer: String, // JSON pointer
+}
+
+impl Execution for Pointer {
+    fn name(&self) -> String {
+        "slice".to_string()
+    }
+
+    fn run_with_context(
+        &self,
+        pico_rules: &PicoRules,
+        runtime: &mut PicoRuntime,
+        ctx: &mut PicoContext,
+    ) -> FnResult {
+        if let Some(json) = &ctx.json {
+            if let Some(value) = json.pointer(&self.pointer) {
+                return Ok(ExecutionResult::Continue(PicoValue::String(
+                    value.to_string(),
+                )));
+            }
+        }
+
+        Ok(ExecutionResult::Continue(PicoValue::Boolean(true)))
     }
 }

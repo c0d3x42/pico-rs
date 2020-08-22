@@ -1,10 +1,13 @@
 use crate::rules::PicoRules;
+use serde_json::Value as JsonValue;
 use std::collections::HashMap;
 
 use crate::context::PicoContext;
 
+#[derive(Debug)]
 pub struct PicoRuntime<'a> {
   pub variables: Vec<HashMap<String, String>>,
+  pub json_variables: Vec<HashMap<String, JsonValue>>,
   current_rules: Vec<&'a PicoRules>,
   root_rule: &'a PicoRules, // borrowed reference of the top level rulefile
 }
@@ -12,6 +15,7 @@ impl<'a> PicoRuntime<'a> {
   pub fn new(root_rule: &'a PicoRules) -> Self {
     Self {
       variables: Vec::new(),
+      json_variables: Vec::new(),
       current_rules: Vec::new(),
       root_rule,
     }
@@ -38,11 +42,27 @@ impl<'a> PicoRuntime<'a> {
 
   pub fn add(&mut self) {
     info!("runtimes: {}", self.variables.len());
-    self.variables.push(HashMap::new())
+    self.variables.push(HashMap::new());
+    self.json_variables.push(HashMap::new());
   }
 
   pub fn remove(&mut self) {
     self.variables.pop();
+  }
+
+  pub fn json_get(&self, key: &str) -> Option<&serde_json::Value> {
+    for variable in self.json_variables.iter() {
+      if let Some(j) = variable.get(key) {
+        return Some(j);
+      }
+    }
+    None
+  }
+
+  pub fn json_set(&mut self, key: &str, value: &serde_json::Value) {
+    if let Some(hm) = self.json_variables.last_mut() {
+      hm.insert(key.to_string(), value.clone());
+    }
   }
 
   pub fn get(&self, key: &str) -> Option<&String> {

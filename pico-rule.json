@@ -11,7 +11,29 @@
     },
     "root": [
         {
+            "set": [
+                "X0",
+                {
+                    "pointer": "/x/0"
+                }
+            ]
+        },
+        {
+            "set": [
+                "X1",
+                {
+                    "pointer": "/x/1"
+                }
+            ]
+        },
+        {
             "include": "other-rules.json"
+        },
+        {
+            "set": [
+                "var1",
+                "isvar1"
+            ]
         },
         {
             "uuid": "de5b1618-cfb0-4b3d-9dbf-9c3fb3f778de",

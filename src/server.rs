@@ -9,6 +9,8 @@ use std::result::Result;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
+use jsonpath_lib as jsonpath;
+
 use warp::{reply::json, Filter, Rejection, Reply};
 
 pub async fn serve(pico: Arc<RwLock<PicoRules>>) {
@@ -29,44 +31,70 @@ pub struct SubmitResponse {
 }
 
 pub async fn submit_handler(
-    body: InVars,
+    body: serde_json::Value,
     pico: Arc<RwLock<PicoRules>>,
 ) -> Result<impl Reply, Rejection> {
     let re = pico.read().await;
 
-    let mut ctx = PicoContext::new();
-
     trace!("InVars... {:?}", body);
+    let mut ctx = PicoContext::new().set_json(body);
 
-    for (key, value) in body.input_map {
-        match value {
-            serde_json::Value::String(s) => {
-                ctx.variables.insert(key, PicoValue::String(s));
+    //body.hello();
+    /*
+        for (key, value) in body.input_map {
+            info!("Checking input JSON [{}] = {}", key, value);
+
+            /*
+                    match key.as_ref() {
+                        "json" => {
+                            debug!("keyref is json");
+                            ctx = ctx.set_json(value);
+                            continue;
+                        }
+                        _ => {}
+                    }
+            */
+            if let "json" = key.as_ref() {
+                ctx = ctx.set_json(value);
+                continue;
             }
-            serde_json::Value::Number(n) => {
-                if n.is_i64() {
-                    let pv = match n.as_i64() {
-                        Some(nn) => PicoValue::Number(nn),
-                        None => PicoValue::Number(0),
-                    };
 
-                    ctx.variables.insert(key, pv);
-                } else if n.is_u64() {
-                    let pv = match n.as_u64() {
-                        Some(nn) => PicoValue::UnsignedNumber(nn),
-                        None => PicoValue::UnsignedNumber(0),
-                    };
+            match value {
+                serde_json::Value::String(s) => {
+                    ctx.variables.insert(key, PicoValue::String(s));
+                }
+                serde_json::Value::Number(n) => {
+                    if n.is_i64() {
+                        let pv = match n.as_i64() {
+                            Some(nn) => PicoValue::Number(nn),
+                            None => PicoValue::Number(0),
+                        };
 
-                    ctx.variables.insert(key, pv);
+                        ctx.variables.insert(key, pv);
+                    } else if n.is_u64() {
+                        let pv = match n.as_u64() {
+                            Some(nn) => PicoValue::UnsignedNumber(nn),
+                            None => PicoValue::UnsignedNumber(0),
+                        };
+
+                        ctx.variables.insert(key, pv);
+                    }
+                }
+                _ => {
+                    warn!("Unsupported input var {}", key);
                 }
             }
-            _ => {
-                warn!("Unsupported input var {}", key);
-            }
         }
-    }
+    */
 
     trace!("INITIAL CTX = {:?}", ctx);
+
+    let mut template = jsonpath::compile("$..deus");
+
+    if let Some(j) = &ctx.json {
+        let o = template(&j).unwrap();
+        info!("JSONPATH = {:?}", o);
+    }
 
     let mut runtime = PicoRuntime::new(&re);
     re.run_with_context(&mut runtime, &mut ctx);
