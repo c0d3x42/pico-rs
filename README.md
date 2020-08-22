@@ -1,6 +1,8 @@
 
 # Pico-Lang
 
+![Rust](https://github.com/c0d3x42/pico-rs/workflows/Rust/badge.svg?branch=master)
+
 A minimal and safe programming language expressed in `JSON`
 
 
