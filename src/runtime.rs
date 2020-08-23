@@ -24,11 +24,26 @@ impl<'a> PicoRuntime<'a> {
     Self {
       variables: Vec::new(),
       globals: HashMap::new(),
-      namespaced_variables: HashMap::new(),
+      namespaced_variables: HashMap::new(), // all namespaced variables
       json_variables: Vec::new(),
       current_rules: Vec::new(),
       root_rule,
     }
+  }
+
+  pub fn initialise(mut self) -> Self {
+    info!("xx");
+
+    let mut namespaces: Vec<String> = Vec::new();
+    self.root_rule.all_namespace(&mut namespaces);
+
+    info!("ALL NAMESPACES {}", namespaces.join(","));
+
+    for ns in namespaces {
+      self.add_namespace(&ns);
+    }
+
+    self
   }
 
   pub fn exec_root_with_context(&mut self, ctx: &mut PicoContext) {
@@ -118,6 +133,27 @@ impl<'a> PicoRuntime<'a> {
       self.new_namespace(name);
     } else {
       warn!("Attempt to redeclare namespace: [{}]", name);
+    }
+  }
+
+  pub fn ns_get(&self, ns: &str, key: &str) -> Option<&PicoValue> {
+    match self.namespaced_variables.get(ns) {
+      None => {
+        warn!("No such namespace [{}] when looking for key [{}]", ns, key);
+        None
+      }
+      Some(hm) => hm.get(key),
+    }
+  }
+
+  pub fn ns_set(&mut self, ns: &str, key: &str, value: &PicoValue) {
+    if let Some(ns_map) = self.namespaced_variables.get_mut(ns) {
+      ns_map.insert(key.to_string(), value.clone());
+    } else {
+      warn!(
+        "namespace {} does not exist, can not save {} = {}",
+        ns, key, value
+      );
     }
   }
 }

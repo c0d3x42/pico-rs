@@ -9,6 +9,11 @@
             "default": 0
         }
     },
+    "namespaces": [
+        "lower1",
+        "lower2",
+        "dev::test"
+    ],
     "fini": [
         {
             "pop_locals": true

@@ -10,6 +10,9 @@
             "default": "unknown"
         }
     },
+    "namespaces": [
+        "test2"
+    ],
     "fini": [],
     "root": [
         {

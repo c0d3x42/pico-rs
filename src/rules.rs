@@ -59,12 +59,21 @@ impl RuleFile {
 }
 impl fmt::Display for RuleFile {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "version={}, rule count={}",
-            self.version,
-            self.root.len()
-        )
+        match &self.namespaces {
+            Some(ns) => write!(
+                f,
+                "version={}, rule count={} namespaces={}",
+                self.version,
+                self.root.len(),
+                ns.join(",")
+            ),
+            None => write!(
+                f,
+                "version={}, rule count={}",
+                self.version,
+                self.root.len()
+            ),
+        }
     }
 }
 
@@ -145,6 +154,21 @@ impl PicoRules {
         Default::default()
     }
 
+    pub fn all_namespace(&self, collected: &mut Vec<String>) {
+        //let collected_namespace: Vec<String> = Vec::new();
+
+        if let Some(rf) = &self.rulefile.content {
+            if let Some(ns_v) = &rf.namespaces {
+                for ns in ns_v {
+                    collected.push(ns.to_string());
+                }
+            }
+        }
+        for (key, pico_rule) in &self.rulefile_cache {
+            PicoRules::all_namespace(pico_rule, collected);
+        }
+    }
+
     pub fn set_entry(mut self, entrypoint: &str) -> Self {
         self.entrypoint = entrypoint.to_string();
         self
@@ -195,6 +219,14 @@ impl PicoRules {
         };
 
         include_sections
+    }
+
+    pub fn setup_rules(mut self) -> Self {
+        if let Some(rf) = &self.rulefile.content {
+            if let Some(namespaces) = &rf.namespaces {}
+        }
+
+        self
     }
 
     /*
@@ -265,5 +297,9 @@ impl PicoRules {
             }
         };
         runtime.remove();
+    }
+
+    pub fn is_ns_allowed(&self, requested_namespace: &str) -> bool {
+        self.allowed_namespaces.contains(requested_namespace)
     }
 }
