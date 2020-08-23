@@ -5,10 +5,16 @@ use std::collections::HashMap;
 use crate::context::PicoContext;
 use crate::values::PicoValue;
 
+type Namespace = String;
+type VariableMap = HashMap<String, JsonValue>;
+
 #[derive(Debug)]
 pub struct PicoRuntime<'a> {
   pub variables: Vec<HashMap<String, String>>,
   pub globals: HashMap<String, PicoValue>,
+
+  pub namespaced_variables: HashMap<Namespace, VariableMap>,
+
   pub json_variables: Vec<HashMap<String, JsonValue>>,
   current_rules: Vec<&'a PicoRules>,
   root_rule: &'a PicoRules, // borrowed reference of the top level rulefile
@@ -18,6 +24,7 @@ impl<'a> PicoRuntime<'a> {
     Self {
       variables: Vec::new(),
       globals: HashMap::new(),
+      namespaced_variables: HashMap::new(),
       json_variables: Vec::new(),
       current_rules: Vec::new(),
       root_rule,
@@ -98,5 +105,19 @@ impl<'a> PicoRuntime<'a> {
 
   pub fn global_set(&mut self, key: &str, value: &PicoValue) {
     self.globals.insert(key.to_string(), value.clone());
+  }
+
+  pub fn new_namespace(&mut self, name: &str) {
+    self
+      .namespaced_variables
+      .insert(name.to_string(), HashMap::new());
+  }
+
+  pub fn add_namespace(&mut self, name: &str) {
+    if !self.namespaced_variables.contains_key(name) {
+      self.new_namespace(name);
+    } else {
+      warn!("Attempt to redeclare namespace: [{}]", name);
+    }
   }
 }

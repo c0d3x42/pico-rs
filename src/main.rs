@@ -65,8 +65,10 @@ async fn main() -> Result<()> {
 
     debug!("Hello, world! ");
 
-    let nr = PicoRules::new().load_rulefile("rule2.json").load_includes();
-    debug!("NR = {:?}", nr);
+    let nr = PicoRules::new()
+        .load_rulefile("pico-rule.json")
+        .load_includes();
+    debug!("NR = {}", nr);
 
     let mut ctx = PicoContext::new();
     let mut runtime = PicoRuntime::new(&nr);

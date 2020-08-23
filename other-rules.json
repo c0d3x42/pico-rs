@@ -10,6 +10,7 @@
             "default": "unknown"
         }
     },
+    "fini": [],
     "root": [
         {
             "include": "rule2.json"

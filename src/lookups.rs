@@ -6,6 +6,7 @@ use crate::commands::execution::{Execution, ExecutionResult, FnResult};
 use crate::context::PicoContext;
 use crate::errors::PicoError;
 //use crate::state::PicoState;
+//use super::namespace;
 use crate::rules::PicoRules;
 use crate::runtime::PicoRuntime;
 use crate::PicoValue;
@@ -16,6 +17,9 @@ pub type LookupDict = HashMap<String, PicoValue>;
 pub struct LookupTable {
     pub entries: LookupDict,
     pub default: PicoValue,
+
+    // namespaces this lookup table is available in
+    pub namespaces: Option<Vec<String>>,
 }
 
 impl Default for LookupTable {
@@ -23,6 +27,7 @@ impl Default for LookupTable {
         Self {
             default: PicoValue::String("unknown".to_string()),
             entries: HashMap::new(),
+            namespaces: None,
         }
     }
 }

@@ -17,8 +17,7 @@ pub enum Settable {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct SetCommand {
     set: Settable,
-    global: Option<bool>,
-    local: Option<bool>,
+    namespaces: Option<Vec<String>>,
 }
 impl Execution for SetCommand {
     fn name(&self) -> String {
@@ -58,9 +57,9 @@ impl Execution for SetCommand {
 
                 match produced_value {
                     ExecutionResult::Continue(pv) => {
-                        if let Some(true) = self.global {
-                            runtime.global_set(var_name, &pv)
-                        }
+                        //if let Some(true) = self.global {
+                        //    runtime.global_set(var_name, &pv)
+                        //}
                         runtime.json_set(var_name, &pv);
                         ctx.set_value(var_name, pv);
                     }

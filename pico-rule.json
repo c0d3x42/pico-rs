@@ -6,9 +6,15 @@
                 "localhost": "development",
                 "blpap": "production"
             },
-            "default": "unknown"
+            "default": "unknown",
+            "namespaces": [
+                "dev::test"
+            ]
         }
     },
+    "namespaces": [
+        "dev::test"
+    ],
     "fini": [],
     "root": [
         {
@@ -25,10 +31,16 @@
                 {
                     "pointer": "/x/1"
                 }
+            ],
+            "namespaces": [
+                "dev::test"
             ]
         },
         {
-            "include": "other-rules.json"
+            "include": "other-rules.json",
+            "namespaces": [
+                "dev::test"
+            ]
         },
         {
             "set": [
