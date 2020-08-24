@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 //use std::rc::Rc;
 
-use crate::commands::execution::{Execution, ExecutionResult, FnResult};
+use crate::commands::execution::{ValueExecution, ValueResult};
 use crate::context::PicoContext;
 use crate::errors::PicoError;
 //use crate::state::PicoState;
@@ -54,17 +54,13 @@ pub struct LookupCommand {
     lookup: (String, String), // table, key
 }
 
-impl Execution for LookupCommand {
-    fn name(&self) -> String {
-        String::from("lookup")
-    }
-
+impl ValueExecution for LookupCommand {
     fn run_with_context(
         &self,
         pico_rules: &PicoRules,
         runtime: &mut PicoRuntime,
         _ctx: &mut PicoContext,
-    ) -> FnResult {
+    ) -> ValueResult {
         info!(
             "Lookup Dictionary {:?} -> {:?}",
             self.lookup.0, self.lookup.1

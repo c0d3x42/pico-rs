@@ -1,7 +1,9 @@
 use serde::{Deserialize, Serialize};
 
 use crate::commands::action::Action;
-use crate::commands::execution::{Execution, ExecutionResult, FnResult};
+use crate::commands::execution::{
+    ActionExecution, ActionResult, ActionValue, ConditionExecution, ConditionResult,
+};
 use crate::conditions::Condition;
 use crate::context::PicoContext;
 use crate::errors::PicoError;
@@ -16,18 +18,15 @@ use uuid::Uuid;
 pub struct StopCommand {
     stop: String,
 }
-impl Execution for StopCommand {
-    fn name(&self) -> String {
-        "Stop Command".to_string()
-    }
+impl ActionExecution for StopCommand {
     fn run_with_context(
         &self,
         _pico_rules: &PicoRules,
         _runtime: &mut PicoRuntime,
         _ctx: &mut PicoContext,
-    ) -> FnResult {
+    ) -> ActionResult {
         debug!("stopping because {:?}", self.stop);
-        Ok(ExecutionResult::Stop(Some(self.stop.clone())))
+        Ok(ActionValue::Stop(Some(self.stop.clone())))
     }
 }
 
@@ -35,18 +34,15 @@ impl Execution for StopCommand {
 pub struct BreakToCommand {
     r#break: uuid::Uuid,
 }
-impl Execution for BreakToCommand {
-    fn name(&self) -> String {
-        "BreakTo Command".to_string()
-    }
+impl ActionExecution for BreakToCommand {
     fn run_with_context(
         &self,
         _pico_rules: &PicoRules,
         _runtime: &mut PicoRuntime,
         _ctx: &mut PicoContext,
-    ) -> FnResult {
+    ) -> ActionResult {
         debug!("breaking to {:?}", self.r#break);
-        Ok(ExecutionResult::BreakTo(self.r#break))
+        Ok(ActionValue::BreakTo(self.r#break))
     }
 }
 
@@ -66,57 +62,21 @@ impl IfThenElse {
     }
 }
 
-impl Execution for IfThenElse {
-    fn name(&self) -> String {
-        let s: String = format!("ifthenelse [{:?}]", self.uuid);
-        s
-    }
-
+impl ActionExecution for IfThenElse {
     fn run_with_context(
         &self,
         pico_rules: &PicoRules,
         runtime: &mut PicoRuntime,
         ctx: &mut PicoContext,
-    ) -> FnResult {
+    ) -> ActionResult {
         info!("running ITE -> {:?}", self.uuid);
-        let if_result = self.r#if.run_with_context(pico_rules, runtime, ctx)?;
-        //state.increment_branch_hit(&self.uuid);
-        match if_result {
-            ExecutionResult::BreakTo(bto) => Ok(ExecutionResult::BreakTo(bto)),
-            ExecutionResult::Stop(stp) => Ok(ExecutionResult::Stop(stp)),
-            ExecutionResult::Setting(_dict) => {
-                Err(PicoError::Crash(String::from("cant set dict here")))
-            }
-            ExecutionResult::Continue(opt) => match opt {
-                PicoValue::Bool(b) => {
-                    debug!("ITE got boolean back {:?}", b);
+        let if_result: bool = self.r#if.run_with_context(pico_rules, runtime, ctx)?;
 
-                    let branch_result = match b {
-                        true => self.then.run_with_context(pico_rules, runtime, ctx),
-                        false => match &self.r#else {
-                            None => Ok(ExecutionResult::Continue(PicoValue::Bool(true))),
-                            Some(else_branch) => {
-                                else_branch.run_with_context(pico_rules, runtime, ctx)
-                            }
-                        },
-                    };
-                    // then OR else has run, check the result
-                    match branch_result {
-                        Err(unhappy) => Err(unhappy),
-                        Ok(happy_result) => match happy_result {
-                            ExecutionResult::BreakTo(bto_uuid) => {
-                                debug!("Checking breakto {:?} == {:?}", self.uuid, bto_uuid);
-                                if bto_uuid == self.uuid {
-                                    debug!("breakto stopping");
-                                    return Ok(ExecutionResult::Stop(None));
-                                }
-                                Ok(ExecutionResult::BreakTo(bto_uuid))
-                            }
-                            c => Ok(c), // passback everything else as is
-                        },
-                    }
-                }
-                _ => Ok(ExecutionResult::Stop(None)),
+        match if_result {
+            true => self.then.run_with_context(pico_rules, runtime, ctx),
+            false => match &self.r#else {
+                None => Ok(ActionValue::Continue),
+                Some(else_branch) => else_branch.run_with_context(pico_rules, runtime, ctx),
             },
         }
     }

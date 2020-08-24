@@ -5,7 +5,7 @@ pub mod existence;
 pub mod logic;
 pub mod matching;
 
-use crate::commands::execution::{Execution, ExecutionResult, FnResult};
+use crate::commands::execution::{ConditionExecution, ConditionResult};
 use crate::conditions::compare::{Eq, GreaterThan, LessThan};
 use crate::conditions::existence::{VarExistsCondition, VarMissingCondition};
 use crate::conditions::logic::{And, Not, Or};
@@ -35,17 +35,13 @@ pub enum Condition {
     Not(Not),
 }
 
-impl Execution for Condition {
-    fn name(&self) -> String {
-        "condition".to_string()
-    }
-
+impl ConditionExecution for Condition {
     fn run_with_context(
         &self,
         pico_rules: &PicoRules,
         runtime: &mut PicoRuntime,
         ctx: &mut PicoContext,
-    ) -> FnResult {
+    ) -> ConditionResult {
         debug!("Checking condition {:?}", self);
         let condition_result = match self {
             Condition::And(and) => and.run_with_context(pico_rules, runtime, ctx),
@@ -68,7 +64,7 @@ impl Execution for Condition {
             Err(error_result) => match error_result {
                 PicoError::NoSuchValue(_) | PicoError::IncompatibleComparison => {
                     info!("condition result was bad - mapping to false");
-                    Ok(ExecutionResult::Continue(PicoValue::Bool(false)))
+                    Ok(false)
                 }
                 err => Err(err),
             },

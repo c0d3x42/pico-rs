@@ -91,7 +91,7 @@ pub async fn submit_handler(
 
     let mut template = jsonpath::compile("$..deus");
 
-    if let Some(j) = &ctx.json {
+    if let Some(j) = &ctx.input_json {
         let o = template(&j).unwrap();
         info!("JSONPATH = {:?}", o);
     }

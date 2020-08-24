@@ -1,6 +1,8 @@
 use serde::{Deserialize, Serialize};
 
-use crate::commands::execution::{Execution, ExecutionResult, FnResult};
+use crate::commands::execution::{
+    ConditionExecution, ConditionResult, ValueExecution, ValueResult,
+};
 use crate::context::PicoContext;
 //use crate::state::PicoState;
 use crate::rules::PicoRules;
@@ -12,29 +14,20 @@ use crate::{PicoValue, ValueProducer};
 pub struct Eq {
     eq: (ValueProducer, ValueProducer),
 }
-impl Execution for Eq {
-    fn name(&self) -> String {
-        "equality".to_string()
-    }
+impl ConditionExecution for Eq {
     fn run_with_context(
         &self,
         pico_rules: &PicoRules,
         runtime: &mut PicoRuntime,
         ctx: &mut PicoContext,
-    ) -> FnResult {
+    ) -> ConditionResult {
         trace!("Eq resolving...");
         let lhs = self.eq.0.run_with_context(pico_rules, runtime, ctx)?;
         let rhs = self.eq.1.run_with_context(pico_rules, runtime, ctx)?;
         trace!("LHS = {:?}", lhs);
         trace!("RHS = {:?}", rhs);
 
-        match (lhs, rhs) {
-            (ExecutionResult::Continue(left), ExecutionResult::Continue(right)) => {
-                Ok(ExecutionResult::Continue(PicoValue::Bool(left == right)))
-            }
-
-            _ => Ok(ExecutionResult::Continue(PicoValue::Bool(false))),
-        }
+        Ok(lhs == rhs)
     }
 }
 
@@ -42,23 +35,21 @@ impl Execution for Eq {
 pub struct GreaterThan {
     gt: (ValueProducer, ValueProducer),
 }
-impl Execution for GreaterThan {
-    fn name(&self) -> String {
-        "less than".to_string()
-    }
+impl ConditionExecution for GreaterThan {
     fn run_with_context(
         &self,
         pico_rules: &PicoRules,
         runtime: &mut PicoRuntime,
         ctx: &mut PicoContext,
-    ) -> FnResult {
+    ) -> ConditionResult {
         let lhs = self.gt.0.run_with_context(pico_rules, runtime, ctx)?;
         let rhs = self.gt.1.run_with_context(pico_rules, runtime, ctx)?;
         match (lhs, rhs) {
+            // FIXME
             //(ExecutionResult::Continue(left), ExecutionResult::Continue(right)) => {
             //    Ok(ExecutionResult::Continue(PicoValue::Bool(left > right)))
             //}
-            _ => Ok(ExecutionResult::Continue(PicoValue::Bool(false))),
+            _ => Ok(false),
         }
     }
 }
@@ -67,23 +58,21 @@ impl Execution for GreaterThan {
 pub struct LessThan {
     lt: (ValueProducer, ValueProducer),
 }
-impl Execution for LessThan {
-    fn name(&self) -> String {
-        "less than".to_string()
-    }
+impl ConditionExecution for LessThan {
     fn run_with_context(
         &self,
         pico_rules: &PicoRules,
         runtime: &mut PicoRuntime,
         ctx: &mut PicoContext,
-    ) -> FnResult {
+    ) -> ConditionResult {
         let lhs = self.lt.0.run_with_context(pico_rules, runtime, ctx)?;
         let rhs = self.lt.1.run_with_context(pico_rules, runtime, ctx)?;
         match (lhs, rhs) {
+            // FIXME
             //(ExecutionResult::Continue(left), ExecutionResult::Continue(right)) => {
             //    Ok(ExecutionResult::Continue(PicoValue::Bool(left < right)))
             // }
-            _ => Ok(ExecutionResult::Continue(PicoValue::Bool(false))),
+            _ => Ok(false),
         }
     }
 }

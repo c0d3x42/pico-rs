@@ -5,7 +5,7 @@ use serde_json::Value;
 
 pub type PicoValue = Value;
 
-use crate::commands::execution::{Execution, ExecutionResult, FnResult};
+use crate::commands::execution::{ValueExecution, ValueResult};
 use crate::context::PicoContext;
 use crate::errors::PicoError;
 use crate::lookups::LookupCommand;
@@ -18,85 +18,16 @@ use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::fmt;
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
-#[serde(untagged)]
-pub enum PicoValueOld {
-    UnsignedNumber(u64),
-    Number(i64),
-    String(String),
-    Boolean(bool),
-    //Array(Vec<PicoValue>),
-    //Dictionary(HashMap<String, PicoValue>),
-}
-
-/*
-impl Execution for PicoValueOld {
-    fn name(&self) -> String {
-        "PicoValue".to_string()
-    }
-
+impl ValueExecution for PicoValue {
     fn run_with_context(
         &self,
         _pico_rules: &PicoRules,
         _runtime: &mut PicoRuntime,
         _ctx: &mut PicoContext,
-    ) -> FnResult {
+    ) -> ValueResult {
         trace!("pico cloning");
-        Ok(ExecutionResult::Continue(self.clone()))
+        Ok(self.clone())
     }
-}
-*/
-
-impl Execution for PicoValue {
-    fn name(&self) -> String {
-        "PicoValue".to_string()
-    }
-
-    fn run_with_context(
-        &self,
-        _pico_rules: &PicoRules,
-        _runtime: &mut PicoRuntime,
-        _ctx: &mut PicoContext,
-    ) -> FnResult {
-        trace!("pico cloning");
-        Ok(ExecutionResult::Continue(self.clone()))
-    }
-}
-
-impl fmt::Display for PicoValueOld {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        info!("PicoValue::Display {}, {:?}", self, self);
-        return write!(f, "{}", self);
-    }
-}
-
-impl PartialEq for PicoValueOld {
-    fn eq(&self, other: &Self) -> bool {
-        match (self, other) {
-            (&PicoValueOld::Boolean(a), &PicoValueOld::Boolean(b)) => a == b,
-            (&PicoValueOld::UnsignedNumber(a), &PicoValueOld::UnsignedNumber(b)) => a == b,
-            (&PicoValueOld::Number(a), &PicoValueOld::Number(b)) => a == b,
-            (&PicoValueOld::String(ref a), &PicoValueOld::String(ref b)) => a == b,
-            _ => false,
-        }
-    }
-}
-
-impl PartialOrd for PicoValueOld {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        match (self, other) {
-            (&PicoValueOld::UnsignedNumber(a), &PicoValueOld::UnsignedNumber(b)) => Some(a.cmp(&b)),
-            (&PicoValueOld::Number(a), &PicoValueOld::Number(b)) => Some(a.cmp(&b)),
-            (&PicoValueOld::String(ref a), &PicoValueOld::String(ref b)) => Some(a.cmp(b)),
-            _ => None,
-        }
-    }
-}
-
-#[test]
-fn eq9() {
-    let v = json!(9);
-    //assert_eq!(v.eq(&PicoValue::Number(9.0)), true);
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -111,37 +42,21 @@ pub struct VarLookup {
     var: VarValue,
 }
 
-impl Execution for VarLookup {
-    fn name(&self) -> String {
-        "VarLookup".to_string()
-    }
-
+impl ValueExecution for VarLookup {
     fn run_with_context(
         &self,
-        pico_rules: &PicoRules,
+        _pico_rules: &PicoRules,
         _runtime: &mut PicoRuntime,
         ctx: &mut PicoContext,
-    ) -> FnResult {
+    ) -> ValueResult {
         match &self.var {
             // Plain lookup in ctx variables
             VarValue::Lookup(s) => {
-                debug!("lookup {:?}", s);
-                // let lookup = ctx.variables.get(s);
+                trace!("lookup {:?}", s);
                 let lookup = ctx.get_value(s);
                 match lookup {
-                    Some(v) => {
-                        let r = v.clone();
-                        Ok(ExecutionResult::Continue(r))
-                    }
-                    None => {
-                        info!("Failed to lookup var {:?}", s);
-                        // let local_lookup = ctx.local_variables.get(s);
-                        let local_lookup = ctx.get_value(s);
-                        match local_lookup {
-                            Some(v) => Ok(ExecutionResult::Continue(v.clone())),
-                            None => Err(PicoError::NoSuchValue(format!("no such var {}", s))),
-                        }
-                    }
+                    Some(v) => Ok(v.clone()),
+                    None => Err(PicoError::NoSuchValue(format!("no such var {}", s))),
                 }
             }
             VarValue::DefaultLookup(varname, fallback) => {
@@ -150,8 +65,8 @@ impl Execution for VarLookup {
                 //let lookup = ctx.variables.get(varname);
                 let lookup = ctx.get_value(varname);
                 match lookup {
-                    Some(value) => Ok(ExecutionResult::Continue(value.clone())),
-                    None => Ok(ExecutionResult::Continue(fallback.clone())),
+                    Some(value) => Ok(value.clone()),
+                    None => Ok(fallback.clone()),
                 }
             }
         }
@@ -166,21 +81,17 @@ pub enum Var {
     Lookup(VarLookup),
 }
 
-impl Execution for Var {
-    fn name(&self) -> String {
-        "Var".to_string()
-    }
-
+impl ValueExecution for Var {
     fn run_with_context(
         &self,
         pico_rules: &PicoRules,
         runtime: &mut PicoRuntime,
         ctx: &mut PicoContext,
-    ) -> FnResult {
+    ) -> ValueResult {
         match self {
-            Var::String(s) => Ok(ExecutionResult::Continue(PicoValue::String(s.to_string()))),
+            Var::String(s) => Ok(PicoValue::String(s.to_string())),
             Var::Lookup(lookup) => lookup.run_with_context(pico_rules, runtime, ctx),
-            Var::Literal(literal) => Ok(ExecutionResult::Continue(literal.clone())),
+            Var::Literal(literal) => Ok(literal.clone()),
         }
     }
 }
@@ -199,17 +110,13 @@ pub enum ValueProducer {
     UnsupportedObject(PicoValue),
 }
 
-impl Execution for ValueProducer {
-    fn name(&self) -> String {
-        "Var".to_string()
-    }
-
+impl ValueExecution for ValueProducer {
     fn run_with_context(
         &self,
         pico_rules: &PicoRules,
         runtime: &mut PicoRuntime,
         ctx: &mut PicoContext,
-    ) -> FnResult {
+    ) -> ValueResult {
         trace!("producer running..");
         match self {
             ValueProducer::Lookup(lookup) => lookup.run_with_context(pico_rules, runtime, ctx),
@@ -239,18 +146,41 @@ pub struct Extract {
 /*
  * Extract - extracts to context variables named from the regex named capture
  */
-impl Execution for Extract {
-    fn name(&self) -> String {
-        return String::from("extract");
-    }
-
+impl ValueExecution for Extract {
     fn run_with_context(
         &self,
         pico_rules: &PicoRules,
         runtime: &mut PicoRuntime,
         ctx: &mut PicoContext,
-    ) -> FnResult {
+    ) -> ValueResult {
         let with_value = self.extract.1.run_with_context(pico_rules, runtime, ctx)?;
+
+        match with_value {
+            PicoValue::String(s) => {
+                let captures = self.extract.0.captures(&s);
+                if let Some(caps) = &captures {
+                    let dict: HashMap<String, PicoValue> = self
+                        .extract
+                        .0
+                        .capture_names()
+                        .flatten()
+                        .filter_map(|n| {
+                            Some((
+                                String::from(n),
+                                // FIXME unwrap may panic
+                                PicoValue::String(caps.name(n).unwrap().as_str().to_string()),
+                            ))
+                        })
+                        .collect();
+                    Ok(json!(dict))
+                } else {
+                    Ok(json!({}))
+                }
+            }
+            _ => Err(PicoError::IncompatibleComparison),
+        }
+
+        /*
         match with_value {
             ExecutionResult::Continue(continuation) => match continuation {
                 PicoValue::String(string_value) => {
@@ -279,6 +209,7 @@ impl Execution for Extract {
             },
             everything_else => Ok(everything_else),
         }
+        */
     }
 }
 
@@ -287,27 +218,19 @@ pub struct ConCat {
     concat: Vec<ValueProducer>,
 }
 
-impl Execution for ConCat {
-    fn name(&self) -> String {
-        "concat".to_string()
-    }
-
+impl ValueExecution for ConCat {
     fn run_with_context(
         &self,
         pico_rules: &PicoRules,
         runtime: &mut PicoRuntime,
         ctx: &mut PicoContext,
-    ) -> FnResult {
+    ) -> ValueResult {
         let words = &self
             .concat
             .iter()
             .map(|e| e.run_with_context(pico_rules, runtime, ctx))
             .filter(|x| x.is_ok())
             .filter_map(Result::ok)
-            .filter_map(|p| match p {
-                ExecutionResult::Continue(c) => Some(c),
-                _ => None,
-            })
             .collect::<Vec<PicoValue>>();
 
         info!("TTTTT {:?}", words);
@@ -325,7 +248,7 @@ impl Execution for ConCat {
 
         info!("TT {:?}", tt.join(""));
 
-        Ok(ExecutionResult::Continue(PicoValue::String(tt.join(""))))
+        Ok(PicoValue::String(tt.join("")))
     }
 }
 
@@ -390,49 +313,40 @@ fn slice_ends_at(requested_end: isize, vec_length: usize) -> usize {
     }
 }
 
-impl Execution for Slice {
-    fn name(&self) -> String {
-        "slice".to_string()
-    }
-
+impl ValueExecution for Slice {
     fn run_with_context(
         &self,
         pico_rules: &PicoRules,
         runtime: &mut PicoRuntime,
         ctx: &mut PicoContext,
-    ) -> FnResult {
+    ) -> ValueResult {
         info!("slicing");
         let s = self.slice.0.run_with_context(pico_rules, runtime, ctx)?;
         let start_index = self.slice.1;
         //let endIndex = self.slice.2;
 
         let final_result = match s {
-            ExecutionResult::Continue(r) => match r {
-                PicoValue::String(matched_string) => {
-                    trace!("Slicing string {:?}", matched_string);
+            PicoValue::String(matched_string) => {
+                trace!("Slicing string {:?}", matched_string);
 
-                    let my_vec: Vec<char> = matched_string.chars().collect();
-                    trace!("sliced vec {:?}", my_vec);
+                let my_vec: Vec<char> = matched_string.chars().collect();
+                trace!("sliced vec {:?}", my_vec);
 
-                    let iistart = slice_starts_at(start_index, my_vec.len());
-                    trace!("IIII start {:?}", iistart);
+                let iistart = slice_starts_at(start_index, my_vec.len());
+                trace!("IIII start {:?}", iistart);
 
-                    let end_offset = match self.slice.2 {
-                        Some(ending) => slice_ends_at(ending, my_vec.len()),
-                        None => my_vec.len(),
-                    };
+                let end_offset = match self.slice.2 {
+                    Some(ending) => slice_ends_at(ending, my_vec.len()),
+                    None => my_vec.len(),
+                };
 
-                    if let Some(substring) = matched_string.get(iistart..end_offset) {
-                        return Ok(ExecutionResult::Continue(PicoValue::String(
-                            substring.to_string(),
-                        )));
-                    }
-
-                    return Ok(ExecutionResult::Continue(PicoValue::String("".to_string())));
+                if let Some(substring) = matched_string.get(iistart..end_offset) {
+                    return Ok(PicoValue::String(substring.to_string()));
                 }
-                _ => Err(PicoError::IncompatibleComparison),
-            },
-            everything_else => Ok(everything_else),
+
+                return Ok(PicoValue::String("".to_string()));
+            }
+            _ => Err(PicoError::IncompatibleComparison),
         };
 
         return final_result;
@@ -440,55 +354,72 @@ impl Execution for Slice {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct Pointer {
-    pointer: String, // JSON pointer
+#[serde(untagged)]
+pub enum PointerValue {
+    InputPointer(String),
+    VarPointer(String, VarLookup),
 }
 
-impl Execution for Pointer {
-    fn name(&self) -> String {
-        "slice".to_string()
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Pointer {
+    pointer: PointerValue, // JSON pointer
+}
+impl fmt::Display for PointerValue {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match &self {
+            PointerValue::InputPointer(c) => write!(f, "JSON Pointer {}", c),
+            PointerValue::VarPointer(s, v) => write!(f, "JSON Pointer {}, {:?}", s, v,),
+        }
     }
+}
 
+impl ValueExecution for Pointer {
     fn run_with_context(
         &self,
         pico_rules: &PicoRules,
         runtime: &mut PicoRuntime,
         ctx: &mut PicoContext,
-    ) -> FnResult {
+    ) -> ValueResult {
         info!("consulting pointer");
-        if let Some(json) = &ctx.json {
-            trace!("we have some json, checking pointer {}", self.pointer);
-            if let Some(value) = json.pointer(&self.pointer) {
-                trace!("found some value {}", value);
-                return Ok(ExecutionResult::Continue(PicoValue::String(
-                    value.to_string(),
-                )));
+        match &self.pointer {
+            PointerValue::InputPointer(json_pointer) => {
+                if let Some(input_json) = &ctx.input_json {
+                    if let Some(value) = input_json.pointer(&json_pointer) {
+                        return Ok(value.clone());
+                    }
+                }
+                Err(PicoError::NoSuchValue(json_pointer.to_string()))
+            }
+            PointerValue::VarPointer(json_pointer, var) => {
+                let value = var.run_with_context(pico_rules, runtime, ctx)?;
+                if let Some(c) = value.pointer(&json_pointer) {
+                    return Ok(c.clone());
+                }
+
+                Err(PicoError::NoSuchValue(json_pointer.to_string()))
             }
         }
-
-        Ok(ExecutionResult::Continue(PicoValue::Bool(true)))
+        /*
+        if let Some(json) = &ctx.input_json {
+            trace!("we have some json, checking pointer {}", self.pointer);
+        }
+        */
     }
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct LiteralString(String);
 
-impl Execution for LiteralString {
-    fn name(&self) -> String {
-        "literalstring".to_string()
-    }
-
+impl ValueExecution for LiteralString {
     fn run_with_context(
         &self,
         pico_rules: &PicoRules,
         runtime: &mut PicoRuntime,
         ctx: &mut PicoContext,
-    ) -> FnResult {
+    ) -> ValueResult {
         info!("HIT a literal string {}", self.0);
 
-        Ok(ExecutionResult::Continue(PicoValue::String(
-            self.0.to_string(),
-        )))
+        Ok(PicoValue::String(self.0.to_string()))
     }
 }
 

@@ -6,7 +6,7 @@ pub mod setting;
 
 use serde::{Deserialize, Serialize};
 
-use crate::commands::execution::{Execution, ExecutionResult, FnResult};
+use crate::commands::execution::{ActionExecution, ActionResult, ActionValue};
 use crate::commands::flow_control::{BreakToCommand, IfThenElse, StopCommand};
 use crate::commands::logging::{DebugLog, Log};
 use crate::commands::setting::SetCommand;
@@ -25,16 +25,13 @@ pub enum Command {
     Stop(StopCommand),
     Set(SetCommand),
 }
-impl Execution for Command {
-    fn name(&self) -> String {
-        String::from("Command")
-    }
+impl ActionExecution for Command {
     fn run_with_context(
         &self,
         pico_rules: &PicoRules,
         runtime: &mut PicoRuntime,
         ctx: &mut PicoContext,
-    ) -> FnResult {
+    ) -> ActionResult {
         info!("Running command...");
         match self {
             Command::IfThenElse(ite) => ite.run_with_context(pico_rules, runtime, ctx),
@@ -51,18 +48,15 @@ impl Execution for Command {
 pub struct PopLocals {
     pop_locals: bool,
 }
-impl Execution for PopLocals {
-    fn name(&self) -> String {
-        String::from("Fini Command")
-    }
+impl ActionExecution for PopLocals {
     fn run_with_context(
         &self,
         pico_rules: &PicoRules,
         runtime: &mut PicoRuntime,
         ctx: &mut PicoContext,
-    ) -> FnResult {
+    ) -> ActionResult {
         let hm = runtime.json_pop();
-        Ok(ExecutionResult::Setting(hm))
+        Ok(ActionValue::Setting(hm))
     }
 }
 
@@ -73,16 +67,13 @@ pub enum FiniCommand {
     DebugLog(DebugLog),
     PopLocals(PopLocals),
 }
-impl Execution for FiniCommand {
-    fn name(&self) -> String {
-        String::from("Fini Command")
-    }
+impl ActionExecution for FiniCommand {
     fn run_with_context(
         &self,
         pico_rules: &PicoRules,
         runtime: &mut PicoRuntime,
         ctx: &mut PicoContext,
-    ) -> FnResult {
+    ) -> ActionResult {
         info!("Running finish command...");
         match self {
             FiniCommand::Log(log) => log.run_with_context(pico_rules, runtime, ctx),

@@ -70,12 +70,12 @@ async fn main() -> Result<()> {
         .load_includes();
     debug!("NR = {}", nr);
 
-    let mut ctx = PicoContext::new();
-    let mut runtime = PicoRuntime::new(&nr).initialise();
-    runtime.exec_root_with_context(&mut ctx);
+    //    let mut ctx = PicoContext::new();
+    //    let mut runtime = PicoRuntime::new(&nr).initialise();
+    //    runtime.exec_root_with_context(&mut ctx);
     //nr.run_with_context(&mut runtime, &mut ctx);
 
-    warn!("RUNTIME {:?}", runtime);
+    //    warn!("RUNTIME {:?}", runtime);
     info!("DONE");
     start_nats();
 

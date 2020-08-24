@@ -6,7 +6,7 @@ use std::iter::FromIterator;
 use itertools::Itertools;
 use std::fs::File;
 
-use crate::commands::execution::{Execution, ExecutionResult, FnResult};
+use crate::commands::execution::{ActionExecution, ActionResult, ActionValue};
 use crate::commands::{Command, FiniCommand};
 use crate::context::PicoContext;
 use crate::errors::PicoError;
@@ -290,6 +290,7 @@ impl PicoRules {
                         }
                     }
                 }
+
                 //rule_file.run_with_context_new(state, ctx);
             }
             None => {

@@ -1,7 +1,10 @@
 use serde::{Deserialize, Serialize};
 
-use crate::commands::execution::{Execution, ExecutionResult, FnResult};
+use crate::commands::execution::{
+    ActionExecution, ActionResult, ActionValue, ValueExecution, ValueResult,
+};
 use crate::context::PicoContext;
+use crate::errors::PicoError;
 //use crate::state::PicoState;
 use crate::rules::PicoRules;
 use crate::runtime::PicoRuntime;
@@ -19,28 +22,25 @@ pub struct SetCommand {
     set: Settable,
     namespaces: Option<Vec<String>>, //namespaces that the variable will be available in
 }
-impl Execution for SetCommand {
-    fn name(&self) -> String {
-        "Set Command".to_string()
-    }
+impl ActionExecution for SetCommand {
     fn run_with_context(
         &self,
         pico_rules: &PicoRules,
         runtime: &mut PicoRuntime,
         ctx: &mut PicoContext,
-    ) -> FnResult {
+    ) -> ActionResult {
         info!("RUNNING SET for {}", pico_rules);
 
         match &self.set {
             Settable::Extractor(extraction) => {
                 let extracted_values = extraction.run_with_context(pico_rules, runtime, ctx)?;
                 match extracted_values {
-                    ExecutionResult::Setting(dict) => {
+                    PicoValue::Object(dict) => {
                         for (key, value) in dict {
                             ctx.set_value(&key, value);
                         }
                     }
-                    _ => {}
+                    _ => warn!("extractor returned non Object"),
                 }
             }
 
@@ -55,65 +55,21 @@ impl Execution for SetCommand {
 
                 debug!("Produced value = {:?}", produced_value);
 
-                match produced_value {
-                    ExecutionResult::Continue(pv) => {
-                        //if let Some(true) = self.global {
-                        //    runtime.global_set(var_name, &pv)
-                        //}
-
-                        match &self.namespaces {
-                            None => {}
-                            Some(requested_namespaces) => {
-                                for ns in requested_namespaces {
-                                    if pico_rules.is_ns_allowed(ns) {
-                                        runtime.ns_set(ns, var_name, &pv)
-                                    }
-                                }
+                match &self.namespaces {
+                    None => {}
+                    Some(requested_namespaces) => {
+                        for ns in requested_namespaces {
+                            if pico_rules.is_ns_allowed(ns) {
+                                runtime.ns_set(ns, var_name, &produced_value)
                             }
                         }
-                        runtime.json_set(var_name, &pv);
-                        ctx.set_value(var_name, pv);
-                    }
-                    everything_else => {
-                        warn!("can't set with the produced values {:?}", everything_else);
                     }
                 }
-
-                /*
-                match produced_value {
-                    ExecutionResult::Continue(pv) => match pv {
-                        PicoValue::String(v) => {
-                            runtime.json_set(var_name, &serde_json::Value::String(v.clone()));
-                            if let Some(true) = self.global {
-                            }
-                            ctx.set_value(var_name, PicoValue::String(v.to_string()))
-                        }
-                        PicoValue::Number(val) => ctx.set_value(var_name, PicoValue::Number(val)),
-                        //PicoValue::UnsignedNumber(val) => {
-                        //    ctx.set_value(var_name, PicoValue::UnsignedNumber(val))
-                        //}
-                        PicoValue::Bool(val) => ctx.set_value(var_name, PicoValue::Bool(val)),
-
-                        _ => {
-                            warn!("Cant set complex types");
-                        }
-                    },
-                    ExecutionResult::Setting(dict) => {
-                        // convert dictionary to ctx values prefixed by var_name
-
-                        for (key, value) in dict {
-                            let new_key = format!("{}{}", var_name, key);
-                            ctx.set_value(&new_key, value);
-                        }
-                    }
-                    everything_else => {
-                        info!("produced value ignored {:?}", everything_else);
-                    }
-                }
-                */
+                runtime.json_set(var_name, &produced_value);
+                ctx.set_value(var_name, produced_value);
             }
         }
 
-        Ok(ExecutionResult::Continue(PicoValue::Bool(true)))
+        Ok(ActionValue::Continue)
     }
 }

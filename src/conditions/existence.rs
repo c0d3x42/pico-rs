@@ -1,7 +1,7 @@
 use serde::de::Visitor;
 use serde::{Deserialize, Serialize};
 
-use crate::commands::execution::{Execution, ExecutionResult, FnResult};
+use crate::commands::execution::{ConditionExecution, ConditionResult};
 use crate::context::PicoContext;
 //use crate::state::PicoState;
 use crate::rules::PicoRules;
@@ -82,36 +82,32 @@ pub struct VarExistsCondition {
     exists: VarExistence,
 }
 
-impl Execution for VarExistsCondition {
-    fn name(&self) -> String {
-        "VarExists".to_string()
-    }
-
+impl ConditionExecution for VarExistsCondition {
     fn run_with_context(
         &self,
         pico_rules: &PicoRules,
         _runtime: &mut PicoRuntime,
         ctx: &mut PicoContext,
-    ) -> FnResult {
+    ) -> ConditionResult {
         match &self.exists {
             VarExistence::SingleVar(s) => {
                 if let Some(_v) = ctx.get_value(s) {
-                    return Ok(ExecutionResult::Continue(PicoValue::Bool(true)));
+                    return Ok(true);
                 }
             }
             VarExistence::ManyVar(vs) => {
                 for v in vs {
                     match ctx.get_value(v) {
-                        None => return Ok(ExecutionResult::Continue(PicoValue::Bool(false))),
+                        None => return Ok(false),
                         Some(_) => {}
                     }
                 }
                 // not yet exited early, all vars existed
-                return Ok(ExecutionResult::Continue(PicoValue::Bool(true)));
+                return Ok(true);
             }
         }
 
-        Ok(ExecutionResult::Continue(PicoValue::Bool(false)))
+        Ok(false)
     }
 }
 
@@ -119,21 +115,16 @@ impl Execution for VarExistsCondition {
 pub struct VarMissingCondition {
     missing: String,
 }
-impl Execution for VarMissingCondition {
-    fn name(&self) -> String {
-        "VarMissing".to_string()
-    }
-
+impl ConditionExecution for VarMissingCondition {
     fn run_with_context(
         &self,
         _pico_rules: &PicoRules,
         _runtime: &mut PicoRuntime,
         ctx: &mut PicoContext,
-    ) -> FnResult {
-        let final_result = match ctx.get_value(&self.missing) {
-            Some(_v) => Ok(ExecutionResult::Continue(PicoValue::Bool(false))),
-            None => Ok(ExecutionResult::Continue(PicoValue::Bool(true))),
-        };
-        final_result
+    ) -> ConditionResult {
+        match ctx.get_value(&self.missing) {
+            Some(_v) => Ok(false),
+            None => Ok(true),
+        }
     }
 }

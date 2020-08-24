@@ -1,6 +1,8 @@
 use serde::{Deserialize, Serialize};
 
-use crate::commands::execution::{Execution, ExecutionResult, FnResult};
+use crate::commands::execution::{
+    ConditionExecution, ConditionResult, ValueExecution, ValueResult,
+};
 use crate::context::PicoContext;
 use crate::errors::PicoError;
 //use crate::state::PicoState;
@@ -21,40 +23,31 @@ pub struct RegMatch {
     regmatch: RegMatchInternal, //    with: ValueProducer,
 }
 
-impl Execution for RegMatch {
-    fn name(&self) -> String {
-        "regmatch".to_string()
-    }
-
+impl ConditionExecution for RegMatch {
     fn run_with_context(
         &self,
         pico_rules: &PicoRules,
         runtime: &mut PicoRuntime,
         ctx: &mut PicoContext,
-    ) -> FnResult {
+    ) -> ConditionResult {
         debug!("Looking up regmatch/with");
 
         let with_value = self.regmatch.1.run_with_context(pico_rules, runtime, ctx)?;
 
         match with_value {
-            ExecutionResult::Stop(stopping_reason) => Ok(ExecutionResult::Stop(stopping_reason)),
-            ExecutionResult::Continue(continuation) => match continuation {
-                PicoValue::String(string_value) => {
-                    let match_result = self.regmatch.0.is_match(&string_value);
-
-                    debug!(
-                        "Regmatch: {:?} / {:?} = {:?}",
-                        self.regmatch, string_value, match_result
-                    );
-
-                    let re_captures = self.regmatch.0.captures(&string_value);
-                    debug!("LOC {:?}", re_captures);
-
-                    Ok(ExecutionResult::Continue(PicoValue::Bool(match_result)))
-                }
-                _ => Err(PicoError::IncompatibleComparison),
-            },
-            c => Ok(c),
+            PicoValue::String(s) => {
+                let match_result = self.regmatch.0.is_match(&s);
+                trace!(
+                    "Regmatch: {:?} / {:?} = {:?}",
+                    self.regmatch,
+                    s,
+                    match_result
+                );
+                let re_captures = self.regmatch.0.captures(&s);
+                debug!("LOC {:?}", re_captures);
+                Ok(match_result)
+            }
+            _ => Err(PicoError::IncompatibleComparison),
         }
     }
 }
@@ -63,43 +56,31 @@ impl Execution for RegMatch {
 pub struct StartsWith {
     match_start: (ValueProducer, ValueProducer), // needle, haystack
 }
-impl Execution for StartsWith {
-    fn name(&self) -> String {
-        "startswith".to_string()
-    }
+impl ConditionExecution for StartsWith {
     fn run_with_context(
         &self,
         pico_rules: &PicoRules,
         runtime: &mut PicoRuntime,
         ctx: &mut PicoContext,
-    ) -> FnResult {
-        let needle_ctx = self
+    ) -> ConditionResult {
+        let needle_value = self
             .match_start
             .0
             .run_with_context(pico_rules, runtime, ctx)?;
-        let haystack_ctx = self
+        let haystack_value = self
             .match_start
             .1
             .run_with_context(pico_rules, runtime, ctx)?;
 
-        match (needle_ctx, haystack_ctx) {
-            (
-                ExecutionResult::Continue(needle_continuation),
-                ExecutionResult::Continue(haystack_continuation),
-            ) => {
-                match (needle_continuation, haystack_continuation) {
-                    (PicoValue::String(needle), PicoValue::String(haystack)) => {
-                        // do stuff
-                        let needle_str = needle.as_str();
-                        let haystack_str = haystack.as_str();
-
-                        let b = haystack_str.starts_with(needle_str);
-                        Ok(ExecutionResult::Continue(PicoValue::Bool(b)))
-                    }
-                    _ => Err(PicoError::IncompatibleComparison),
-                }
+        match (needle_value, haystack_value) {
+            (PicoValue::String(needle), PicoValue::String(haystack)) => {
+                let needle_str = needle.as_str();
+                let haystack_str = haystack.as_str();
+                let b: bool = haystack_str.starts_with(needle_str);
+                Ok(b)
             }
-            _ => Ok(ExecutionResult::Stop(Some("Stopping".to_string()))),
+
+            _ => Err(PicoError::IncompatibleComparison),
         }
     }
 }
@@ -108,35 +89,24 @@ impl Execution for StartsWith {
 pub struct Match {
     r#match: (ValueProducer, ValueProducer),
 }
-impl Execution for Match {
-    fn name(&self) -> String {
-        "match".to_string()
-    }
-
+impl ConditionExecution for Match {
     fn run_with_context(
         &self,
         pico_rules: &PicoRules,
         runtime: &mut PicoRuntime,
         ctx: &mut PicoContext,
-    ) -> FnResult {
+    ) -> ConditionResult {
         info!("running match");
         let lhs = self.r#match.0.run_with_context(pico_rules, runtime, ctx)?;
         let rhs = self.r#match.1.run_with_context(pico_rules, runtime, ctx)?;
 
         match (lhs, rhs) {
-            (ExecutionResult::Continue(left), ExecutionResult::Continue(right)) => {
-                match (left, right) {
-                    (PicoValue::String(ls), PicoValue::String(rs)) => {
-                        let re = Regex::new(&rs).unwrap();
-                        let b = re.is_match(&ls);
-                        Ok(ExecutionResult::Continue(PicoValue::Bool(b)))
-                    }
-                    _ => Err(PicoError::IncompatibleComparison),
-                }
+            (PicoValue::String(ls), PicoValue::String(rs)) => {
+                let re = Regex::new(&rs).unwrap();
+                let b = re.is_match(&ls);
+                Ok(b)
             }
-            _ => Ok(ExecutionResult::Stop(Some(
-                "match requested stop".to_string(),
-            ))),
+            _ => Err(PicoError::IncompatibleComparison),
         }
     }
 }

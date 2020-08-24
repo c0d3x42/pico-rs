@@ -19,7 +19,7 @@ pub struct PicoContext {
     pub variables: VariablesMap,
     pub local_variables: VariablesMap,
     pub lookup_tables: Lookups,
-    pub json: Option<serde_json::Value>,
+    pub input_json: Option<serde_json::Value>,
 }
 
 impl Default for PicoContext {
@@ -28,7 +28,7 @@ impl Default for PicoContext {
             variables: HashMap::new(),
             local_variables: HashMap::new(),
             lookup_tables: HashMap::new(),
-            json: None,
+            input_json: None,
         }
     }
 }
@@ -39,7 +39,7 @@ impl PicoContext {
     }
 
     pub fn set_json(mut self, json: serde_json::Value) -> Self {
-        self.json = Some(json);
+        self.input_json = Some(json);
         self
     }
 

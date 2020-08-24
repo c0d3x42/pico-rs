@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-use crate::commands::execution::{Execution, ExecutionResult, FnResult};
+use crate::commands::execution::{ActionExecution, ActionResult, ActionValue};
 use crate::context::PicoContext;
 use crate::errors::PicoError;
 //use crate::state::PicoState;
@@ -16,19 +16,16 @@ use tinytemplate::TinyTemplate;
 pub struct Log {
     log: String,
 }
-impl Execution for Log {
-    fn name(&self) -> String {
-        "log".to_string()
-    }
+impl ActionExecution for Log {
     fn run_with_context(
         &self,
         _pico_rules: &PicoRules,
         _runtime: &mut PicoRuntime,
         _ctx: &mut PicoContext,
-    ) -> FnResult {
+    ) -> ActionResult {
         info!("MSG: {:?}", self.log);
 
-        Ok(ExecutionResult::Continue(PicoValue::Bool(true)))
+        Ok(ActionValue::Continue)
     }
 }
 
@@ -44,16 +41,13 @@ impl DebugLog {
         "TTT".to_string()
     }
 }
-impl Execution for DebugLog {
-    fn name(&self) -> String {
-        "debug-log".to_string()
-    }
+impl ActionExecution for DebugLog {
     fn run_with_context(
         &self,
         _pico_rules: &PicoRules,
         _runtime: &mut PicoRuntime,
         ctx: &mut PicoContext,
-    ) -> FnResult {
+    ) -> ActionResult {
         let mut tt = TinyTemplate::new();
         trace!("Building tiny template");
 
@@ -80,6 +74,6 @@ impl Execution for DebugLog {
             Err(e) => error!("{:?}", e),
         }
 
-        Ok(ExecutionResult::Continue(PicoValue::Bool(true)))
+        Ok(ActionValue::Continue)
     }
 }
