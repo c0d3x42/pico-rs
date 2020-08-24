@@ -14,10 +14,7 @@ use clap::{App, Arg};
 
 extern crate picolang;
 
-use picolang::context::PicoContext;
-//use picolang::include::PicoRules;
 use picolang::rules::PicoRules;
-use picolang::runtime::PicoRuntime;
 
 #[cfg(feature = "srv_nats")]
 use picolang::nats::start_nats;
@@ -26,7 +23,6 @@ use picolang::nats::start_nats;
 async fn start_nats() {}
 
 use picolang::server::serve;
-use picolang::values::PicoValue;
 use serde::Serialize;
 use std::sync::Arc;
 use tokio::sync::RwLock;

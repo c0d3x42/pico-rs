@@ -1,9 +1,6 @@
 use crate::context::PicoContext;
-//use crate::include::PicoRules;
-use crate::invar::InVars;
 use crate::rules::PicoRules;
 use crate::runtime::PicoRuntime;
-use crate::values::PicoValue;
 use std::convert::Infallible;
 use std::result::Result;
 use std::sync::Arc;

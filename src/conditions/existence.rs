@@ -3,11 +3,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::commands::execution::{ConditionExecution, ConditionResult};
 use crate::context::PicoContext;
-//use crate::state::PicoState;
 use crate::rules::PicoRules;
 use crate::runtime::PicoRuntime;
-//use crate::values::{PicoValue, Var};
-use crate::PicoValue;
 
 use regex::Regex;
 

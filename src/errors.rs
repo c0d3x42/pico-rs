@@ -1,6 +1,8 @@
 //use std::fmt;
 use thiserror::Error;
 
+use crate::values::PicoValue;
+
 #[derive(Error, Debug)]
 pub enum PicoError {
     #[error("Parse failure in [{filename:?}]")]
@@ -12,8 +14,8 @@ pub enum PicoError {
     #[error(transparent)]
     SerDe(#[from] serde_json::Error),
 
-    #[error("Cant compare apples to oranges")]
-    IncompatibleComparison,
+    #[error("Cant compare apples to oranges `{0}`, `{1}` ")]
+    IncompatibleComparison(PicoValue, PicoValue),
 
     #[error("Value `{0}` did not exist")]
     NoSuchValue(String),

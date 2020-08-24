@@ -1,9 +1,8 @@
 use serde::{Deserialize, Serialize};
 
-use crate::commands::execution::{
-    ConditionExecution, ConditionResult, ValueExecution, ValueResult,
-};
+use crate::commands::execution::{ConditionExecution, ConditionResult, ValueExecution};
 use crate::context::PicoContext;
+use crate::errors::PicoError;
 //use crate::state::PicoState;
 use crate::rules::PicoRules;
 use crate::runtime::PicoRuntime;
@@ -44,12 +43,19 @@ impl ConditionExecution for GreaterThan {
     ) -> ConditionResult {
         let lhs = self.gt.0.run_with_context(pico_rules, runtime, ctx)?;
         let rhs = self.gt.1.run_with_context(pico_rules, runtime, ctx)?;
-        match (lhs, rhs) {
-            // FIXME
-            //(ExecutionResult::Continue(left), ExecutionResult::Continue(right)) => {
-            //    Ok(ExecutionResult::Continue(PicoValue::Bool(left > right)))
-            //}
-            _ => Ok(false),
+
+        match (&lhs, &rhs) {
+            (PicoValue::Number(left), PicoValue::Number(right)) => {
+                trace!("{} > {}", left, right);
+                match (left.as_i64(), right.as_i64()) {
+                    (Some(l), Some(r)) => Ok(l > r),
+                    _ => Err(PicoError::IncompatibleComparison(lhs, rhs)),
+                }
+            }
+            _ => {
+                info!("cant compare {} > {}", lhs, rhs);
+                Err(PicoError::IncompatibleComparison(lhs, rhs))
+            }
         }
     }
 }
@@ -67,12 +73,21 @@ impl ConditionExecution for LessThan {
     ) -> ConditionResult {
         let lhs = self.lt.0.run_with_context(pico_rules, runtime, ctx)?;
         let rhs = self.lt.1.run_with_context(pico_rules, runtime, ctx)?;
-        match (lhs, rhs) {
-            // FIXME
-            //(ExecutionResult::Continue(left), ExecutionResult::Continue(right)) => {
-            //    Ok(ExecutionResult::Continue(PicoValue::Bool(left < right)))
-            // }
-            _ => Ok(false),
+
+        match (&lhs, &rhs) {
+            (PicoValue::Number(left), PicoValue::Number(right)) => {
+                trace!("{} < {}", left, right);
+
+                match (left.as_i64(), right.as_i64()) {
+                    (Some(l), Some(r)) => Ok(l < r),
+                    _ => Err(PicoError::IncompatibleComparison(lhs, rhs)),
+                }
+            }
+            (PicoValue::String(left), PicoValue::String(right)) => Ok(left < right),
+            _ => {
+                info!("cant compare {} > {}", lhs, rhs);
+                Err(PicoError::IncompatibleComparison(lhs, rhs))
+            }
         }
     }
 }

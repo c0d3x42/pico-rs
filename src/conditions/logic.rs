@@ -3,12 +3,10 @@ use serde::{Deserialize, Serialize};
 use crate::commands::execution::{ConditionExecution, ConditionResult};
 use crate::conditions::Condition;
 use crate::context::PicoContext;
-use crate::errors::PicoError;
 //use crate::state::PicoState;
 use crate::rules::PicoRules;
 use crate::runtime::PicoRuntime;
 //use crate::values::{PicoValue, Var};
-use crate::PicoValue;
 
 /*
  * condition collections
@@ -27,10 +25,10 @@ impl ConditionExecution for And {
         ctx: &mut PicoContext,
     ) -> ConditionResult {
         for condition in &self.and {
-            let condition_result = condition.run_with_context(pico_rules, runtime, ctx)?;
-            if condition_result == false {
-                return Ok(false);
+            if condition.run_with_context(pico_rules, runtime, ctx)? {
+                continue;
             }
+            return Ok(false);
         }
         // all conditions returned boolean true
         Ok(true)
@@ -54,7 +52,7 @@ impl ConditionExecution for Or {
         for condition in &self.or {
             let condition_result = condition.run_with_context(pico_rules, runtime, ctx)?;
 
-            if condition_result == true {
+            if condition_result {
                 return Ok(true);
             }
         }

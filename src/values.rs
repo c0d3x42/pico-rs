@@ -1,6 +1,5 @@
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use serde_json::Number;
 use serde_json::Value;
 
 pub type PicoValue = Value;
@@ -9,11 +8,9 @@ use crate::commands::execution::{ValueExecution, ValueResult};
 use crate::context::PicoContext;
 use crate::errors::PicoError;
 use crate::lookups::LookupCommand;
-//use crate::state::PicoState;
 use crate::rules::PicoRules;
 use crate::runtime::PicoRuntime;
 use regex::Regex;
-use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::fmt;
@@ -106,6 +103,7 @@ pub enum ValueProducer {
     Extract(Box<Extract>),
     DictionaryLookup(LookupCommand),
     LiteralString(LiteralString),
+    LiteralI64(LiteralI64),
 
     UnsupportedObject(PicoValue),
 }
@@ -125,6 +123,7 @@ impl ValueExecution for ValueProducer {
             ValueProducer::ConCat(concat) => concat.run_with_context(pico_rules, runtime, ctx),
             ValueProducer::Extract(extract) => extract.run_with_context(pico_rules, runtime, ctx),
             ValueProducer::LiteralString(ls) => ls.run_with_context(pico_rules, runtime, ctx),
+            ValueProducer::LiteralI64(i) => i.run_with_context(pico_rules, runtime, ctx),
             ValueProducer::UnsupportedObject(literal) => {
                 literal.run_with_context(pico_rules, runtime, ctx)
             }
@@ -177,7 +176,10 @@ impl ValueExecution for Extract {
                     Ok(json!({}))
                 }
             }
-            _ => Err(PicoError::IncompatibleComparison),
+            _ => Err(PicoError::IncompatibleComparison(
+                with_value,
+                PicoValue::Null,
+            )),
         }
 
         /*
@@ -325,7 +327,7 @@ impl ValueExecution for Slice {
         let start_index = self.slice.1;
         //let endIndex = self.slice.2;
 
-        let final_result = match s {
+        match s {
             PicoValue::String(matched_string) => {
                 trace!("Slicing string {:?}", matched_string);
 
@@ -346,10 +348,8 @@ impl ValueExecution for Slice {
 
                 return Ok(PicoValue::String("".to_string()));
             }
-            _ => Err(PicoError::IncompatibleComparison),
-        };
-
-        return final_result;
+            _ => Err(PicoError::IncompatibleComparison(s, PicoValue::Null)),
+        }
     }
 }
 
@@ -423,24 +423,18 @@ impl ValueExecution for LiteralString {
     }
 }
 
-/*
 #[derive(Serialize, Deserialize, Debug)]
-pub struct LiteralNumber(Number);
+pub struct LiteralI64(i64);
 
-impl Execution for LiteralNumber {
-    fn name(&self) -> String {
-        "liternalnumber".to_string()
-    }
-
+impl ValueExecution for LiteralI64 {
     fn run_with_context(
         &self,
         pico_rules: &PicoRules,
         runtime: &mut PicoRuntime,
         ctx: &mut PicoContext,
-    ) -> FnResult {
+    ) -> ValueResult {
         info!("HIT a literal number {}", self.0);
 
-        Ok(ExecutionResult::Continue(PicoValue::Number(json!(self.0))))
+        Ok(json!(self.0))
     }
 }
-*/

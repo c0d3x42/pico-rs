@@ -17,7 +17,6 @@ use crate::errors::PicoError;
 use crate::rules::PicoRules;
 use crate::runtime::PicoRuntime;
 //use crate::values::{PicoValue, Var};
-use crate::PicoValue;
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(untagged)]
@@ -62,8 +61,12 @@ impl ConditionExecution for Condition {
         match condition_result {
             Ok(result) => Ok(result),
             Err(error_result) => match error_result {
-                PicoError::NoSuchValue(_) | PicoError::IncompatibleComparison => {
-                    info!("condition result was bad - mapping to false");
+                PicoError::IncompatibleComparison(lhs, rhs) => {
+                    warn!("cant compare {} with {}", lhs, rhs);
+                    Ok(false)
+                }
+                PicoError::NoSuchValue(_) => {
+                    warn!("no such value - mapping to false: {}", error_result);
                     Ok(false)
                 }
                 err => Err(err),

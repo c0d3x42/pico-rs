@@ -1,21 +1,15 @@
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::fmt;
-use std::iter::FromIterator;
 
 use itertools::Itertools;
 use std::fs::File;
 
-use crate::commands::execution::{ActionExecution, ActionResult, ActionValue};
+use crate::commands::execution::ActionExecution;
 use crate::commands::{Command, FiniCommand};
 use crate::context::PicoContext;
-use crate::errors::PicoError;
-//use crate::include::IncludeFile;
-//use super::namespace::NameSpaces;
 use crate::lookups::Lookups;
-//use crate::state::PicoState;
 use crate::runtime::PicoRuntime;
-use crate::values::PicoValue;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct IncludeFile {
@@ -125,8 +119,6 @@ pub struct PicoRules {
 
 impl fmt::Display for PicoRules {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let joined = self.allowed_namespaces.iter().join(", ");
-
         write!(
             f,
             "PicoRule: {}, includes: [{}], namespaces: [{}], rule summary: [{}]",
@@ -164,7 +156,7 @@ impl PicoRules {
                 }
             }
         }
-        for (key, pico_rule) in &self.rulefile_cache {
+        for (_key, pico_rule) in &self.rulefile_cache {
             PicoRules::all_namespace(pico_rule, collected);
         }
     }

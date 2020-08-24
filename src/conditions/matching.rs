@@ -1,8 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::commands::execution::{
-    ConditionExecution, ConditionResult, ValueExecution, ValueResult,
-};
+use crate::commands::execution::{ConditionExecution, ConditionResult, ValueExecution};
 use crate::context::PicoContext;
 use crate::errors::PicoError;
 //use crate::state::PicoState;
@@ -47,7 +45,10 @@ impl ConditionExecution for RegMatch {
                 debug!("LOC {:?}", re_captures);
                 Ok(match_result)
             }
-            _ => Err(PicoError::IncompatibleComparison),
+            _ => Err(PicoError::IncompatibleComparison(
+                with_value,
+                PicoValue::Null,
+            )),
         }
     }
 }
@@ -72,7 +73,7 @@ impl ConditionExecution for StartsWith {
             .1
             .run_with_context(pico_rules, runtime, ctx)?;
 
-        match (needle_value, haystack_value) {
+        match (&needle_value, &haystack_value) {
             (PicoValue::String(needle), PicoValue::String(haystack)) => {
                 let needle_str = needle.as_str();
                 let haystack_str = haystack.as_str();
@@ -80,7 +81,10 @@ impl ConditionExecution for StartsWith {
                 Ok(b)
             }
 
-            _ => Err(PicoError::IncompatibleComparison),
+            _ => Err(PicoError::IncompatibleComparison(
+                needle_value,
+                haystack_value,
+            )),
         }
     }
 }
@@ -100,13 +104,13 @@ impl ConditionExecution for Match {
         let lhs = self.r#match.0.run_with_context(pico_rules, runtime, ctx)?;
         let rhs = self.r#match.1.run_with_context(pico_rules, runtime, ctx)?;
 
-        match (lhs, rhs) {
+        match (&lhs, &rhs) {
             (PicoValue::String(ls), PicoValue::String(rs)) => {
                 let re = Regex::new(&rs).unwrap();
                 let b = re.is_match(&ls);
                 Ok(b)
             }
-            _ => Err(PicoError::IncompatibleComparison),
+            _ => Err(PicoError::IncompatibleComparison(lhs, rhs)),
         }
     }
 }
