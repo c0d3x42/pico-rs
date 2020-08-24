@@ -48,7 +48,7 @@ pub async fn submit_handler(
     info!("\n FINAL CTX {:?}", ctx);
     info!("\n FINAL runtime globals {:?}", runtime.globals);
 
-    Ok(json(&ctx))
+    Ok(json(ctx.get_final_ctx()))
 }
 
 pub fn with_pico(

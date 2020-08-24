@@ -2,6 +2,7 @@ use crate::lookups::Lookups;
 use crate::PicoValue;
 
 use serde::Serialize;
+use serde_json::json;
 use std::collections::HashMap;
 
 #[derive(Debug, Clone, Serialize)]
@@ -53,6 +54,15 @@ impl PicoContext {
             return Some(pv);
         }
         None
+    }
+
+    pub fn get_final_ctx(&mut self) -> &VariablesMap {
+        self.variables
+            .insert("input".to_string(), json!(&self.input_json));
+        self.variables
+            .insert("locals".to_string(), json!(&self.local_variables));
+
+        &self.variables
     }
 }
 
