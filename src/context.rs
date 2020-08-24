@@ -93,7 +93,8 @@ impl PicoContext {
             None => {
                 if let Some(input_json) = &self.input_json {
                     trace!("Looking for key [{}] in input json", key);
-                    input_json.pointer(key)
+                    let json_path = format!("/{}", key);
+                    input_json.pointer(&json_path)
                 } else {
                     None
                 }

@@ -16,18 +16,50 @@ cargo install pico-lang
 
 # build
 
-**enable nats**
+```bash
+cargo build
+```
+
+**or** just run it
+
+```bash
+cargo run
+```
+
+**enable nats** (incomplete)
 ```bash
 cargo run --features srv_nats
 ```
 
-# lookups
+# PicoRules
 
-lookup tables should be scoped to the rule file inclusion hierarchy.
-each table is available to RuleFile that defined it, **and** files included below it
-the lowest level included RuleFile has access to all lookups above it.
-the root level RuleFile **onl** has access to the lookups defined in it
+`JSON` formmated file that encapsulates your logic
 
+see [simple.json](/simple.json) example rule file
+
+start server with
+```bash
+cargo run -- --rules simple.json
+```
+
+submit rule execution
+
+```bash
+curl -X POST localhost:8000/submit -d '{"nochicken": 1}' -H 'Content-Type: application/json'
+```
+returns:
+```
+{"namespaced":{},"input":{"nochicken":1},"locals":{"enochicken":"must be no hens"}}
+```
+
+and with a chicken:
+```bash
+curl -X POST localhost:8000/submit -d '{"chicken": 1}' -H 'Content-Type: application/json'
+```
+returns:
+```
+{"locals":{"egg":"must have been layed"},"namespaced":{},"input":{"chicken":1}}
+```
 
 # warp submit
 

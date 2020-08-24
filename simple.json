@@ -1,0 +1,32 @@
+{
+    "fini": [
+        {
+            "pop_locals": true
+        }
+    ],
+    "root": [
+        {
+            "if": {
+                "exists": [
+                    "chicken"
+                ]
+            },
+            "then": [
+                {
+                    "set": [
+                        "egg",
+                        "must have been layed"
+                    ]
+                }
+            ],
+            "else": [
+                {
+                    "set": [
+                        "enochicken",
+                        "must be no hens"
+                    ]
+                }
+            ]
+        }
+    ]
+}
