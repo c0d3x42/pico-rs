@@ -171,6 +171,16 @@ impl PicoRules {
         match File::open(&rulefile_name) {
             Ok(opened_file) => {
                 let rule_file: RuleFile = serde_json::from_reader(opened_file).unwrap();
+                if let Some(namespaces) = &rule_file.namespaces {
+                    trace!(
+                        "rule file has namespaces defined: {:?}",
+                        rule_file.namespaces
+                    );
+                    for ns in namespaces {
+                        info!("[{}] Adding namespace {}", rulefile_name, ns);
+                        self.allowed_namespaces.insert(ns.to_string());
+                    }
+                }
                 self.rulefile.content = Some(rule_file);
                 self.rulefile.status = FileStatus::Loaded;
             }
@@ -262,6 +272,8 @@ impl PicoRules {
                 for command in &rule_file.root {
                     match command {
                         RuleFileRoot::IncludeFile(i) => {
+                            // ensure the local scope variables are cleared
+                            ctx.local_clear();
                             trace!("command include {:?}", i);
                             let pico_rule = self.rulefile_cache.get(&i.include).unwrap();
 
@@ -293,6 +305,9 @@ impl PicoRules {
     }
 
     pub fn is_ns_allowed(&self, requested_namespace: &str) -> bool {
+        debug!("checking namespace access for [{}]", requested_namespace);
+        trace!("Allowed namespaces {:?}", self.allowed_namespaces);
+
         self.allowed_namespaces.contains(requested_namespace)
     }
 }

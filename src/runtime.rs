@@ -16,7 +16,6 @@ pub struct PicoRuntime<'a> {
   pub namespaced_variables: HashMap<Namespace, VariableMap>,
 
   pub json_variables: Vec<HashMap<String, JsonValue>>,
-  current_rules: Vec<&'a PicoRules>,
   root_rule: &'a PicoRules, // borrowed reference of the top level rulefile
 }
 impl<'a> PicoRuntime<'a> {
@@ -26,7 +25,6 @@ impl<'a> PicoRuntime<'a> {
       globals: HashMap::new(),
       namespaced_variables: HashMap::new(), // all namespaced variables
       json_variables: Vec::new(),
-      current_rules: Vec::new(),
       root_rule,
     }
   }
@@ -46,23 +44,16 @@ impl<'a> PicoRuntime<'a> {
     self
   }
 
-  pub fn exec_root_with_context(&mut self, ctx: &mut PicoContext) {
-    self.root_rule.run_with_context(self, ctx)
+  pub fn make_ctx(&self) -> PicoContext {
+    let mut pc = PicoContext::new();
+    for ns in self.namespaced_variables.keys() {
+      pc.ns_add(ns);
+    }
+    pc
   }
 
-  /*
-   * Maybe...
-   * when switching to an included file,
-   *  push the include onto current_rules
-   *   exec the last current_rules
-   *  pop off current rules
-   */
-  pub fn exec_current_with_context(&mut self, ctx: &mut PicoContext) {
-    self
-      .current_rules
-      .last_mut()
-      .unwrap()
-      .run_with_context(self, ctx);
+  pub fn exec_root_with_context(&mut self, ctx: &mut PicoContext) {
+    self.root_rule.run_with_context(self, ctx)
   }
 
   pub fn add(&mut self) {
@@ -137,6 +128,10 @@ impl<'a> PicoRuntime<'a> {
   }
 
   pub fn ns_get(&self, ns: &str, key: &str) -> Option<&PicoValue> {
+    // one liner?
+    let i = self.namespaced_variables.get(ns).and_then(|hm| hm.get(key));
+    //return i;
+
     match self.namespaced_variables.get(ns) {
       None => {
         warn!("No such namespace [{}] when looking for key [{}]", ns, key);

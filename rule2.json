@@ -25,6 +25,9 @@
                 "x",
                 "varx1"
             ],
+            "namespaces": [
+                "lower1"
+            ],
             "global": true
         },
         {
@@ -36,6 +39,12 @@
             "then": [
                 {
                     "log": "xxx"
+                },
+                {
+                    "set": [
+                        "xxx",
+                        "XXX(local)"
+                    ]
                 }
             ],
             "else": [

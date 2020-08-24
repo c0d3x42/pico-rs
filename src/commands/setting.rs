@@ -34,7 +34,7 @@ impl ActionExecution for SetCommand {
                 match extracted_values {
                     PicoValue::Object(dict) => {
                         for (key, value) in dict {
-                            ctx.set_value(&key, value);
+                            ctx.local_set(&key, &value);
                         }
                     }
                     _ => warn!("extractor returned non Object"),
@@ -51,21 +51,23 @@ impl ActionExecution for SetCommand {
                 let produced_value = value_producer.run_with_context(pico_rules, runtime, ctx)?;
 
                 debug!("Produced value = {:?}", produced_value);
-
+                trace!("available namespaces: {:?}", self.namespaces);
                 match &self.namespaces {
                     None => {}
                     Some(requested_namespaces) => {
                         for ns in requested_namespaces {
                             if pico_rules.is_ns_allowed(ns) {
-                                runtime.ns_set(ns, var_name, &produced_value)
+                                ctx.ns_set(ns, var_name, &produced_value);
+                            } else {
+                                warn!("namespace {}, access denied for {}", ns, var_name);
                             }
                         }
                     }
                 }
-                runtime.json_set(var_name, &produced_value);
-                ctx.set_value(var_name, produced_value);
+                ctx.local_set(var_name, &produced_value);
             }
         }
+        trace!("CTX now {:?}", ctx);
 
         Ok(ActionValue::Continue)
     }

@@ -39,11 +39,13 @@ pub async fn submit_handler(
 ) -> Result<impl Reply, Rejection> {
     let re = pico.read().await;
 
+    let mut runtime = PicoRuntime::new(&re).initialise();
+
     trace!("InVars... {:?}", body);
-    let mut ctx = PicoContext::new().set_json(body);
+    //let mut ctx = PicoContext::new().set_json(body);
+    let mut ctx = runtime.make_ctx().set_json(body);
     trace!("INITIAL CTX = {:?}", ctx);
 
-    let mut runtime = PicoRuntime::new(&re);
     re.run_with_context(&mut runtime, &mut ctx);
     info!("\n FINAL CTX {:?}", ctx);
     info!("\n FINAL runtime globals {:?}", runtime.globals);
