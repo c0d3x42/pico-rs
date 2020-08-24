@@ -1,3 +1,4 @@
+use crate::app::AppOptions;
 use crate::context::PicoContext;
 use crate::rules::PicoRules;
 use crate::runtime::PicoRuntime;
@@ -10,7 +11,9 @@ use jsonpath_lib as jsonpath;
 
 use warp::{reply::json, Filter, Rejection, Reply};
 
-pub async fn serve(pico: Arc<RwLock<PicoRules>>) {
+pub async fn serve(pico: Arc<RwLock<PicoRules>>, app: AppOptions) {
+    info!("Serve {:?}", app);
+
     let submit = warp::path("submit");
     let submit_route = submit
         .and(warp::post())
@@ -19,6 +22,9 @@ pub async fn serve(pico: Arc<RwLock<PicoRules>>) {
         .and_then(submit_handler);
 
     let routes = submit_route.with(warp::cors().allow_any_origin());
+
+    let port = app.port;
+
     warp::serve(routes).run(([127, 0, 0, 1], 8000)).await
 }
 
@@ -35,63 +41,7 @@ pub async fn submit_handler(
 
     trace!("InVars... {:?}", body);
     let mut ctx = PicoContext::new().set_json(body);
-
-    //body.hello();
-    /*
-        for (key, value) in body.input_map {
-            info!("Checking input JSON [{}] = {}", key, value);
-
-            /*
-                    match key.as_ref() {
-                        "json" => {
-                            debug!("keyref is json");
-                            ctx = ctx.set_json(value);
-                            continue;
-                        }
-                        _ => {}
-                    }
-            */
-            if let "json" = key.as_ref() {
-                ctx = ctx.set_json(value);
-                continue;
-            }
-
-            match value {
-                serde_json::Value::String(s) => {
-                    ctx.variables.insert(key, PicoValue::String(s));
-                }
-                serde_json::Value::Number(n) => {
-                    if n.is_i64() {
-                        let pv = match n.as_i64() {
-                            Some(nn) => PicoValue::Number(nn),
-                            None => PicoValue::Number(0),
-                        };
-
-                        ctx.variables.insert(key, pv);
-                    } else if n.is_u64() {
-                        let pv = match n.as_u64() {
-                            Some(nn) => PicoValue::UnsignedNumber(nn),
-                            None => PicoValue::UnsignedNumber(0),
-                        };
-
-                        ctx.variables.insert(key, pv);
-                    }
-                }
-                _ => {
-                    warn!("Unsupported input var {}", key);
-                }
-            }
-        }
-    */
-
     trace!("INITIAL CTX = {:?}", ctx);
-
-    let mut template = jsonpath::compile("$..deus");
-
-    if let Some(j) = &ctx.input_json {
-        let o = template(&j).unwrap();
-        info!("JSONPATH = {:?}", o);
-    }
 
     let mut runtime = PicoRuntime::new(&re);
     re.run_with_context(&mut runtime, &mut ctx);
@@ -99,11 +49,6 @@ pub async fn submit_handler(
     info!("\n FINAL runtime globals {:?}", runtime.globals);
 
     Ok(json(&ctx))
-    /*
-    Ok(json(&SubmitResponse {
-        output: "lop".to_string(),
-    }))
-    */
 }
 
 pub fn with_pico(

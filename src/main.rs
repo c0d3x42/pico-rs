@@ -22,6 +22,7 @@ use picolang::nats::start_nats;
 #[cfg(not(feature = "srv_nats"))]
 async fn start_nats() {}
 
+use picolang::app::AppOptions;
 use picolang::server::serve;
 use serde::Serialize;
 use std::sync::Arc;
@@ -46,23 +47,34 @@ async fn main() -> Result<()> {
     let matches: clap::ArgMatches = App::new("Pico Lang")
         .version("0.1")
         .arg(
-            Arg::new("rules")
+            Arg::with_name("rules")
                 .long("rules")
                 .default_value("pico-rule.json")
                 .value_name("FILE")
                 .takes_value(true),
         )
+        .arg(
+            Arg::with_name("port")
+                .long("port")
+                .default_value("8000")
+                .takes_value(true),
+        )
         .get_matches();
     info!("Matches {:?}", matches);
 
-    if let Some(ref file) = matches.value_of("rules") {
-        info!("filename {}", file);
-    }
+    let mut app_options = AppOptions::new();
+
+    app_options.rulefile = matches
+        .value_of("rules")
+        .unwrap_or("pico-rule.json")
+        .to_string();
+
+    app_options.port = matches.value_of("port").unwrap_or("8000").parse().unwrap();
 
     debug!("Hello, world! ");
 
     let nr = PicoRules::new()
-        .load_rulefile("pico-rule.json")
+        .load_rulefile(&app_options.rulefile)
         .load_includes();
     debug!("NR = {}", nr);
 
@@ -80,6 +92,6 @@ async fn main() -> Result<()> {
     //let _x: picolang::commands::execution::ExecutionResult = pr.load().unwrap();
     let pico: Arc<RwLock<PicoRules>> = Arc::new(RwLock::new(nr));
 
-    serve(pico).await;
+    serve(pico, app_options).await;
     Ok(())
 }

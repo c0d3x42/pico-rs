@@ -16,6 +16,7 @@ pub use crate::values::{PicoValue, ValueProducer, Var};
 //pub use crate::include::IncludeFile;
 pub use crate::lookups::LookupTable;
 
+pub mod app;
 pub mod commands;
 pub mod conditions;
 pub mod context;
