@@ -2,7 +2,6 @@
 extern crate serde;
 extern crate serde_json;
 extern crate tinytemplate;
-extern crate valico;
 #[macro_use]
 extern crate serde_derive;
 
@@ -71,25 +70,16 @@ async fn main() -> Result<()> {
 
     app_options.port = matches.value_of("port").unwrap_or("8000").parse().unwrap();
 
+    // for posterity
     debug!("Hello, world! ");
 
     let nr = PicoRules::new()
         .load_rulefile(&app_options.rulefile)
         .load_includes();
-    debug!("NR = {}", nr);
+    trace!("NR = {}", nr);
 
-    //    let mut ctx = PicoContext::new();
-    //    let mut runtime = PicoRuntime::new(&nr).initialise();
-    //    runtime.exec_root_with_context(&mut ctx);
-    //nr.run_with_context(&mut runtime, &mut ctx);
-
-    //    warn!("RUNTIME {:?}", runtime);
-    info!("DONE");
     start_nats();
 
-    let file = matches.value_of("rules").unwrap();
-    //let mut pr = PicoRules::new(file);
-    //let _x: picolang::commands::execution::ExecutionResult = pr.load().unwrap();
     let pico: Arc<RwLock<PicoRules>> = Arc::new(RwLock::new(nr));
 
     serve(pico, app_options).await;

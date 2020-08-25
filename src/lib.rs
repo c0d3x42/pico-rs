@@ -6,7 +6,6 @@ extern crate env_logger;
 extern crate serde;
 extern crate serde_json;
 extern crate tinytemplate;
-extern crate valico;
 
 #[macro_use]
 extern crate serde_derive;
@@ -21,7 +20,6 @@ pub mod conditions;
 pub mod context;
 pub mod errors;
 //pub mod include;
-pub mod invar;
 pub mod rules;
 //pub mod runners;
 //pub mod state;

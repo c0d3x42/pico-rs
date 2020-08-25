@@ -6,13 +6,10 @@ use std::fs::File;
 use crate::commands::execution::{Execution, ExecutionResult, FnResult};
 use crate::context::PicoContext;
 use crate::errors::{PicoError, RuleFileError};
+use crate::loader::PicoRuntime as PicoState;
 use crate::rules::RuleFile;
 use crate::rules::RuleFileRoot;
-//use crate::state::PicoState;
-use crate::loader::PicoRuntime as PicoState;
 use crate::values::PicoValue;
-
-use valico::json_schema;
 
 #[derive(Debug)]
 pub struct IncludeFileDriver {
