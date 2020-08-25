@@ -5,11 +5,14 @@ use std::fmt;
 use itertools::Itertools;
 use std::fs::File;
 
+mod lookups;
+
 use crate::commands::execution::ActionExecution;
 use crate::commands::{Command, FiniCommand};
 use crate::context::PicoContext;
-use crate::lookups::Lookups;
 use crate::runtime::PicoRuntime;
+use crate::values::PicoValue;
+use lookups::Lookups;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct IncludeFile {
@@ -292,5 +295,15 @@ impl PicoRules {
         trace!("Allowed namespaces {:?}", self.allowed_namespaces);
 
         self.allowed_namespaces.contains(requested_namespace)
+    }
+
+    pub fn table_lookup_value(&self, table: &str, key: &str) -> Option<&PicoValue> {
+        match &self.rulefile {
+            None => None,
+            Some(rf) => match rf.lookups.get(table) {
+                None => None,
+                Some(m) => Some(m.lookup(key)),
+            },
+        }
     }
 }

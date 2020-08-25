@@ -1,4 +1,3 @@
-use crate::lookups::Lookups;
 use crate::PicoValue;
 
 use serde::Serialize;
@@ -21,7 +20,6 @@ pub struct PicoContext {
     pub namespaced_variables: NamespaceVariableMap,
     pub variables: VariablesMap,
     pub local_variables: VariablesMap,
-    pub lookup_tables: Lookups,
     pub input_json: Option<serde_json::Value>,
 }
 
@@ -31,7 +29,6 @@ impl Default for PicoContext {
             namespaced_variables: HashMap::new(),
             variables: HashMap::new(),
             local_variables: HashMap::new(),
-            lookup_tables: HashMap::new(),
             input_json: None,
         }
     }

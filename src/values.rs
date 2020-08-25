@@ -7,7 +7,6 @@ pub type PicoValue = Value;
 use crate::commands::execution::{ValueExecution, ValueResult};
 use crate::context::PicoContext;
 use crate::errors::PicoError;
-use crate::lookups::LookupCommand;
 use crate::rules::PicoRules;
 use crate::runtime::PicoRuntime;
 use regex::Regex;
@@ -97,11 +96,11 @@ impl ValueExecution for Var {
 #[serde(untagged)]
 pub enum ValueProducer {
     Pointer(Pointer),
-    Lookup(VarLookup),
+    VarLookup(VarLookup),
+    TableLookup(TableLookup),
     Slice(Slice),
     ConCat(ConCat),
     Extract(Box<Extract>),
-    DictionaryLookup(LookupCommand),
     LiteralString(LiteralString),
     LiteralI64(LiteralI64),
 
@@ -117,7 +116,7 @@ impl ValueExecution for ValueProducer {
     ) -> ValueResult {
         trace!("producer running..");
         match self {
-            ValueProducer::Lookup(lookup) => lookup.run_with_context(pico_rules, runtime, ctx),
+            ValueProducer::VarLookup(lookup) => lookup.run_with_context(pico_rules, runtime, ctx),
             ValueProducer::Pointer(pointer) => pointer.run_with_context(pico_rules, runtime, ctx),
             ValueProducer::Slice(slice) => slice.run_with_context(pico_rules, runtime, ctx),
             ValueProducer::ConCat(concat) => concat.run_with_context(pico_rules, runtime, ctx),
@@ -127,9 +126,7 @@ impl ValueExecution for ValueProducer {
             ValueProducer::UnsupportedObject(literal) => {
                 literal.run_with_context(pico_rules, runtime, ctx)
             }
-            ValueProducer::DictionaryLookup(dict) => {
-                dict.run_with_context(pico_rules, runtime, ctx)
-            }
+            ValueProducer::TableLookup(lookup) => lookup.run_with_context(pico_rules, runtime, ctx),
         }
     }
 }
@@ -436,5 +433,35 @@ impl ValueExecution for LiteralI64 {
         info!("HIT a literal number {}", self.0);
 
         Ok(json!(self.0))
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct TableLookup {
+    lookup: (String, String), // table, key
+}
+
+impl ValueExecution for TableLookup {
+    fn run_with_context(
+        &self,
+        pico_rules: &PicoRules,
+        runtime: &mut PicoRuntime,
+        _ctx: &mut PicoContext,
+    ) -> ValueResult {
+        info!(
+            "Lookup Dictionary {:?} -> {:?}",
+            self.lookup.0, self.lookup.1
+        );
+
+        let lookedup_value = pico_rules.table_lookup_value(&self.lookup.0, &self.lookup.1);
+        info!("Lookup failed for {:?}", self.lookup.0);
+
+        match lookedup_value {
+            Some(v) => Ok(v.clone()),
+            None => Err(PicoError::NoSuchValue(format!(
+                "No Such table {}",
+                &self.lookup.0
+            ))),
+        }
     }
 }

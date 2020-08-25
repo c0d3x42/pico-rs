@@ -22,6 +22,17 @@
     "root": [
         {
             "set": [
+                "bingo",
+                {
+                    "lookup": [
+                        "blah",
+                        "one"
+                    ]
+                }
+            ]
+        },
+        {
+            "set": [
                 "x",
                 "varx1"
             ],

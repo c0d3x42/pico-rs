@@ -14,7 +14,6 @@ extern crate serde_derive;
 pub use crate::values::{PicoValue, ValueProducer, Var};
 
 //pub use crate::include::IncludeFile;
-pub use crate::lookups::LookupTable;
 
 pub mod app;
 pub mod commands;
@@ -23,7 +22,6 @@ pub mod context;
 pub mod errors;
 //pub mod include;
 pub mod invar;
-pub mod lookups;
 pub mod rules;
 //pub mod runners;
 //pub mod state;
