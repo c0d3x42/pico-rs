@@ -30,6 +30,8 @@ pub enum RuleFileFini {
     FiniCommand(FiniCommand),
 }
 
+///
+/// The internal reprsentation of a Pico rule file
 #[derive(Serialize, Deserialize, Debug)]
 pub struct RuleFile {
     #[serde(default = "RuleFile::default_version")]
@@ -72,36 +74,6 @@ impl fmt::Display for RuleFile {
 }
 
 #[derive(Debug)]
-pub struct LoadedFile {
-    content: Option<RuleFile>,
-    status: FileStatus,
-}
-
-impl fmt::Display for LoadedFile {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match &self.content {
-            Some(c) => write!(f, "{:?}, {}", self.status, c),
-            None => write!(f, "{:?}", self.status,),
-        }
-    }
-}
-
-impl LoadedFile {
-    pub fn new() -> Self {
-        Self {
-            content: None,
-            status: FileStatus::Unchecked,
-        }
-    }
-
-    pub fn load(mut self, rule_file: RuleFile) -> Self {
-        self.content = Some(rule_file);
-        self.status = FileStatus::Loaded;
-        self
-    }
-}
-
-#[derive(Debug)]
 enum FileStatus {
     Unchecked,
     Loaded,
@@ -112,21 +84,31 @@ enum FileStatus {
 pub struct PicoRules {
     rulefile_cache: HashMap<String, PicoRules>,
     entrypoint: String,
-    rulefile: LoadedFile,
+    rulefile: Option<RuleFile>,
+    status: FileStatus,
 
     allowed_namespaces: HashSet<String>,
 }
 
 impl fmt::Display for PicoRules {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "PicoRule: {}, includes: [{}], namespaces: [{}], rule summary: [{}]",
-            self.entrypoint,
-            self.rulefile_cache.keys().join(", "),
-            self.allowed_namespaces.iter().join(", "),
-            self.rulefile
-        )
+        match &self.rulefile {
+            Some(rf) => write!(
+                f,
+                "PicoRule: {}, includes: [{}], namespaces: [{}], rule summary: [{}]",
+                self.entrypoint,
+                self.rulefile_cache.keys().join(", "),
+                self.allowed_namespaces.iter().join(", "),
+                rf
+            ),
+            None => write!(
+                f,
+                "PicoRule: {}, includes: [{}], namespaces: [{}], rule summary: [NOT LOADED]",
+                self.entrypoint,
+                self.rulefile_cache.keys().join(", "),
+                self.allowed_namespaces.iter().join(", "),
+            ),
+        }
     }
 }
 
@@ -135,7 +117,8 @@ impl Default for PicoRules {
         Self {
             rulefile_cache: HashMap::new(),
             entrypoint: String::new(),
-            rulefile: LoadedFile::new(),
+            rulefile: None,
+            status: FileStatus::Missing,
             allowed_namespaces: HashSet::new(),
         }
     }
@@ -149,7 +132,7 @@ impl PicoRules {
     pub fn all_namespace(&self, collected: &mut Vec<String>) {
         //let collected_namespace: Vec<String> = Vec::new();
 
-        if let Some(rf) = &self.rulefile.content {
+        if let Some(rf) = &self.rulefile {
             if let Some(ns_v) = &rf.namespaces {
                 for ns in ns_v {
                     collected.push(ns.to_string());
@@ -181,12 +164,12 @@ impl PicoRules {
                         self.allowed_namespaces.insert(ns.to_string());
                     }
                 }
-                self.rulefile.content = Some(rule_file);
-                self.rulefile.status = FileStatus::Loaded;
+                self.rulefile = Some(rule_file);
+                self.status = FileStatus::Loaded;
             }
             Err(x) => {
                 error!("failed to open: {:?}", x);
-                self.rulefile.status = FileStatus::Missing;
+                self.status = FileStatus::Missing;
             }
         }
         self.set_entry(rulefile_name)
@@ -194,7 +177,7 @@ impl PicoRules {
 
     // convenience, returns vec of filenames this file also includes
     fn included_filenames(&self) -> Vec<String> {
-        match &self.rulefile.content {
+        match &self.rulefile {
             Some(rf) => rf
                 .root
                 .iter()
@@ -208,7 +191,7 @@ impl PicoRules {
     }
 
     fn include_sections(&self) -> Vec<&IncludeFile> {
-        let include_sections: Vec<&IncludeFile> = match &self.rulefile.content {
+        let include_sections: Vec<&IncludeFile> = match &self.rulefile {
             Some(rfc) => rfc
                 .root
                 .iter()
@@ -224,7 +207,7 @@ impl PicoRules {
     }
 
     pub fn setup_rules(mut self) -> Self {
-        if let Some(rf) = &self.rulefile.content {
+        if let Some(rf) = &self.rulefile {
             if let Some(namespaces) = &rf.namespaces {}
         }
 
@@ -267,7 +250,7 @@ impl PicoRules {
 
         runtime.add();
         runtime.set("key", "value");
-        match &self.rulefile.content {
+        match &self.rulefile {
             Some(rule_file) => {
                 for command in &rule_file.root {
                     match command {

@@ -36,6 +36,13 @@ pub trait ConditionExecution {
 }
 
 pub trait ValueExecution {
+    /// Evaluates a value within the context of a `PicoRule`, variables namespaces and the current context
+    ///
+    /// # Arguments
+    ///
+    /// * `pico_rule` - The rule file thats being used
+    /// * `runtime` - PicoRuntime
+    /// * `ctx` - the context, hold the initial JSON and any local variables
     fn run_with_context(
         &self,
         pico_rule: &PicoRules,

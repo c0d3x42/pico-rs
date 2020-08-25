@@ -74,6 +74,7 @@ impl<'de> Deserialize<'de> for VarExistence {
     }
 }
 
+/// Checks for the existence of a variable
 #[derive(Serialize, Deserialize, Debug)]
 pub struct VarExistsCondition {
     exists: VarExistence,
