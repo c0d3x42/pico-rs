@@ -178,37 +178,6 @@ impl ValueExecution for Extract {
                 PicoValue::Null,
             )),
         }
-
-        /*
-        match with_value {
-            ExecutionResult::Continue(continuation) => match continuation {
-                PicoValue::String(string_value) => {
-                    let captures = self.extract.0.captures(&string_value);
-                    info!("CCCCCCC {:?}", captures);
-
-                    if let Some(caps) = &captures {
-                        let dict: HashMap<String, PicoValue> = self
-                            .extract
-                            .0
-                            .capture_names()
-                            .flatten()
-                            .filter_map(|n| {
-                                Some((
-                                    String::from(n),
-                                    PicoValue::String(caps.name(n)?.as_str().to_string()),
-                                ))
-                            })
-                            .collect();
-                        info!("DICT = {:?}", dict);
-                        return Ok(ExecutionResult::Setting(dict));
-                    }
-                    Ok(ExecutionResult::Setting(HashMap::new()))
-                }
-                _ => Err(PicoError::IncompatibleComparison),
-            },
-            everything_else => Ok(everything_else),
-        }
-        */
     }
 }
 
