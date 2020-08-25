@@ -2,6 +2,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 use serde_json::Value;
 
+/// The base value that can be used.
+/// For now identical to [`serde_json::Value`](crate::serde_json::Value)
 pub type PicoValue = Value;
 
 use crate::commands::execution::{ValueExecution, ValueResult};
@@ -29,12 +31,18 @@ impl ValueExecution for PicoValue {
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(untagged)]
 pub enum VarValue {
+    /// String to lookup
     Lookup(String),
+    /// String to lookup, with a default value
     DefaultLookup(String, PicoValue),
 }
 
+///
+/// Getting a PicoValue
 #[derive(Serialize, Deserialize, Debug)]
 pub struct VarLookup {
+    /// String
+    /// String, [`PicoValue`](crate::values::PicoValue)
     var: VarValue,
 }
 
@@ -69,11 +77,15 @@ impl ValueExecution for VarLookup {
     }
 }
 
+/// Types of Var's that can be used
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(untagged)]
 pub enum Var {
+    /// A literal String
     String(String),
+    /// A literal PicoValue
     Literal(PicoValue),
+    /// A named PicoValue to lookup
     Lookup(VarLookup),
 }
 
@@ -92,21 +104,31 @@ impl ValueExecution for Var {
     }
 }
 
+/// All things that can produce a PicoValue
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(untagged)]
 pub enum ValueProducer {
+    /// a JSON pointer
     Pointer(Pointer),
+    /// A Var
     VarLookup(VarLookup),
+    /// Lookup in a table in a PicoRule file
     TableLookup(TableLookup),
+
+    /// Slice of a String
     Slice(Slice),
+
+    /// concatenation of String's
     ConCat(ConCat),
     Extract(Box<Extract>),
+
     LiteralString(LiteralString),
     LiteralI64(LiteralI64),
 
     UnsupportedObject(PicoValue),
 }
 
+/// Produce a PicoValue
 impl ValueExecution for ValueProducer {
     fn run_with_context(
         &self,
@@ -181,8 +203,10 @@ impl ValueExecution for Extract {
     }
 }
 
+/// ConCat from a JSON array of other ValueProducers that produce Strings
 #[derive(Serialize, Deserialize, Debug)]
 pub struct ConCat {
+    /// Array of [`ValueProducer`](crate::values::ValueProducer)
     concat: Vec<ValueProducer>,
 }
 
@@ -407,6 +431,7 @@ impl ValueExecution for LiteralI64 {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct TableLookup {
+    /// table name
     lookup: (String, String), // table, key
 }
 
