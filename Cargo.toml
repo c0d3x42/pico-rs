@@ -1,6 +1,6 @@
 [package]
 name = "pico-lang"
-version = "0.0.3"
+version = "0.0.4"
 authors = ["Vince <c0d3x42@gmail.com>"]
 edition = "2018"
 license = "MIT OR Apache-2.0"
