@@ -11,6 +11,7 @@ use clap::{App, Arg};
 
 extern crate picolang;
 
+use picolang::rules::loaders::FileLoader;
 use picolang::rules::PicoRules;
 
 #[cfg(feature = "srv_nats")]
@@ -71,9 +72,9 @@ async fn main() -> Result<()> {
     // for posterity
     debug!("Hello, world! ");
 
-    let nr = PicoRules::new()
-        .load_rulefile(&app_options.rulefile)
-        .load_includes();
+    let fl = FileLoader::new(&app_options.rulefile);
+
+    let nr = PicoRules::new().load_rulefile(&fl).load_includes();
     trace!("NR = {}", nr);
 
     start_nats();

@@ -18,6 +18,7 @@ pub enum ActionValue {
 }
 
 pub type MyResult<T> = AnyHowResult<T, PicoError>;
+pub type AnyResult<R, T> = AnyHowResult<R, T>;
 pub type ConditionResult = MyResult<bool>;
 pub type ValueResult = MyResult<PicoValue>;
 pub type ActionResult = MyResult<ActionValue>;

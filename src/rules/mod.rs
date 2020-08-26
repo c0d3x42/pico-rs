@@ -5,6 +5,7 @@ use std::fmt;
 use itertools::Itertools;
 use std::fs::File;
 
+pub mod loaders;
 mod lookups;
 
 use crate::commands::execution::ActionExecution;
@@ -12,6 +13,7 @@ use crate::commands::{Command, FiniCommand};
 use crate::context::PicoContext;
 use crate::runtime::PicoRuntime;
 use crate::values::PicoValue;
+use loaders::{FileLoader, PicoLoader};
 use lookups::Lookups;
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -152,7 +154,24 @@ impl PicoRules {
         self
     }
 
-    pub fn load_rulefile(mut self, rulefile_name: &str) -> Self {
+    pub fn load_rulefile(mut self, loader: &dyn PicoLoader) -> Self {
+        let s = &loader.filename_is();
+        match loader.load() {
+            Ok(rf) => {
+                self.rulefile = Some(rf);
+                self.status = FileStatus::Loaded;
+            }
+            Err(x) => {
+                error!("failed to load {}", x);
+                self.rulefile = None;
+                self.status = FileStatus::Missing;
+            }
+        }
+
+        trace!("After loading file SELF is {:?}", self);
+        self.set_entry(&s)
+    }
+    pub fn load_rulefile_old(mut self, rulefile_name: &str) -> Self {
         info!("Loading... {}", rulefile_name);
         match File::open(&rulefile_name) {
             Ok(opened_file) => {
@@ -229,8 +248,9 @@ impl PicoRules {
 
                 info!("permitted namespace [{:?}]", i.namespaces);
 
-                let mut imported_pico_rule =
-                    PicoRules::new().load_rulefile(&i.include).load_includes();
+                let fl = FileLoader::new(&i.include);
+                let mut imported_pico_rule = PicoRules::new().load_rulefile(&fl).load_includes();
+                warn!("got an imported_pico_rule");
 
                 if let Some(allowed_namespaces) = &i.namespaces {
                     for ns in allowed_namespaces {
@@ -261,9 +281,12 @@ impl PicoRules {
                             // ensure the local scope variables are cleared
                             ctx.local_clear();
                             trace!("command include {:?}", i);
-                            let pico_rule = self.rulefile_cache.get(&i.include).unwrap();
-
-                            pico_rule.run_with_context(runtime, ctx);
+                            if let Some(pico_rule) = self.rulefile_cache.get(&i.include) {
+                                pico_rule.run_with_context(runtime, ctx);
+                            } else {
+                                error!("Did not find expected rule {}", &i.include);
+                                trace!(" have these instead {:?}", self.rulefile_cache);
+                            }
                         }
                         RuleFileRoot::Command(c) => match c.run_with_context(&self, runtime, ctx) {
                             _ => debug!("root: command finished"),
