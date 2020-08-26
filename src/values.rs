@@ -403,9 +403,9 @@ pub struct LiteralString(String);
 impl ValueExecution for LiteralString {
     fn run_with_context(
         &self,
-        pico_rules: &PicoRules,
-        runtime: &mut PicoRuntime,
-        ctx: &mut PicoContext,
+        _pico_rules: &PicoRules,
+        _runtime: &mut PicoRuntime,
+        _ctx: &mut PicoContext,
     ) -> ValueResult {
         info!("HIT a literal string {}", self.0);
 

@@ -266,7 +266,7 @@ impl PicoRules {
                             pico_rule.run_with_context(runtime, ctx);
                         }
                         RuleFileRoot::Command(c) => match c.run_with_context(&self, runtime, ctx) {
-                            _ => {}
+                            _ => debug!("root: command finished"),
                         },
                     }
                 }
@@ -275,7 +275,7 @@ impl PicoRules {
                         RuleFileFini::FiniCommand(fc) => {
                             match fc.run_with_context(&self, runtime, ctx) {
                                 Ok(data) => info!("returned data {:?}", data),
-                                Err(e) => {}
+                                Err(e) => error!("fini failed {}", e),
                             }
                         }
                     }

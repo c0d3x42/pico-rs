@@ -27,9 +27,9 @@ pub type ActionResult = MyResult<ActionValue>;
 pub trait ConditionExecution {
     fn run_with_context(
         &self,
-        pico_rule: &PicoRules,
-        runtime: &mut PicoRuntime,
-        ctx: &mut PicoContext,
+        _pico_rule: &PicoRules,
+        _runtime: &mut PicoRuntime,
+        _ctx: &mut PicoContext,
     ) -> MyResult<bool> {
         Err(PicoError::Crash("Not implemented".to_string()))
     }
@@ -45,9 +45,9 @@ pub trait ValueExecution {
     /// * `ctx` - the context, hold the initial JSON and any local variables
     fn run_with_context(
         &self,
-        pico_rule: &PicoRules,
-        runtime: &mut PicoRuntime,
-        ctx: &mut PicoContext,
+        _pico_rule: &PicoRules,
+        _runtime: &mut PicoRuntime,
+        _ctx: &mut PicoContext,
     ) -> MyResult<PicoValue> {
         Err(PicoError::Crash("Not implemented".to_string()))
     }
@@ -56,9 +56,9 @@ pub trait ValueExecution {
 pub trait ActionExecution {
     fn run_with_context(
         &self,
-        pico_rule: &PicoRules,
-        runtime: &mut PicoRuntime,
-        ctx: &mut PicoContext,
+        _pico_rule: &PicoRules,
+        _runtime: &mut PicoRuntime,
+        _ctx: &mut PicoContext,
     ) -> MyResult<ActionValue> {
         Err(PicoError::Crash("Not implemented".to_string()))
     }

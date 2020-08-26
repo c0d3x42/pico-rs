@@ -83,7 +83,7 @@ pub struct VarExistsCondition {
 impl ConditionExecution for VarExistsCondition {
     fn run_with_context(
         &self,
-        pico_rules: &PicoRules,
+        _pico_rules: &PicoRules,
         _runtime: &mut PicoRuntime,
         ctx: &mut PicoContext,
     ) -> ConditionResult {

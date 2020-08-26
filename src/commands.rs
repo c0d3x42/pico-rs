@@ -51,9 +51,9 @@ pub struct PopLocals {
 impl ActionExecution for PopLocals {
     fn run_with_context(
         &self,
-        pico_rules: &PicoRules,
+        _pico_rules: &PicoRules,
         runtime: &mut PicoRuntime,
-        ctx: &mut PicoContext,
+        _ctx: &mut PicoContext,
     ) -> ActionResult {
         let hm = runtime.json_pop();
         Ok(ActionValue::Setting(hm))

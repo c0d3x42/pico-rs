@@ -1,9 +1,7 @@
-//extern crate jsonpath_lib as jsonpath;
 extern crate serde;
+extern crate serde_derive;
 extern crate serde_json;
 extern crate tinytemplate;
-#[macro_use]
-extern crate serde_derive;
 
 #[macro_use]
 extern crate log;

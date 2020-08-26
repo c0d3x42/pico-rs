@@ -128,17 +128,7 @@ impl<'a> PicoRuntime<'a> {
   }
 
   pub fn ns_get(&self, ns: &str, key: &str) -> Option<&PicoValue> {
-    // one liner?
-    let i = self.namespaced_variables.get(ns).and_then(|hm| hm.get(key));
-    //return i;
-
-    match self.namespaced_variables.get(ns) {
-      None => {
-        warn!("No such namespace [{}] when looking for key [{}]", ns, key);
-        None
-      }
-      Some(hm) => hm.get(key),
-    }
+    self.namespaced_variables.get(ns).and_then(|hm| hm.get(key))
   }
 
   pub fn ns_set(&mut self, ns: &str, key: &str, value: &PicoValue) {

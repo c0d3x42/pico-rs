@@ -1,13 +1,10 @@
 use crate::app::AppOptions;
-use crate::context::PicoContext;
 use crate::rules::PicoRules;
 use crate::runtime::PicoRuntime;
 use std::convert::Infallible;
 use std::result::Result;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-
-use jsonpath_lib as jsonpath;
 
 use warp::{reply::json, Filter, Rejection, Reply};
 
