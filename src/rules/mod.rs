@@ -13,7 +13,7 @@ use crate::commands::{Command, FiniCommand};
 use crate::context::PicoContext;
 use crate::runtime::PicoRuntime;
 use crate::values::PicoValue;
-use loaders::{FileLoader, PicoLoader};
+use loaders::{FileLoader, PicoRuleLoader};
 use lookups::Lookups;
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -154,7 +154,12 @@ impl PicoRules {
         self
     }
 
-    pub fn load_rulefile(mut self, loader: &dyn PicoLoader) -> Self {
+    pub fn make_runtime(&self) -> PicoRuntime {
+        let runtime = PicoRuntime::new(self);
+        runtime.initialise()
+    }
+
+    pub fn load_rulefile(mut self, loader: &impl PicoRuleLoader) -> Self {
         let s = &loader.filename_is();
         match loader.load() {
             Ok(rf) => {
@@ -169,7 +174,12 @@ impl PicoRules {
         }
 
         trace!("After loading file SELF is {:?}", self);
-        self.set_entry(&s)
+        //let s = self.set_entry(&s);
+        if loader.follow_includes() {
+            self.set_entry(&s).load_includes()
+        } else {
+            self.set_entry(&s)
+        }
     }
     pub fn load_rulefile_old(mut self, rulefile_name: &str) -> Self {
         info!("Loading... {}", rulefile_name);
@@ -239,7 +249,7 @@ impl PicoRules {
     /*
      * load all included but unloaded files into the cache
      */
-    pub fn load_includes(mut self) -> Self {
+    fn load_includes(mut self) -> Self {
         let imported_rules: Vec<PicoRules> = self
             .include_sections()
             .iter()

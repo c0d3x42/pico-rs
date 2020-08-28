@@ -74,7 +74,7 @@ async fn main() -> Result<()> {
 
     let fl = FileLoader::new(&app_options.rulefile);
 
-    let nr = PicoRules::new().load_rulefile(&fl).load_includes();
+    let nr = PicoRules::new().load_rulefile(&fl);
     trace!("NR = {}", nr);
 
     start_nats();

@@ -1,15 +1,16 @@
 use crate::commands::execution::AnyResult;
 use crate::errors::RuleFileError;
 use crate::rules::RuleFile;
-use serde_json;
 use std::fs::File;
 
 pub type LoaderResult = AnyResult<RuleFile, RuleFileError>;
 
-pub trait PicoLoader {
-  //type RuleFileProvider;
+pub trait PicoRuleLoader {
   fn load(&self) -> LoaderResult;
   fn filename_is(&self) -> String;
+  fn follow_includes(&self) -> bool {
+    true
+  }
 }
 
 pub struct FileLoader {
@@ -24,7 +25,7 @@ impl FileLoader {
   }
 }
 
-impl PicoLoader for FileLoader {
+impl PicoRuleLoader for FileLoader {
   //type RuleFileProvider = FileLoader;
 
   fn filename_is(&self) -> String {

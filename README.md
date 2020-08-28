@@ -68,7 +68,7 @@ curl -v -X POST localhost:8000/submit -d '{"xp": "x1xxx", "y": "y2"}' -H 'Conten
 ```
 
 ```bash
-curl -v -X POST localhost:8000/submit -d '{"xp": "x1xxx", "y": "y2", "json": {"ja": "rules}}' -H 'Content-Type: application/json'
+curl -v -X POST localhost:8000/submit -d '{"xp": "x1xxx", "y": "y2", "json": {"ja": "rules"}}' -H 'Content-Type: application/json'
 ```
 
 # benchmark

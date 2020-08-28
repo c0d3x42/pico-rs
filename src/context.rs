@@ -17,9 +17,13 @@ type NamespaceVariableMap = HashMap<Namespace, VariablesMap>;
 
 #[derive(Serialize, Debug)]
 pub struct PicoContext {
+    /// HashMap of namespaces, and key=values
     pub namespaced_variables: NamespaceVariableMap,
-    pub variables: VariablesMap,
+
+    /// HashMap of local variables only within the context of a [`PicoRule`](crate::rules::PicoRules)
     pub local_variables: VariablesMap,
+
+    /// The input JSON value, typically an Object
     pub input_json: Option<serde_json::Value>,
 }
 
@@ -27,7 +31,6 @@ impl Default for PicoContext {
     fn default() -> Self {
         Self {
             namespaced_variables: HashMap::new(),
-            variables: HashMap::new(),
             local_variables: HashMap::new(),
             input_json: None,
         }
@@ -99,15 +102,13 @@ impl PicoContext {
         }
     }
 
-    pub fn get_final_ctx(&mut self) -> &VariablesMap {
-        self.variables
-            .insert("input".to_string(), json!(&self.input_json));
-        self.variables
-            .insert("locals".to_string(), json!(&self.local_variables));
-        self.variables
-            .insert("namespaced".to_string(), json!(&self.namespaced_variables));
+    pub fn get_final_ctx(&mut self) -> VariablesMap {
+        let mut variables: VariablesMap = HashMap::new();
+        variables.insert("input".to_string(), json!(&self.input_json));
+        variables.insert("locals".to_string(), json!(&self.local_variables));
+        variables.insert("namespaced".to_string(), json!(&self.namespaced_variables));
 
-        &self.variables
+        variables
     }
 }
 

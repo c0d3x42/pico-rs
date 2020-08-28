@@ -34,20 +34,20 @@ pub async fn submit_handler(
     body: serde_json::Value,
     pico: Arc<RwLock<PicoRules>>,
 ) -> Result<impl Reply, Rejection> {
-    let re = pico.read().await;
+    let pico_rule = pico.read().await;
 
-    let mut runtime = PicoRuntime::new(&re).initialise();
+    let mut runtime = pico_rule.make_runtime();
 
-    trace!("InVars... {:?}", body);
-    //let mut ctx = PicoContext::new().set_json(body);
+    trace!("InputVars... {:?}", body);
     let mut ctx = runtime.make_ctx().set_json(body);
     trace!("INITIAL CTX = {:?}", ctx);
 
-    re.run_with_context(&mut runtime, &mut ctx);
+    runtime.exec_root_with_context(&mut ctx);
+
     info!("\n FINAL CTX {:?}", ctx);
     info!("\n FINAL runtime globals {:?}", runtime.globals);
 
-    Ok(json(ctx.get_final_ctx()))
+    Ok(json(&ctx.get_final_ctx()))
 }
 
 pub fn with_pico(

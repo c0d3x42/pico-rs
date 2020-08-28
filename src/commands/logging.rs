@@ -61,13 +61,13 @@ impl ActionExecution for DebugLog {
 
         // combine variables and local_variables into one hashmap for template rendering
 
-        let c = ctx.variables.clone();
-        let l = ctx.local_variables.clone();
+        let variables = ctx.local_variables.clone();
 
-        let k: HashMap<String, PicoValue> = l.into_iter().chain(c).collect();
+        //let k: HashMap<String, PicoValue> = l.into_iter().chain(c).collect();
 
-        let rendered = tt.render("debug", &k);
-        trace!("MSG: {:?}, variables: {:#?}", self.debug, &ctx.variables);
+        debug!("Rendering [{}]", self.tt);
+        trace!(" with - {:?}", variables);
+        let rendered = tt.render("debug", &variables);
 
         match rendered {
             Ok(val) => debug!("tmpl[{:?}]: {:?}", self.tt, val),
