@@ -52,10 +52,11 @@ impl ActionExecution for PopLocals {
     fn run_with_context(
         &self,
         _pico_rules: &PicoRules,
-        runtime: &mut PicoRuntime,
-        _ctx: &mut PicoContext,
+        _runtime: &mut PicoRuntime,
+        ctx: &mut PicoContext,
     ) -> ActionResult {
-        let hm = runtime.json_pop();
+        let hm = ctx.local_pop();
+
         Ok(ActionValue::Setting(hm))
     }
 }

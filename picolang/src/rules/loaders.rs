@@ -13,6 +13,28 @@ pub trait PicoRuleLoader {
   }
 }
 
+pub struct StringLoader {
+  filename: String,
+  document: String,
+}
+impl StringLoader {
+  pub fn new(filename: &str, document: &str) -> Self {
+    Self {
+      filename: filename.to_string(),
+      document: document.to_string(),
+    }
+  }
+}
+impl PicoRuleLoader for StringLoader {
+  fn filename_is(&self) -> String {
+    self.filename.to_string()
+  }
+  fn load(&self) -> LoaderResult {
+    let rule_file: RuleFile = serde_json::from_str(&self.document).expect("a JSON document");
+    Ok(rule_file)
+  }
+}
+
 pub struct FileLoader {
   filename: String,
 }

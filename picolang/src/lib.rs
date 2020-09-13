@@ -14,7 +14,7 @@ pub use crate::values::{PicoValue, ValueProducer, Var};
 
 //pub use crate::include::IncludeFile;
 
-pub mod app;
+//pub mod app;
 pub mod commands;
 pub mod conditions;
 pub mod context;
@@ -26,5 +26,5 @@ pub mod rules;
 pub mod runtime;
 pub mod values;
 
-pub mod nats;
-pub mod server;
+//pub mod nats;
+//pub mod server;

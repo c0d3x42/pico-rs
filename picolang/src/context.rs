@@ -2,7 +2,9 @@ use crate::PicoValue;
 
 use serde::Serialize;
 use serde_json::json;
+use std::boxed::Box;
 use std::collections::HashMap;
+use std::mem::replace;
 
 #[derive(Debug, Clone, Serialize)]
 pub enum StateValue {
@@ -21,7 +23,7 @@ pub struct PicoContext {
     pub namespaced_variables: NamespaceVariableMap,
 
     /// HashMap of local variables only within the context of a [`PicoRule`](crate::rules::PicoRules)
-    pub local_variables: VariablesMap,
+    pub local_variables: Box<VariablesMap>,
 
     /// The input JSON value, typically an Object
     pub input_json: Option<serde_json::Value>,
@@ -31,7 +33,7 @@ impl Default for PicoContext {
     fn default() -> Self {
         Self {
             namespaced_variables: HashMap::new(),
-            local_variables: HashMap::new(),
+            local_variables: Box::new(HashMap::new()),
             input_json: None,
         }
     }
@@ -85,6 +87,11 @@ impl PicoContext {
 
     pub fn local_clear(&mut self) {
         self.local_variables.clear()
+    }
+
+    pub fn local_pop(&mut self) -> VariablesMap {
+        let vm = replace(&mut self.local_variables, Box::new(HashMap::new()));
+        *vm
     }
 
     pub fn get_value(&self, key: &str) -> Option<&PicoValue> {

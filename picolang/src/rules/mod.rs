@@ -50,7 +50,7 @@ pub struct RuleFile {
 
     pub root: Vec<RuleFileRoot>,
 
-    pub fini: Vec<RuleFileFini>,
+    pub fini: Option<Vec<RuleFileFini>>,
 }
 
 impl RuleFile {
@@ -159,7 +159,7 @@ impl PicoRules {
         runtime.initialise()
     }
 
-    pub fn load_rulefile(mut self, loader: &impl PicoRuleLoader) -> Self {
+    pub fn load_rulefile(mut self, loader: impl PicoRuleLoader) -> Self {
         let s = &loader.filename_is();
         match loader.load() {
             Ok(rf) => {
@@ -259,7 +259,7 @@ impl PicoRules {
                 info!("permitted namespace [{:?}]", i.namespaces);
 
                 let fl = FileLoader::new(&i.include);
-                let mut imported_pico_rule = PicoRules::new().load_rulefile(&fl).load_includes();
+                let mut imported_pico_rule = PicoRules::new().load_rulefile(fl).load_includes();
                 warn!("got an imported_pico_rule");
 
                 if let Some(allowed_namespaces) = &i.namespaces {
@@ -279,10 +279,8 @@ impl PicoRules {
     }
 
     pub fn run_with_context(&self, runtime: &mut PicoRuntime, ctx: &mut PicoContext) {
-        trace!("RUNTIME: {:?}", runtime.variables);
+        trace!("RUNTIME: {:?}", runtime);
 
-        runtime.add();
-        runtime.set("key", "value");
         match &self.rulefile {
             Some(rule_file) => {
                 for command in &rule_file.root {
@@ -303,12 +301,15 @@ impl PicoRules {
                         },
                     }
                 }
-                for fini_command in &rule_file.fini {
-                    match fini_command {
-                        RuleFileFini::FiniCommand(fc) => {
-                            match fc.run_with_context(&self, runtime, ctx) {
-                                Ok(data) => info!("returned data {:?}", data),
-                                Err(e) => error!("fini failed {}", e),
+
+                if let Some(fini_secion) = &rule_file.fini {
+                    for fini_command in fini_secion {
+                        match fini_command {
+                            RuleFileFini::FiniCommand(fc) => {
+                                match fc.run_with_context(&self, runtime, ctx) {
+                                    Ok(data) => info!("returned data {:?}", data),
+                                    Err(e) => error!("fini failed {}", e),
+                                }
                             }
                         }
                     }
@@ -320,7 +321,6 @@ impl PicoRules {
                 trace!("Cache-miss");
             }
         };
-        runtime.remove();
     }
 
     pub fn is_ns_allowed(&self, requested_namespace: &str) -> bool {

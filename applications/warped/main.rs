@@ -1,7 +1,6 @@
 extern crate serde;
 extern crate serde_derive;
 extern crate serde_json;
-extern crate tinytemplate;
 
 #[macro_use]
 extern crate log;
@@ -20,8 +19,8 @@ use picolang::nats::start_nats;
 #[cfg(not(feature = "srv_nats"))]
 async fn start_nats() {}
 
-use picolang::app::AppOptions;
-use picolang::server::serve;
+mod app;
+mod server;
 use serde::Serialize;
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -60,7 +59,7 @@ async fn main() -> Result<()> {
         .get_matches();
     info!("Matches {:?}", matches);
 
-    let mut app_options = AppOptions::new();
+    let mut app_options = app::AppOptions::new();
 
     app_options.rulefile = matches
         .value_of("rules")
@@ -74,13 +73,13 @@ async fn main() -> Result<()> {
 
     let fl = FileLoader::new(&app_options.rulefile);
 
-    let nr = PicoRules::new().load_rulefile(&fl);
+    let nr = PicoRules::new().load_rulefile(fl);
     trace!("NR = {}", nr);
 
     start_nats();
 
     let pico: Arc<RwLock<PicoRules>> = Arc::new(RwLock::new(nr));
 
-    serve(pico, app_options).await;
+    server::serve(pico, app_options).await;
     Ok(())
 }
