@@ -154,10 +154,12 @@ impl PicoRules {
         self
     }
 
+    /*
     pub fn make_runtime(&self) -> PicoRuntime {
         let runtime = PicoRuntime::new(self);
         runtime.initialise()
     }
+    */
 
     pub fn load_rulefile(mut self, loader: impl PicoRuleLoader) -> Self {
         let s = &loader.filename_is();
@@ -278,7 +280,7 @@ impl PicoRules {
         self
     }
 
-    pub fn run_with_context(&self, runtime: &mut PicoRuntime, ctx: &mut PicoContext) {
+    pub fn run_with_context(&self, runtime: &PicoRuntime, ctx: &mut PicoContext) {
         trace!("RUNTIME: {:?}", runtime);
 
         match &self.rulefile {

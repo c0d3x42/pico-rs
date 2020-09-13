@@ -9,16 +9,16 @@ type Namespace = String;
 type VariableMap = HashMap<String, PicoValue>;
 
 #[derive(Debug)]
-pub struct PicoRuntime<'a> {
+pub struct PicoRuntime {
   pub globals: HashMap<String, PicoValue>,
   pub namespaced_variables: HashMap<Namespace, VariableMap>,
 
   feature_globals_readonly: bool,
   feature_namespaces: bool,
-  root_rule: &'a PicoRules, // borrowed reference of the top level rulefile
+  pub root_rule: PicoRules, // borrowed reference of the top level rulefile
 }
-impl<'a> PicoRuntime<'a> {
-  pub fn new(root_rule: &'a PicoRules) -> Self {
+impl PicoRuntime {
+  pub fn new(root_rule: PicoRules) -> Self {
     Self {
       globals: HashMap::new(),
       namespaced_variables: HashMap::new(), // all namespaced variables
@@ -69,7 +69,7 @@ impl<'a> PicoRuntime<'a> {
     pc
   }
 
-  pub fn exec_root_with_context(&mut self, ctx: &mut PicoContext) {
+  pub fn exec_root_with_context(&self, ctx: &mut PicoContext) {
     self.root_rule.run_with_context(self, ctx)
   }
 

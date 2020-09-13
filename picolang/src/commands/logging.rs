@@ -20,7 +20,7 @@ impl ActionExecution for Log {
     fn run_with_context(
         &self,
         _pico_rules: &PicoRules,
-        _runtime: &mut PicoRuntime,
+        _runtime: &PicoRuntime,
         _ctx: &mut PicoContext,
     ) -> ActionResult {
         info!("MSG: {:?}", self.log);
@@ -45,7 +45,7 @@ impl ActionExecution for DebugLog {
     fn run_with_context(
         &self,
         _pico_rules: &PicoRules,
-        _runtime: &mut PicoRuntime,
+        _runtime: &PicoRuntime,
         ctx: &mut PicoContext,
     ) -> ActionResult {
         let mut tt = TinyTemplate::new();

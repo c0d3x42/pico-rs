@@ -29,7 +29,7 @@ impl ActionExecution for Command {
     fn run_with_context(
         &self,
         pico_rules: &PicoRules,
-        runtime: &mut PicoRuntime,
+        runtime: &PicoRuntime,
         ctx: &mut PicoContext,
     ) -> ActionResult {
         info!("Running command...");
@@ -52,7 +52,7 @@ impl ActionExecution for PopLocals {
     fn run_with_context(
         &self,
         _pico_rules: &PicoRules,
-        _runtime: &mut PicoRuntime,
+        _runtime: &PicoRuntime,
         ctx: &mut PicoContext,
     ) -> ActionResult {
         let hm = ctx.local_pop();
@@ -72,7 +72,7 @@ impl ActionExecution for FiniCommand {
     fn run_with_context(
         &self,
         pico_rules: &PicoRules,
-        runtime: &mut PicoRuntime,
+        runtime: &PicoRuntime,
         ctx: &mut PicoContext,
     ) -> ActionResult {
         info!("Running finish command...");

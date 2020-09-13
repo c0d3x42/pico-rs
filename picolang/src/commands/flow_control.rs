@@ -18,7 +18,7 @@ impl ActionExecution for StopCommand {
     fn run_with_context(
         &self,
         _pico_rules: &PicoRules,
-        _runtime: &mut PicoRuntime,
+        _runtime: &PicoRuntime,
         _ctx: &mut PicoContext,
     ) -> ActionResult {
         debug!("stopping because {:?}", self.stop);
@@ -34,7 +34,7 @@ impl ActionExecution for BreakToCommand {
     fn run_with_context(
         &self,
         _pico_rules: &PicoRules,
-        _runtime: &mut PicoRuntime,
+        _runtime: &PicoRuntime,
         _ctx: &mut PicoContext,
     ) -> ActionResult {
         debug!("breaking to {:?}", self.r#break);
@@ -62,7 +62,7 @@ impl ActionExecution for IfThenElse {
     fn run_with_context(
         &self,
         pico_rules: &PicoRules,
-        runtime: &mut PicoRuntime,
+        runtime: &PicoRuntime,
         ctx: &mut PicoContext,
     ) -> ActionResult {
         info!("running ITE -> {:?}", self.uuid);

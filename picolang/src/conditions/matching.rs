@@ -25,7 +25,7 @@ impl ConditionExecution for RegMatch {
     fn run_with_context(
         &self,
         pico_rules: &PicoRules,
-        runtime: &mut PicoRuntime,
+        runtime: &PicoRuntime,
         ctx: &mut PicoContext,
     ) -> ConditionResult {
         debug!("Looking up regmatch/with");
@@ -61,7 +61,7 @@ impl ConditionExecution for StartsWith {
     fn run_with_context(
         &self,
         pico_rules: &PicoRules,
-        runtime: &mut PicoRuntime,
+        runtime: &PicoRuntime,
         ctx: &mut PicoContext,
     ) -> ConditionResult {
         let needle_value = self
@@ -97,7 +97,7 @@ impl ConditionExecution for Match {
     fn run_with_context(
         &self,
         pico_rules: &PicoRules,
-        runtime: &mut PicoRuntime,
+        runtime: &PicoRuntime,
         ctx: &mut PicoContext,
     ) -> ConditionResult {
         info!("running match");

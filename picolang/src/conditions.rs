@@ -38,7 +38,7 @@ impl ConditionExecution for Condition {
     fn run_with_context(
         &self,
         pico_rules: &PicoRules,
-        runtime: &mut PicoRuntime,
+        runtime: &PicoRuntime,
         ctx: &mut PicoContext,
     ) -> ConditionResult {
         debug!("Checking condition {:?}", self);

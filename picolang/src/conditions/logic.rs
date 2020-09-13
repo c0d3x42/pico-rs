@@ -21,7 +21,7 @@ impl ConditionExecution for And {
     fn run_with_context(
         &self,
         pico_rules: &PicoRules,
-        runtime: &mut PicoRuntime,
+        runtime: &PicoRuntime,
         ctx: &mut PicoContext,
     ) -> ConditionResult {
         for condition in &self.and {
@@ -43,7 +43,7 @@ impl ConditionExecution for Or {
     fn run_with_context(
         &self,
         pico_rules: &PicoRules,
-        runtime: &mut PicoRuntime,
+        runtime: &PicoRuntime,
         ctx: &mut PicoContext,
     ) -> ConditionResult {
         let condition_count = self.or.len();
@@ -68,7 +68,7 @@ impl ConditionExecution for Not {
     fn run_with_context(
         &self,
         pico_rules: &PicoRules,
-        runtime: &mut PicoRuntime,
+        runtime: &PicoRuntime,
         ctx: &mut PicoContext,
     ) -> ConditionResult {
         let condition_result = self.not.run_with_context(pico_rules, runtime, ctx)?;

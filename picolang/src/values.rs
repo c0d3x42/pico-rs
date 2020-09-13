@@ -20,7 +20,7 @@ impl ValueExecution for PicoValue {
     fn run_with_context(
         &self,
         _pico_rules: &PicoRules,
-        _runtime: &mut PicoRuntime,
+        _runtime: &PicoRuntime,
         _ctx: &mut PicoContext,
     ) -> ValueResult {
         trace!("pico cloning");
@@ -50,7 +50,7 @@ impl ValueExecution for VarLookup {
     fn run_with_context(
         &self,
         _pico_rules: &PicoRules,
-        _runtime: &mut PicoRuntime,
+        _runtime: &PicoRuntime,
         ctx: &mut PicoContext,
     ) -> ValueResult {
         match &self.var {
@@ -93,7 +93,7 @@ impl ValueExecution for Var {
     fn run_with_context(
         &self,
         pico_rules: &PicoRules,
-        runtime: &mut PicoRuntime,
+        runtime: &PicoRuntime,
         ctx: &mut PicoContext,
     ) -> ValueResult {
         match self {
@@ -133,7 +133,7 @@ impl ValueExecution for ValueProducer {
     fn run_with_context(
         &self,
         pico_rules: &PicoRules,
-        runtime: &mut PicoRuntime,
+        runtime: &PicoRuntime,
         ctx: &mut PicoContext,
     ) -> ValueResult {
         trace!("producer running..");
@@ -168,7 +168,7 @@ impl ValueExecution for Extract {
     fn run_with_context(
         &self,
         pico_rules: &PicoRules,
-        runtime: &mut PicoRuntime,
+        runtime: &PicoRuntime,
         ctx: &mut PicoContext,
     ) -> ValueResult {
         let with_value = self.extract.1.run_with_context(pico_rules, runtime, ctx)?;
@@ -214,7 +214,7 @@ impl ValueExecution for ConCat {
     fn run_with_context(
         &self,
         pico_rules: &PicoRules,
-        runtime: &mut PicoRuntime,
+        runtime: &PicoRuntime,
         ctx: &mut PicoContext,
     ) -> ValueResult {
         let words = &self
@@ -309,7 +309,7 @@ impl ValueExecution for Slice {
     fn run_with_context(
         &self,
         pico_rules: &PicoRules,
-        runtime: &mut PicoRuntime,
+        runtime: &PicoRuntime,
         ctx: &mut PicoContext,
     ) -> ValueResult {
         info!("slicing");
@@ -367,7 +367,7 @@ impl ValueExecution for Pointer {
     fn run_with_context(
         &self,
         pico_rules: &PicoRules,
-        runtime: &mut PicoRuntime,
+        runtime: &PicoRuntime,
         ctx: &mut PicoContext,
     ) -> ValueResult {
         info!("consulting pointer");
@@ -404,7 +404,7 @@ impl ValueExecution for LiteralString {
     fn run_with_context(
         &self,
         _pico_rules: &PicoRules,
-        _runtime: &mut PicoRuntime,
+        _runtime: &PicoRuntime,
         _ctx: &mut PicoContext,
     ) -> ValueResult {
         info!("HIT a literal string {}", self.0);
@@ -420,7 +420,7 @@ impl ValueExecution for LiteralI64 {
     fn run_with_context(
         &self,
         pico_rules: &PicoRules,
-        runtime: &mut PicoRuntime,
+        runtime: &PicoRuntime,
         ctx: &mut PicoContext,
     ) -> ValueResult {
         info!("HIT a literal number {}", self.0);
@@ -439,7 +439,7 @@ impl ValueExecution for TableLookup {
     fn run_with_context(
         &self,
         pico_rules: &PicoRules,
-        runtime: &mut PicoRuntime,
+        runtime: &PicoRuntime,
         _ctx: &mut PicoContext,
     ) -> ValueResult {
         info!(

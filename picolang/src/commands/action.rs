@@ -16,7 +16,7 @@ impl ActionExecution for Action {
     fn run_with_context(
         &self,
         pico_rules: &PicoRules,
-        runtime: &mut PicoRuntime,
+        runtime: &PicoRuntime,
         ctx: &mut PicoContext,
     ) -> ActionResult {
         match self {

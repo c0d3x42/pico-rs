@@ -26,7 +26,7 @@ async fn main() -> Result<()> {
 
   let pico_rules = PicoRules::new().load_rulefile(StringLoader::new("anon.json", &document));
 
-  let mut rt = PicoRuntime::new(&pico_rules)
+  let mut rt = PicoRuntime::new(pico_rules)
     .add_global("my-version", &PicoValue::String("0.0.4".to_string()))
     .initialise();
 

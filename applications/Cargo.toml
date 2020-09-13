@@ -17,6 +17,8 @@ env_logger = "*"
 clap = "3.0.0-beta.1"
 warp = "*"
 actix-web = "3"
+futures-core = "0"
+futures-util = "0"
 
 [[bin]]
 name = "server"

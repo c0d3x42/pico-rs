@@ -17,7 +17,7 @@ impl ConditionExecution for Eq {
     fn run_with_context(
         &self,
         pico_rules: &PicoRules,
-        runtime: &mut PicoRuntime,
+        runtime: &PicoRuntime,
         ctx: &mut PicoContext,
     ) -> ConditionResult {
         trace!("Eq resolving...");
@@ -38,7 +38,7 @@ impl ConditionExecution for GreaterThan {
     fn run_with_context(
         &self,
         pico_rules: &PicoRules,
-        runtime: &mut PicoRuntime,
+        runtime: &PicoRuntime,
         ctx: &mut PicoContext,
     ) -> ConditionResult {
         let lhs = self.gt.0.run_with_context(pico_rules, runtime, ctx)?;
@@ -68,7 +68,7 @@ impl ConditionExecution for LessThan {
     fn run_with_context(
         &self,
         pico_rules: &PicoRules,
-        runtime: &mut PicoRuntime,
+        runtime: &PicoRuntime,
         ctx: &mut PicoContext,
     ) -> ConditionResult {
         let lhs = self.lt.0.run_with_context(pico_rules, runtime, ctx)?;

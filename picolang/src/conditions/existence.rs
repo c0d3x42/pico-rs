@@ -84,7 +84,7 @@ impl ConditionExecution for VarExistsCondition {
     fn run_with_context(
         &self,
         _pico_rules: &PicoRules,
-        _runtime: &mut PicoRuntime,
+        _runtime: &PicoRuntime,
         ctx: &mut PicoContext,
     ) -> ConditionResult {
         match &self.exists {
@@ -117,7 +117,7 @@ impl ConditionExecution for VarMissingCondition {
     fn run_with_context(
         &self,
         _pico_rules: &PicoRules,
-        _runtime: &mut PicoRuntime,
+        _runtime: &PicoRuntime,
         ctx: &mut PicoContext,
     ) -> ConditionResult {
         match ctx.get_value(&self.missing) {

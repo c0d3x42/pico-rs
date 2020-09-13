@@ -37,6 +37,7 @@ pub async fn submit_handler(
 ) -> Result<impl Reply, Rejection> {
     let pico_rule = pico.read().await;
 
+    /*
     let mut runtime = pico_rule.make_runtime();
 
     trace!("InputVars... {:?}", body);
@@ -49,6 +50,8 @@ pub async fn submit_handler(
     info!("\n FINAL runtime globals {:?}", runtime.globals);
 
     Ok(json(&ctx.get_final_ctx()))
+    */
+    Ok("xxx")
 }
 
 pub fn with_pico(

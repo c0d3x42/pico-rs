@@ -23,7 +23,7 @@ impl ActionExecution for SetCommand {
     fn run_with_context(
         &self,
         pico_rules: &PicoRules,
-        runtime: &mut PicoRuntime,
+        runtime: &PicoRuntime,
         ctx: &mut PicoContext,
     ) -> ActionResult {
         info!("RUNNING SET for {}", pico_rules);

@@ -29,7 +29,7 @@ pub trait ConditionExecution {
     fn run_with_context(
         &self,
         _pico_rule: &PicoRules,
-        _runtime: &mut PicoRuntime,
+        _runtime: &PicoRuntime,
         _ctx: &mut PicoContext,
     ) -> MyResult<bool> {
         Err(PicoError::Crash("Not implemented".to_string()))
@@ -47,7 +47,7 @@ pub trait ValueExecution {
     fn run_with_context(
         &self,
         _pico_rule: &PicoRules,
-        _runtime: &mut PicoRuntime,
+        _runtime: &PicoRuntime,
         _ctx: &mut PicoContext,
     ) -> MyResult<PicoValue> {
         Err(PicoError::Crash("Not implemented".to_string()))
@@ -58,7 +58,7 @@ pub trait ActionExecution {
     fn run_with_context(
         &self,
         _pico_rule: &PicoRules,
-        _runtime: &mut PicoRuntime,
+        _runtime: &PicoRuntime,
         _ctx: &mut PicoContext,
     ) -> MyResult<ActionValue> {
         Err(PicoError::Crash("Not implemented".to_string()))
