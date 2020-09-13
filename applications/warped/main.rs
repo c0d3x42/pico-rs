@@ -12,6 +12,7 @@ extern crate picolang;
 
 use picolang::rules::loaders::FileLoader;
 use picolang::rules::PicoRules;
+use picolang::runtime::PicoRuntime;
 
 #[cfg(feature = "srv_nats")]
 use picolang::nats::start_nats;
@@ -78,8 +79,12 @@ async fn main() -> Result<()> {
 
     start_nats();
 
-    let pico: Arc<RwLock<PicoRules>> = Arc::new(RwLock::new(nr));
+    let rt = PicoRuntime::new(nr);
+    let pico: Arc<RwLock<PicoRuntime>> = Arc::new(RwLock::new(rt));
 
-    server::serve(pico, app_options).await;
+    //let pico: Arc<RwLock<PicoRules>> = Arc::new(RwLock::new(nr));
+
+    //server::serve(pico, app_options).await;
+    server::serve2(pico, app_options).await;
     Ok(())
 }

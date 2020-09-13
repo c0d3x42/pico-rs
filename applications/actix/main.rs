@@ -13,33 +13,20 @@ use picolang::runtime::PicoRuntime;
 #[macro_use]
 extern crate log;
 
-#[derive(Serialize)]
-struct Lop {
-  lop: i8,
-}
-
-#[derive(Deserialize, Serialize, Debug)]
-struct Anything {
-  xp: String,
-}
-
-async fn index() -> impl Responder {
-  let l = Lop { lop: 1 };
-  HttpResponse::Ok().json(l)
-}
-
-async fn pico2(
+async fn submit(
   data: web::Data<Mutex<PicoRuntime>>,
   mut payload: web::Payload,
 ) -> Result<HttpResponse, Error> {
+  // extract the full body
   let mut body = web::BytesMut::new();
   while let Some(chunk) = payload.next().await {
     body.extend_from_slice(&chunk?);
   }
 
+  // then desrialize
   let obj = serde_json::from_slice::<serde_json::Value>(&body)?;
 
-  let mut rt = data.lock().unwrap();
+  let rt = data.lock().unwrap();
   let mut ctx = rt.make_ctx().set_json(obj);
 
   rt.exec_root_with_context(&mut ctx);
@@ -47,20 +34,6 @@ async fn pico2(
   let f = ctx.get_final_ctx();
 
   Ok(HttpResponse::Ok().json(f))
-}
-
-async fn pico(data: web::Data<Mutex<PicoRuntime>>, input: web::Json<Anything>) -> impl Responder {
-  let mut rt = data.lock().unwrap();
-
-  info!("RT = {:?}", rt);
-  info!("input = {:?}", input);
-
-  let mut ctx = rt.make_ctx();
-  info!("CTX = {:?}", ctx);
-
-  //rt.exec_root_with_context(&mut ctx);
-
-  HttpResponse::Ok()
 }
 
 #[actix_web::main]
@@ -77,11 +50,10 @@ async fn main() -> std::io::Result<()> {
   HttpServer::new(move || {
     App::new()
       .app_data(data.clone())
-      .service(web::resource("/").route(web::get().to(index)))
-      .service(web::resource("/pico").route(web::post().to(pico)))
-      .service(web::resource("/pico2").route(web::post().to(pico2)))
+      .service(web::resource("/submit").route(web::post().to(submit)))
   })
-  .bind("127.0.0.1:1337")?
+  .workers(32)
+  .bind("127.0.0.1:8000")?
   .run()
   .await
 }
