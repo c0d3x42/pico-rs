@@ -7,7 +7,7 @@ license = "MIT OR Apache-2.0"
 description = "JSON Logic like language"
 homepage = "https://github.com/c0d3x42/pico-rs"
 repository = "https://github.com/c0d3x42/pico-rs"
-readme = "README.md"
+readme = "../README.md"
 
 [features]
 default = []
