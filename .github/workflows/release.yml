@@ -24,3 +24,4 @@ jobs:
         CARGO_TOKEN: ${{ secrets.CARGO_TOKEN }}
     - name: cargo publish
       run: cargo publish
+      working-directory: picolang
