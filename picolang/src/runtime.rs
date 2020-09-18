@@ -3,25 +3,29 @@ use serde_json::Value as JsonValue;
 use std::collections::HashMap;
 
 use crate::context::PicoContext;
+use crate::rules::lookups::LookupTable;
 use crate::values::PicoValue;
 
 type Namespace = String;
 type VariableMap = HashMap<String, PicoValue>;
 
 #[derive(Debug)]
-pub struct PicoRuntime {
+pub struct PicoRuntime<'a> {
   pub globals: HashMap<String, PicoValue>,
   pub namespaced_variables: HashMap<Namespace, VariableMap>,
 
+  pub namespaced_lookups: HashMap<(&'a str, &'a str), &'a LookupTable>,
+
   feature_globals_readonly: bool,
   feature_namespaces: bool,
-  pub root_rule: PicoRules, // borrowed reference of the top level rulefile
+  pub root_rule: PicoRules, // moved reference of the top level rulefile
 }
-impl PicoRuntime {
+impl<'a> PicoRuntime<'a> {
   pub fn new(root_rule: PicoRules) -> Self {
     Self {
       globals: HashMap::new(),
       namespaced_variables: HashMap::new(), // all namespaced variables
+      namespaced_lookups: HashMap::new(),
       /// readonly globals by default
       feature_globals_readonly: true,
       /// enabled by default
@@ -54,9 +58,16 @@ impl PicoRuntime {
 
     info!("ALL NAMESPACES {}", namespaces.join(","));
 
+    // register all declared namespaces
     for ns in namespaces {
       self.add_namespace(&ns);
     }
+
+    //let mut cache_map: HashMap<(&str, &str), &LookupTable> = HashMap::new();
+    //self.root_rule.all_namespaced_lookup_tables(&mut cache_map);
+
+    // info!("CACHE MAP after {:?}", cache_map);
+    //self.namespaced_lookups = cache_map;
 
     self
   }

@@ -1,12 +1,13 @@
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::fmt;
 
 use itertools::Itertools;
 use std::fs::File;
+use std::marker::PhantomData;
 
 pub mod loaders;
-mod lookups;
+pub mod lookups;
 
 use crate::commands::execution::ActionExecution;
 use crate::commands::{Command, FiniCommand};
@@ -14,12 +15,47 @@ use crate::context::PicoContext;
 use crate::runtime::PicoRuntime;
 use crate::values::PicoValue;
 use loaders::{FileLoader, PicoRuleLoader};
-use lookups::Lookups;
+use lookups::{get_external_lookups, LookupTable, LookupType, Lookups};
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct StringOrSeq(#[serde(deserialize_with = "string_or_seq_string")] Vec<String>);
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct IncludeFile {
     pub include: String,
-    pub namespaces: Option<Vec<String>>,
+    // namespaces the included file can access
+    pub with_namespaces: Option<StringOrSeq>,
+}
+
+fn string_or_seq_string<'de, D>(deserializer: D) -> Result<Vec<String>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    struct StringOrVec(PhantomData<Vec<String>>);
+
+    impl<'de> serde::de::Visitor<'de> for StringOrVec {
+        type Value = Vec<String>;
+
+        fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+            formatter.write_str("string or list of strings")
+        }
+
+        fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
+        where
+            E: serde::de::Error,
+        {
+            Ok(vec![value.to_owned()])
+        }
+
+        fn visit_seq<S>(self, visitor: S) -> Result<Self::Value, S::Error>
+        where
+            S: serde::de::SeqAccess<'de>,
+        {
+            Deserialize::deserialize(serde::de::value::SeqAccessDeserializer::new(visitor))
+        }
+    }
+
+    deserializer.deserialize_any(StringOrVec(PhantomData))
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -149,6 +185,34 @@ impl PicoRules {
         }
     }
 
+    /*
+    pub fn all_namespaced_lookup_tables<'a>(
+        &'a self,
+        cache_map: &mut HashMap<(&'a str, &'a str), &'a LookupTable>,
+    ) {
+        let mut c: HashMap<(&str, &str), &LookupTable> = HashMap::new();
+
+        if let Some(rule_file) = &self.rulefile {
+            for (table_name, table_data) in &rule_file.lookups {
+                if let Some(table_namespaces) = &table_data.namespaces {
+                    for tbl_namespace in table_namespaces {
+                        info!(
+                            "RULEFILE {}, TBL {}, NS {}",
+                            self.entrypoint, table_name, tbl_namespace
+                        );
+
+                        c.insert((tbl_namespace, table_name), &table_data);
+                        cache_map.insert((tbl_namespace, table_name), &table_data);
+                    }
+                }
+            }
+        }
+
+        trace!("FINAL C {:?}", c);
+        trace!("FINAL Ccache {:?}", cache_map);
+    }
+    */
+
     pub fn set_entry(mut self, entrypoint: &str) -> Self {
         self.entrypoint = entrypoint.to_string();
         self
@@ -165,7 +229,10 @@ impl PicoRules {
         let s = &loader.filename_is();
         match loader.load() {
             Ok(rf) => {
+                get_external_lookups(&rf.lookups);
+
                 self.rulefile = Some(rf);
+
                 self.status = FileStatus::Loaded;
             }
             Err(x) => {
@@ -258,14 +325,14 @@ impl PicoRules {
             .map(|i| {
                 info!("includes: [{}]", i.include);
 
-                info!("permitted namespace [{:?}]", i.namespaces);
+                info!("permitted namespace [{:?}]", i.with_namespaces);
 
                 let fl = FileLoader::new(&i.include);
                 let mut imported_pico_rule = PicoRules::new().load_rulefile(fl).load_includes();
                 warn!("got an imported_pico_rule");
 
-                if let Some(allowed_namespaces) = &i.namespaces {
-                    for ns in allowed_namespaces {
+                if let Some(allowed_namespaces) = &i.with_namespaces {
+                    for ns in &allowed_namespaces.0 {
                         imported_pico_rule.allowed_namespaces.insert(ns.to_string());
                     }
                 }
@@ -337,7 +404,10 @@ impl PicoRules {
             None => None,
             Some(rf) => match rf.lookups.get(table) {
                 None => None,
-                Some(m) => Some(m.lookup(key)),
+                Some(m) => match m {
+                    LookupType::InternalTable(table) => Some(table.lookup(key)),
+                    _ => None,
+                },
             },
         }
     }

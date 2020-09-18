@@ -40,4 +40,23 @@ impl LookupTable {
 }
 
 //pub type Lookups = HashMap<String, Rc<LookupTable>>;
-pub type Lookups = HashMap<String, LookupTable>;
+pub type Lookups = HashMap<String, LookupType>;
+
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(untagged)]
+pub enum LookupType {
+    ExternalTable(String),
+    InternalTable(LookupTable),
+}
+
+pub fn get_external_lookups(lookups: &Lookups) {
+    let c: Vec<(&String, &LookupType)> = lookups
+        .iter()
+        .filter(|(name, typ)| match typ {
+            LookupType::ExternalTable(t) => true,
+            _ => false,
+        })
+        .collect();
+
+    debug!("ccc1 {:?}", c);
+}

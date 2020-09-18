@@ -13,8 +13,8 @@ use picolang::runtime::PicoRuntime;
 #[macro_use]
 extern crate log;
 
-async fn submit(
-  data: web::Data<Mutex<PicoRuntime>>,
+async fn submit<'a>(
+  data: web::Data<Mutex<PicoRuntime<'a>>>,
   mut payload: web::Payload,
 ) -> Result<HttpResponse, Error> {
   // extract the full body

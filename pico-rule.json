@@ -10,7 +10,8 @@
             "namespaces": [
                 "dev::test"
             ]
-        }
+        },
+        "ext-table": "file.lookup"
     },
     "namespaces": [
         "dev::test"
@@ -38,7 +39,7 @@
         },
         {
             "include": "other-rules.json",
-            "namespaces": [
+            "with_namespaces": [
                 "dev::test"
             ]
         },
@@ -61,11 +62,23 @@
             "then": [
                 {
                     "log": "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+                },
+                {
+                    "set": [
+                        "FOUND-XP",
+                        "true"
+                    ]
                 }
             ],
             "else": [
                 {
                     "log": "PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP"
+                },
+                {
+                    "set": [
+                        "FOUND-XP",
+                        "false"
+                    ]
                 }
             ]
         },
