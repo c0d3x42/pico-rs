@@ -30,9 +30,10 @@ async fn submit<'a>(
     body.extend_from_slice(&chunk?);
   }
 
-  // then desrialize
+  // then deserialize
   let json_result = serde_json::from_slice::<serde_json::Value>(&body);
 
+  // either get the parsed json or return BadRequest
   let json = json_result.map_err(|x| {
     error!("parse failure: {}", x);
     HttpResponse::BadRequest()

@@ -112,8 +112,8 @@ impl PicoContext {
     pub fn get_final_ctx(&mut self) -> VariablesMap {
         let mut variables: VariablesMap = HashMap::new();
         variables.insert("input".to_string(), json!(&self.input_json));
-        variables.insert("locals".to_string(), json!(&self.local_variables));
-        variables.insert("namespaced".to_string(), json!(&self.namespaced_variables));
+        variables.insert("output".to_string(), json!(&self.local_variables));
+        //variables.insert("namespaced".to_string(), json!(&self.namespaced_variables));
 
         variables
     }
