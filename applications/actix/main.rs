@@ -5,6 +5,7 @@ use std::sync::Mutex;
 use actix_web::{get, post, web, App, Error, HttpResponse, HttpServer};
 use serde::{Deserialize, Serialize};
 
+use picolang::errors::RuntimeError;
 use picolang::runtime::PicoRuntime;
 
 #[macro_use]
@@ -13,10 +14,15 @@ extern crate log;
 #[post("/{rule}")]
 async fn submit<'a>(
   rule: web::Path<(String)>,
-  data: web::Data<Mutex<PicoRuntime<'a>>>,
+  data_rt: web::Data<Mutex<PicoRuntime<'a>>>,
   mut payload: web::Payload,
 ) -> Result<HttpResponse, Error> {
   info!("RULE {}", rule);
+  let rt = data_rt.lock().unwrap();
+  if !rt.has_rule(&rule) {
+    warn!("Rule does not exist {}", rule);
+    return HttpResponse::NotFound().await;
+  }
 
   // extract the full body
   let mut body = web::BytesMut::new();
@@ -25,17 +31,24 @@ async fn submit<'a>(
   }
 
   // then desrialize
-  let obj = serde_json::from_slice::<serde_json::Value>(&body)?;
+  let json_result = serde_json::from_slice::<serde_json::Value>(&body);
 
-  let mut rt = data.lock().unwrap();
-  let mut ctx = rt.make_ctx().set_json(obj);
+  let json = json_result.map_err(|x| {
+    error!("parse failure: {}", x);
+    HttpResponse::BadRequest()
+  })?;
 
-  rt.exec_root_with_context(&mut ctx);
-  rt.new_namespace("lop");
+  let mut ctx = rt.make_ctx(json);
 
-  let f = ctx.get_final_ctx();
-
-  Ok(HttpResponse::Ok().json(f))
+  match rt.exec_rule_with_context(&rule, &mut ctx) {
+    Ok(final_ctx) => Ok(HttpResponse::Ok().json(final_ctx)),
+    Err(x) => {
+      error!("rule failed {}", x);
+      let s = format!("{}", x);
+      let err = vec![s];
+      HttpResponse::NotFound().json(err).await
+    }
+  }
 }
 
 async fn rules<'a>(data: web::Data<Mutex<PicoRuntime<'a>>>) -> Result<HttpResponse, Error> {

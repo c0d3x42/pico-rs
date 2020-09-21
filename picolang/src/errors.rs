@@ -34,6 +34,12 @@ pub enum PicoError {
 }
 
 #[derive(Debug, Error)]
+pub enum RuntimeError {
+    #[error("No Such rule: [{rulename:?}]")]
+    NoSuchRule { rulename: String },
+}
+
+#[derive(Debug, Error)]
 pub enum RuleFileError {
     #[error("MyRead Error [{filename:?}]")]
     ReadError {

@@ -79,6 +79,10 @@ impl PicoRulesCache {
     self.cache.get(name)
   }
 
+  pub fn has(&self, rulename: &str) -> bool {
+    self.cache.contains_key(rulename)
+  }
+
   pub fn values(&self) -> std::collections::hash_map::Values<String, PicoRules> {
     self.cache.values()
   }

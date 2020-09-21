@@ -4,6 +4,7 @@ use std::{env, fmt, path::Path};
 use std::{fs, io};
 
 use crate::context::PicoContext;
+use crate::errors::RuntimeError;
 use crate::rules::lookups::LookupTable;
 use crate::values::PicoValue;
 
@@ -133,21 +134,37 @@ impl<'a> PicoRuntime<'a> {
         self.rules_cache.filenames()
     }
 
-    pub fn make_ctx(&self) -> PicoContext {
+    pub fn make_ctx(&self, json: serde_json::Value) -> PicoContext {
         let mut pc = PicoContext::new();
         for ns in self.namespaced_variables.keys() {
             pc.ns_add(ns);
         }
-        pc
+        pc.set_json(json)
     }
 
-    pub fn exec_rule_with_context(&self, rule_name: &str, ctx: &mut PicoContext) {
-        if let Some(ref pico_rule) = self.rules_cache.get(rule_name) {
-            pico_rule.run_with_context(self, ctx)
+    pub fn has_rule(&self, rulename: &str) -> bool {
+        self.rules_cache.has(rulename)
+    }
+
+    pub fn exec_rule_with_context(
+        &self,
+        rulename: &str,
+        ctx: &mut PicoContext,
+    ) -> Result<HashMap<String, PicoValue>, RuntimeError> {
+        if let Some(ref pico_rule) = self.rules_cache.get(rulename) {
+            pico_rule.run_with_context(self, ctx);
+            Ok(ctx.get_final_ctx())
+        } else {
+            Err(RuntimeError::NoSuchRule {
+                rulename: rulename.to_string(),
+            })
         }
     }
 
-    pub fn exec_root_with_context(&self, ctx: &mut PicoContext) {
+    pub fn exec_root_with_context(
+        &self,
+        ctx: &mut PicoContext,
+    ) -> Result<HashMap<String, PicoValue>, RuntimeError> {
         info!("Running with default rule: {}", self.default_rule_name);
         self.exec_rule_with_context(&self.default_rule_name, ctx)
     }
