@@ -14,7 +14,7 @@ pub struct SubmitResponse {
     output: String,
 }
 
-pub async fn serve2(pico: Arc<RwLock<PicoRuntime>>, app: AppOptions) {
+pub async fn serve2<'a>(pico: Arc<RwLock<PicoRuntime<'a>>>, app: AppOptions) {
     info!("Serve {:?}", app);
 
     let submit = warp::path("submit");
@@ -31,9 +31,9 @@ pub async fn serve2(pico: Arc<RwLock<PicoRuntime>>, app: AppOptions) {
     warp::serve(routes).run(([127, 0, 0, 1], 8000)).await
 }
 
-pub async fn submit_handler2(
+pub async fn submit_handler2<'a>(
     body: serde_json::Value,
-    pico: Arc<RwLock<PicoRuntime>>,
+    pico: Arc<RwLock<PicoRuntime<'a>>>,
 ) -> Result<impl Reply, Rejection> {
     let rt = pico.read().await;
     trace!("InputVars... {:?}", body);

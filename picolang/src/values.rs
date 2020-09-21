@@ -9,7 +9,7 @@ pub type PicoValue = Value;
 use crate::commands::execution::{ValueExecution, ValueResult};
 use crate::context::PicoContext;
 use crate::errors::PicoError;
-use crate::rules::PicoRules;
+use crate::rules::{lookups::LookupType, PicoRules};
 use crate::runtime::PicoRuntime;
 use regex::Regex;
 use std::collections::HashMap;
@@ -435,6 +435,8 @@ pub struct TableLookup {
     lookup: (String, String), // table, key
 }
 
+// lookup can use a table in this file (InternalTable)
+// or an (ExternalFile)
 impl ValueExecution for TableLookup {
     fn run_with_context(
         &self,
@@ -447,10 +449,20 @@ impl ValueExecution for TableLookup {
             self.lookup.0, self.lookup.1
         );
 
-        let lookedup_value = pico_rules.table_lookup_value(&self.lookup.0, &self.lookup.1);
-        info!("Lookup failed for {:?}", self.lookup.0);
+        let value: Option<&PicoValue> = match pico_rules.get_table(&self.lookup.0) {
+            None => None,
+            Some(table_type) => match table_type {
+                LookupType::InternalTable(internal_table) => {
+                    Some(internal_table.lookup(&self.lookup.1))
+                }
 
-        match lookedup_value {
+                LookupType::ExternalTable(external_table) => {
+                    runtime.table_lookup(external_table, &self.lookup.1)
+                }
+            },
+        };
+
+        match value {
             Some(v) => Ok(v.clone()),
             None => Err(PicoError::NoSuchValue(format!(
                 "No Such table {}",

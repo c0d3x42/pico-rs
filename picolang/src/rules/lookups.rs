@@ -1,7 +1,9 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 //use std::rc::Rc;
+use std::fs::File;
 
+use super::loaders::FileLoader;
 use crate::PicoValue;
 
 pub type LookupDict = HashMap<String, PicoValue>;
@@ -49,14 +51,29 @@ pub enum LookupType {
     InternalTable(LookupTable),
 }
 
-pub fn get_external_lookups(lookups: &Lookups) {
-    let c: Vec<(&String, &LookupType)> = lookups
+pub fn get_external_lookup_names(lookups: &Lookups) -> Vec<(&String, &String)> {
+    let c: Vec<(&String, &String)> = lookups
         .iter()
-        .filter(|(name, typ)| match typ {
-            LookupType::ExternalTable(t) => true,
-            _ => false,
+        .filter_map(|(name, typ)| match typ {
+            LookupType::ExternalTable(t) => Some((name, t)),
+            _ => None,
         })
         .collect();
 
     debug!("ccc1 {:?}", c);
+    c
+}
+
+pub fn load_into_cache(filename: &str, cache: &mut HashMap<String, LookupTable>) {
+    let k = filename.to_string();
+
+    match File::open(filename) {
+        Ok(opened_file) => {
+            let lookup_file: LookupTable = serde_json::from_reader(opened_file).unwrap();
+            cache.insert(k, lookup_file);
+        }
+        Err(x) => {
+            error!("Failed to open: {:?}", x);
+        }
+    }
 }

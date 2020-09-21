@@ -79,7 +79,7 @@ async fn main() -> Result<()> {
 
     start_nats();
 
-    let rt = PicoRuntime::new(nr);
+    let rt = PicoRuntime::new(&nr);
     let pico: Arc<RwLock<PicoRuntime>> = Arc::new(RwLock::new(rt));
 
     //let pico: Arc<RwLock<PicoRules>> = Arc::new(RwLock::new(nr));

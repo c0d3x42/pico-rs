@@ -16,7 +16,7 @@
     "fini": [],
     "root": [
         {
-            "include": "rule2.json"
+            "include": "second.rule.json"
         },
         {
             "uuid": "ce5b1618-cfb0-4b3d-9dbf-9c3fb3f778de",

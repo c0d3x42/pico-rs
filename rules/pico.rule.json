@@ -11,13 +11,24 @@
                 "dev::test"
             ]
         },
-        "ext-table": "file.lookup"
+        "ext-table": "file.lookup.json"
     },
     "namespaces": [
         "dev::test"
     ],
     "fini": [],
     "root": [
+        {
+            "set": [
+                "table_lookup_one",
+                {
+                    "lookup": [
+                        "ext-table",
+                        "one"
+                    ]
+                }
+            ]
+        },
         {
             "set": [
                 "X0",
@@ -38,7 +49,7 @@
             ]
         },
         {
-            "include": "other-rules.json",
+            "include": "other.rule.json",
             "with_namespaces": [
                 "dev::test"
             ]

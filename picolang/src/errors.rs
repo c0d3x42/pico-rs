@@ -41,11 +41,17 @@ pub enum RuleFileError {
         filename: String,
     },
 
+    #[error("CCCC")]
+    IOError(#[from] std::io::Error),
+
     #[error("Failed to parse [{filename:?}]")]
     ParseError {
         source: serde_json::Error,
         filename: String,
     },
+
+    #[error("Recursive include [{filename:?}]")]
+    RecursiveInclude { filename: String },
 
     #[error("unknown data store error")]
     Unknown(#[from] anyhow::Error),

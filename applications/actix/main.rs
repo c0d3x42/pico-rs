@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 
 use picolang::rules::loaders::FileLoader;
 use picolang::rules::PicoRules;
-use picolang::runtime::PicoRuntime;
+use picolang::runtime::{PicoRulesCache, PicoRuntime};
 
 #[macro_use]
 extern crate log;
@@ -26,24 +26,31 @@ async fn submit<'a>(
   // then desrialize
   let obj = serde_json::from_slice::<serde_json::Value>(&body)?;
 
-  let rt = data.lock().unwrap();
+  let mut rt = data.lock().unwrap();
   let mut ctx = rt.make_ctx().set_json(obj);
 
   rt.exec_root_with_context(&mut ctx);
+  rt.new_namespace("lop");
 
   let f = ctx.get_final_ctx();
 
   Ok(HttpResponse::Ok().json(f))
 }
 
+async fn rules<'a>(data: web::Data<Mutex<PicoRuntime<'a>>>) -> Result<HttpResponse, Error> {
+  let rt = data.lock().unwrap();
+  let rules = rt.rule_file_names();
+  Ok(HttpResponse::Ok().json(rules))
+}
+
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
   env_logger::init();
 
-  let fl = FileLoader::new("pico-rule.json");
-  let nv = PicoRules::new().load_rulefile(fl);
+  // let cache_data = web::Data::new(cache);
 
-  let mut rt = PicoRuntime::new(nv).initialise();
+  //let mut rt = PicoRuntime::new(nv, cache, "pico-rule.json").initialise();
+  let mut rt = PicoRuntime::new().initialise();
 
   let data = web::Data::new(Mutex::new(rt));
 
@@ -51,6 +58,7 @@ async fn main() -> std::io::Result<()> {
     App::new()
       .app_data(data.clone())
       .service(web::resource("/submit").route(web::post().to(submit)))
+      .service(web::resource("/rules").route(web::get().to(rules)))
   })
   .workers(32)
   .bind("127.0.0.1:8000")?
