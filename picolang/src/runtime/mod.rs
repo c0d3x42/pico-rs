@@ -1,102 +1,17 @@
 use crate::errors::RuleFileError;
-use crate::rules::PicoRules;
-use itertools::Itertools;
-use serde_json::Value as JsonValue;
 use std::collections::HashMap;
 use std::{env, fmt, path::Path};
 use std::{fs, io};
 
 use crate::context::PicoContext;
-use crate::rules::loaders::FileLoader;
 use crate::rules::lookups::LookupTable;
 use crate::values::PicoValue;
 
 type Namespace = String;
 type VariableMap = HashMap<String, PicoValue>;
-#[derive(Debug)]
-pub struct LookupCache {
-    // key: filename,
-    // value: lookup table
-    cache: HashMap<String, LookupTable>,
-}
-impl Default for LookupCache {
-    fn default() -> Self {
-        Self {
-            cache: HashMap::new(),
-        }
-    }
-}
-impl fmt::Display for LookupCache {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "LookupCache: [{}]", self.cache.keys().join(", "))
-    }
-}
-impl LookupCache {
-    pub fn new() -> Self {
-        Default::default()
-    }
 
-    pub fn load(&mut self, lookup_filename: &str) -> Result<(), RuleFileError> {
-        super::rules::lookups::load_into_cache(lookup_filename, &mut self.cache);
-
-        warn!("CACHE final {:?}", self.cache);
-
-        Ok(())
-    }
-
-    pub fn lookup(&self, lookup_filename: &str, key: &str) -> Option<&PicoValue> {
-        self.cache
-            .get(lookup_filename)
-            .and_then(|t| Some(t.lookup(key)))
-    }
-}
-
-#[derive(Debug)]
-pub struct PicoRulesCache {
-    cache: HashMap<String, PicoRules>,
-    including_paths: HashMap<String, Vec<String>>,
-}
-
-impl Default for PicoRulesCache {
-    fn default() -> Self {
-        Self {
-            cache: HashMap::new(),
-            including_paths: HashMap::new(),
-        }
-    }
-}
-
-impl fmt::Display for PicoRulesCache {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "PicoRulesCache: [{}]", self.cache.keys().join(", "))
-    }
-}
-
-impl PicoRulesCache {
-    pub fn new() -> Self {
-        Default::default()
-    }
-    pub fn get(&self, name: &str) -> Option<&PicoRules> {
-        self.cache.get(name)
-    }
-
-    pub fn store(&mut self, filename: &str, pico_rule: PicoRules) -> Result<(), RuleFileError> {
-        // FIXME detect recursive includes
-        self.cache.insert(filename.to_string(), pico_rule);
-
-        Ok(())
-    }
-
-    pub fn load(&mut self, entry_filename: &str) -> Result<(), RuleFileError> {
-        if self.cache.contains_key(entry_filename) {
-            info!("already have {}", entry_filename);
-        } else {
-            debug!("Attempting to load {}", entry_filename);
-            PicoRules::load_into_cache(entry_filename, &mut self.cache);
-        }
-        Ok(())
-    }
-}
+mod cache;
+use cache::{LookupCache, PicoRulesCache};
 
 #[derive(Debug)]
 pub struct PicoRuntime<'a> {
@@ -154,6 +69,16 @@ impl<'a> PicoRuntime<'a> {
         Ok(())
     }
 
+    pub fn set_default_rule(mut self, filename: &str) -> Self {
+        self.default_rule_name = String::from(filename);
+        self
+    }
+
+    pub fn set_rules_directory(mut self, directory: &str) -> Self {
+        self.rules_directory = String::from(directory);
+        self
+    }
+
     pub fn enable_mutable_globals(mut self) -> Self {
         self.feature_globals_readonly = false;
         self
@@ -171,7 +96,7 @@ impl<'a> PicoRuntime<'a> {
     }
 
     pub fn load_lookups(&mut self) {
-        for value in self.rules_cache.cache.values() {
+        for value in self.rules_cache.values() {
             for (table_name, file_name) in value.external_lookups() {
                 debug!("Loading external lookup from {}", file_name);
                 self.lookup_cache.load(file_name);
@@ -205,7 +130,7 @@ impl<'a> PicoRuntime<'a> {
     }
 
     pub fn rule_file_names(&self) -> Vec<String> {
-        self.rules_cache.cache.keys().cloned().collect()
+        self.rules_cache.filenames()
     }
 
     pub fn make_ctx(&self) -> PicoContext {
@@ -223,6 +148,7 @@ impl<'a> PicoRuntime<'a> {
     }
 
     pub fn exec_root_with_context(&self, ctx: &mut PicoContext) {
+        info!("Running with default rule: {}", self.default_rule_name);
         self.exec_rule_with_context(&self.default_rule_name, ctx)
     }
 

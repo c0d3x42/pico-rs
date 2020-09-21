@@ -35,7 +35,7 @@ cargo run --features srv_nats
 
 `JSON` formmated file that encapsulates your logic
 
-see [simple.json](/simple.json) example rule file
+see [simple.json](/rules/simple.json) example rule file
 
 start server with
 ```bash

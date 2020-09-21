@@ -1,0 +1,20 @@
+{
+  "root": [
+    {
+      "set": [
+        "test1",
+        true
+      ]
+    },
+    {
+      "if": {
+        "exists": "test1"
+      },
+      "then": [
+        {
+          "log": "test1 was set"
+        }
+      ]
+    }
+  ]
+}
