@@ -3,7 +3,6 @@ use std::collections::HashMap;
 //use std::rc::Rc;
 use std::fs::File;
 
-use super::loaders::FileLoader;
 use crate::PicoValue;
 
 pub type LookupDict = HashMap<String, PicoValue>;

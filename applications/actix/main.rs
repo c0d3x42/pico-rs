@@ -2,10 +2,8 @@ use clap::{App as ClApp, Arg};
 use futures_util::StreamExt;
 use std::sync::Mutex;
 
-use actix_web::{get, post, web, App, Error, HttpResponse, HttpServer};
-use serde::{Deserialize, Serialize};
+use actix_web::{post, web, App, Error, HttpResponse, HttpServer};
 
-use picolang::errors::RuntimeError;
 use picolang::runtime::PicoRuntime;
 
 #[macro_use]
@@ -51,9 +49,9 @@ async fn exec_rule<'a>(
 
 #[post("{rulename}")]
 async fn submit_with_rulename<'a>(
-  rulename: web::Path<(String)>,
+  rulename: web::Path<String>,
   data_rt: web::Data<Mutex<PicoRuntime<'a>>>,
-  mut payload: web::Payload,
+  payload: web::Payload,
 ) -> Result<HttpResponse, Error> {
   let runtime = data_rt.lock().unwrap();
   exec_rule(&rulename, &runtime, payload).await
@@ -61,7 +59,7 @@ async fn submit_with_rulename<'a>(
 
 async fn submit_default<'a>(
   data_rt: web::Data<Mutex<PicoRuntime<'a>>>,
-  mut payload: web::Payload,
+  payload: web::Payload,
 ) -> Result<HttpResponse, Error> {
   let runtime = data_rt.lock().unwrap();
   exec_rule(&runtime.get_default_rule(), &runtime, payload).await
@@ -120,7 +118,7 @@ async fn main() -> std::io::Result<()> {
     .to_string();
 
   // Create the Pico rules runtime using command line args
-  let mut rt = PicoRuntime::new()
+  let rt = PicoRuntime::new()
     .set_rules_directory(&rules_directory)
     .initialise()
     .set_default_rule(&entry_rule);

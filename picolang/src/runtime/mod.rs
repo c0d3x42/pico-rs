@@ -1,7 +1,7 @@
 use crate::errors::RuleFileError;
 use std::collections::HashMap;
-use std::{env, fmt, path::Path};
-use std::{fs, io};
+use std::fs;
+use std::{env, path::Path};
 
 use crate::context::PicoContext;
 use crate::errors::RuntimeError;
@@ -47,6 +47,7 @@ impl<'a> PicoRuntime<'a> {
         }
     }
 
+    // loads all rule and lookup files
     pub fn load_rules(&mut self) -> Result<(), RuleFileError> {
         let path = Path::new(&self.rules_directory);
         env::set_current_dir(path)?;
@@ -67,6 +68,16 @@ impl<'a> PicoRuntime<'a> {
             }
         }
 
+        Ok(())
+    }
+
+    pub fn load_lookups(&mut self) -> Result<(), RuleFileError> {
+        for value in self.rules_cache.values() {
+            for (_table_name, file_name) in value.external_lookups() {
+                debug!("Loading external lookup from {}", file_name);
+                self.lookup_cache.load(file_name)?;
+            }
+        }
         Ok(())
     }
 
@@ -99,24 +110,16 @@ impl<'a> PicoRuntime<'a> {
         self.global_set(key, value);
         self
     }
-
-    pub fn load_lookups(&mut self) {
-        for value in self.rules_cache.values() {
-            for (table_name, file_name) in value.external_lookups() {
-                debug!("Loading external lookup from {}", file_name);
-                self.lookup_cache.load(file_name);
-            }
-        }
-    }
-
     pub fn initialise(mut self) -> Self {
         info!("xx");
+        self.load_rules()
+            .map_err(|x| error!("load rules failed {}", x))
+            .unwrap();
+        self.load_lookups()
+            .map_err(|x| error!("load failed {}", x))
+            .unwrap();
 
-        self.load_rules();
-        self.load_lookups();
-
-        let mut namespaces: Vec<String> = Vec::new();
-        //self.root_rule.all_namespace(&mut namespaces);
+        let namespaces: Vec<String> = Vec::new();
 
         info!("ALL NAMESPACES {}", namespaces.join(","));
 
@@ -125,12 +128,6 @@ impl<'a> PicoRuntime<'a> {
             self.add_namespace(&ns);
         }
 
-        //let mut cache_map: HashMap<(&str, &str), &LookupTable> = HashMap::new();
-        //self.root_rule.all_namespaced_lookup_tables(&mut cache_map);
-
-        // info!("CACHE MAP after {:?}", cache_map);
-        //self.namespaced_lookups = cache_map;
-
         self
     }
 
@@ -138,12 +135,12 @@ impl<'a> PicoRuntime<'a> {
         self.rules_cache.filenames()
     }
 
-    pub fn make_ctx(&self, json: serde_json::Value) -> PicoContext {
+    pub fn make_ctx(&self, input_json: serde_json::Value) -> PicoContext {
         let mut pc = PicoContext::new();
         for ns in self.namespaced_variables.keys() {
             pc.ns_add(ns);
         }
-        pc.set_json(json)
+        pc.set_json(input_json)
     }
 
     pub fn has_rule(&self, rulename: &str) -> bool {

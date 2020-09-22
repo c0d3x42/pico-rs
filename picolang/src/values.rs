@@ -419,9 +419,9 @@ pub struct LiteralI64(i64);
 impl ValueExecution for LiteralI64 {
     fn run_with_context(
         &self,
-        pico_rules: &PicoRules,
-        runtime: &PicoRuntime,
-        ctx: &mut PicoContext,
+        _pico_rules: &PicoRules,
+        _runtime: &PicoRuntime,
+        _ctx: &mut PicoContext,
     ) -> ValueResult {
         info!("HIT a literal number {}", self.0);
 

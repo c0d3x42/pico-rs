@@ -3,7 +3,6 @@ use std::collections::{HashMap, HashSet};
 use std::fmt;
 
 use itertools::Itertools;
-use std::fs::File;
 use std::marker::PhantomData;
 
 pub mod loaders;
@@ -15,7 +14,7 @@ use crate::context::PicoContext;
 use crate::runtime::PicoRuntime;
 use crate::values::PicoValue;
 use loaders::{FileLoader, PicoRuleLoader};
-use lookups::{get_external_lookup_names, LookupTable, LookupType, Lookups};
+use lookups::{get_external_lookup_names, LookupType, Lookups};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct StringOrSeq(#[serde(deserialize_with = "string_or_seq_string")] Vec<String>);
@@ -116,7 +115,6 @@ impl fmt::Display for RuleFile {
 
 #[derive(Debug)]
 enum FileStatus {
-    Unchecked,
     Loaded,
     Missing,
 }
@@ -178,34 +176,6 @@ impl PicoRules {
         }
     }
 
-    /*
-    pub fn all_namespaced_lookup_tables<'a>(
-        &'a self,
-        cache_map: &mut HashMap<(&'a str, &'a str), &'a LookupTable>,
-    ) {
-        let mut c: HashMap<(&str, &str), &LookupTable> = HashMap::new();
-
-        if let Some(rule_file) = &self.rulefile {
-            for (table_name, table_data) in &rule_file.lookups {
-                if let Some(table_namespaces) = &table_data.namespaces {
-                    for tbl_namespace in table_namespaces {
-                        info!(
-                            "RULEFILE {}, TBL {}, NS {}",
-                            self.entrypoint, table_name, tbl_namespace
-                        );
-
-                        c.insert((tbl_namespace, table_name), &table_data);
-                        cache_map.insert((tbl_namespace, table_name), &table_data);
-                    }
-                }
-            }
-        }
-
-        trace!("FINAL C {:?}", c);
-        trace!("FINAL Ccache {:?}", cache_map);
-    }
-    */
-
     pub fn set_entry(mut self, entrypoint: &str) -> Self {
         self.entrypoint = entrypoint.to_string();
         self
@@ -214,13 +184,6 @@ impl PicoRules {
     pub fn get_entry(&self) -> &String {
         &self.entrypoint
     }
-
-    /*
-    pub fn make_runtime(&self) -> PicoRuntime {
-        let runtime = PicoRuntime::new(self);
-        runtime.initialise()
-    }
-    */
 
     pub fn external_lookups(&self) -> Vec<(&String, &String)> {
         match &self.rulefile {
@@ -256,34 +219,9 @@ impl PicoRules {
         }
         */
     }
-    pub fn load_rulefile_old(mut self, rulefile_name: &str) -> Self {
-        info!("Loading... {}", rulefile_name);
-        match File::open(&rulefile_name) {
-            Ok(opened_file) => {
-                let rule_file: RuleFile = serde_json::from_reader(opened_file).unwrap();
-                if let Some(namespaces) = &rule_file.namespaces {
-                    trace!(
-                        "rule file has namespaces defined: {:?}",
-                        rule_file.namespaces
-                    );
-                    for ns in namespaces {
-                        info!("[{}] Adding namespace {}", rulefile_name, ns);
-                        self.allowed_namespaces.insert(ns.to_string());
-                    }
-                }
-                self.rulefile = Some(rule_file);
-                self.status = FileStatus::Loaded;
-            }
-            Err(x) => {
-                error!("failed to open: {:?}", x);
-                self.status = FileStatus::Missing;
-            }
-        }
-        self.set_entry(rulefile_name)
-    }
 
     // convenience, returns vec of filenames this file also includes
-    fn included_filenames(&self) -> Vec<String> {
+    fn _included_filenames(&self) -> Vec<String> {
         match &self.rulefile {
             Some(rf) => rf
                 .root
@@ -313,9 +251,9 @@ impl PicoRules {
         include_sections
     }
 
-    pub fn setup_rules(mut self) -> Self {
+    pub fn setup_rules(self) -> Self {
         if let Some(rf) = &self.rulefile {
-            if let Some(namespaces) = &rf.namespaces {}
+            if let Some(_namespaces) = &rf.namespaces {}
         }
 
         self
@@ -328,38 +266,6 @@ impl PicoRules {
             PicoRules::load_into_cache(&x.include, cache);
         }
         cache.insert(filename.to_string(), pr);
-    }
-
-    /*
-     * load all included but unloaded files into the cache
-     */
-    fn load_includes(mut self) -> Self {
-        let imported_rules: Vec<PicoRules> = self
-            .include_sections()
-            .iter()
-            .map(|i| {
-                info!("includes: [{}]", i.include);
-
-                info!("permitted namespace [{:?}]", i.with_namespaces);
-
-                let fl = FileLoader::new(&i.include);
-                let mut imported_pico_rule = PicoRules::new().load_rulefile(fl).load_includes();
-                warn!("got an imported_pico_rule");
-
-                if let Some(allowed_namespaces) = &i.with_namespaces {
-                    for ns in &allowed_namespaces.0 {
-                        imported_pico_rule.allowed_namespaces.insert(ns.to_string());
-                    }
-                }
-                imported_pico_rule
-            })
-            .collect();
-
-        for pr in imported_rules {
-            info!("Importing {}", pr);
-            //self.rulefile_cache.insert(pr.entrypoint.to_string(), pr);
-        }
-        self
     }
 
     pub fn run_with_context(&self, runtime: &PicoRuntime, ctx: &mut PicoContext) {

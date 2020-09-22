@@ -91,13 +91,6 @@ impl PicoRulesCache {
     self.cache.keys().cloned().collect()
   }
 
-  pub fn store(&mut self, filename: &str, pico_rule: PicoRules) -> Result<(), RuleFileError> {
-    // FIXME detect recursive includes
-    self.cache.insert(filename.to_string(), pico_rule);
-
-    Ok(())
-  }
-
   pub fn load(&mut self, entry_filename: &str) -> Result<(), RuleFileError> {
     if self.cache.contains_key(entry_filename) {
       info!("already have {}", entry_filename);
