@@ -11,16 +11,13 @@ use picolang::runtime::PicoRuntime;
 #[macro_use]
 extern crate log;
 
-#[post("/{rule}")]
-async fn submit<'a>(
-  rule: web::Path<(String)>,
-  data_rt: web::Data<Mutex<PicoRuntime<'a>>>,
+async fn exec_rule<'a>(
+  rulename: &str,
+  runtime: &PicoRuntime<'a>,
   mut payload: web::Payload,
 ) -> Result<HttpResponse, Error> {
-  info!("RULE {}", rule);
-  let rt = data_rt.lock().unwrap();
-  if !rt.has_rule(&rule) {
-    warn!("Rule does not exist {}", rule);
+  if !runtime.has_rule(&rulename) {
+    warn!("Rule does not exist {}", rulename);
     return HttpResponse::NotFound().await;
   }
 
@@ -39,10 +36,10 @@ async fn submit<'a>(
     HttpResponse::BadRequest()
   })?;
 
-  let mut ctx = rt.make_ctx(json);
+  let mut ctx = runtime.make_ctx(json);
 
-  match rt.exec_rule_with_context(&rule, &mut ctx) {
-    Ok(final_ctx) => Ok(HttpResponse::Ok().json(final_ctx)),
+  match runtime.exec_rule_with_context(&rulename, &mut ctx) {
+    Ok(final_ctx) => HttpResponse::Ok().json(final_ctx).await,
     Err(x) => {
       error!("rule failed {}", x);
       let s = format!("{}", x);
@@ -50,6 +47,24 @@ async fn submit<'a>(
       HttpResponse::NotFound().json(err).await
     }
   }
+}
+
+#[post("{rulename}")]
+async fn submit_with_rulename<'a>(
+  rulename: web::Path<(String)>,
+  data_rt: web::Data<Mutex<PicoRuntime<'a>>>,
+  mut payload: web::Payload,
+) -> Result<HttpResponse, Error> {
+  let runtime = data_rt.lock().unwrap();
+  exec_rule(&rulename, &runtime, payload).await
+}
+
+async fn submit_default<'a>(
+  data_rt: web::Data<Mutex<PicoRuntime<'a>>>,
+  mut payload: web::Payload,
+) -> Result<HttpResponse, Error> {
+  let runtime = data_rt.lock().unwrap();
+  exec_rule(&runtime.get_default_rule(), &runtime, payload).await
 }
 
 async fn rules<'a>(data: web::Data<Mutex<PicoRuntime<'a>>>) -> Result<HttpResponse, Error> {
@@ -72,7 +87,7 @@ async fn main() -> std::io::Result<()> {
     )
     .arg(
       Arg::with_name("entry")
-        .default_value("pico-rule.json")
+        .default_value("pico.rule.json")
         .takes_value(true),
     )
     .arg(
@@ -115,8 +130,9 @@ async fn main() -> std::io::Result<()> {
   HttpServer::new(move || {
     App::new()
       .app_data(data.clone())
-      .service(web::scope("/submit").service(submit))
-      //.service(web::resource("/submit").route(web::post().to(submit)))
+      .service(web::resource("/submit").route(web::post().to(submit_default)))
+      .service(web::scope("/submit/").service(submit_with_rulename))
+      //.service(web::resource("/submit/").route(web::post().to(submit_with_rulename)))
       .service(web::resource("/rules").route(web::get().to(rules)))
   })
   .workers(32)

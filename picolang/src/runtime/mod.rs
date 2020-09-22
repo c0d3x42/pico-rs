@@ -70,6 +70,10 @@ impl<'a> PicoRuntime<'a> {
         Ok(())
     }
 
+    pub fn get_default_rule(&self) -> &str {
+        &self.default_rule_name
+    }
+
     pub fn set_default_rule(mut self, filename: &str) -> Self {
         self.default_rule_name = String::from(filename);
         self
