@@ -35,11 +35,11 @@ cargo run --features srv_nats
 
 `JSON` formmated file that encapsulates your logic
 
-see [simple.json](/rules/simple.json) example rule file
+see [simple.rule.json](/rules/simple.rule.json) example rule file
 
 start server with
 ```bash
-cargo run -- --rules simple.json
+cargo run --package picolang-applications
 ```
 
 submit rule execution
