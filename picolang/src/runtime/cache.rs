@@ -1,7 +1,7 @@
 use crate::errors::RuleFileError;
 use crate::rules::{
   lookups::{load_into_cache, LookupTable},
-  PicoRules,
+  PicoRules, RuleFile,
 };
 use crate::values::PicoValue;
 use itertools::Itertools;
@@ -99,5 +99,9 @@ impl PicoRulesCache {
       PicoRules::load_into_cache(entry_filename, &mut self.cache);
     }
     Ok(())
+  }
+
+  pub fn upload(&mut self, rulefile_name: &str, rulefile: RuleFile) {
+    PicoRules::upload_into_cache(rulefile_name, rulefile, &mut self.cache);
   }
 }

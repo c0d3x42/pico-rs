@@ -75,7 +75,7 @@ pub enum RuleFileFini {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct RuleFile {
     #[serde(default = "RuleFile::default_version")]
-    version: String,
+    pub version: String,
 
     #[serde(default)]
     pub lookups: Lookups,
@@ -176,6 +176,13 @@ impl PicoRules {
         }
     }
 
+    pub fn get_rulefile(&self) -> Option<&RuleFile> {
+        match &self.rulefile {
+            None => None,
+            Some(rulefile) => Some(&rulefile),
+        }
+    }
+
     pub fn set_entry(mut self, entrypoint: &str) -> Self {
         self.entrypoint = entrypoint.to_string();
         self
@@ -211,13 +218,12 @@ impl PicoRules {
 
         trace!("After loading file SELF is {:?}", self);
         self.set_entry(&s)
-        /*
-        if loader.follow_includes() {
-            self.set_entry(&s).load_includes()
-        } else {
-            self.set_entry(&s)
-        }
-        */
+    }
+
+    pub fn upload_rulefile(mut self, rulefile_name: &str, rulefile: RuleFile) -> Self {
+        self.rulefile = Some(rulefile);
+        self.status = FileStatus::Loaded;
+        self.set_entry(rulefile_name)
     }
 
     // convenience, returns vec of filenames this file also includes
@@ -265,6 +271,15 @@ impl PicoRules {
         for x in pr.include_sections().iter() {
             PicoRules::load_into_cache(&x.include, cache);
         }
+        cache.insert(filename.to_string(), pr);
+    }
+
+    pub fn upload_into_cache(
+        filename: &str,
+        rulefile: RuleFile,
+        cache: &mut HashMap<String, PicoRules>,
+    ) {
+        let pr = PicoRules::new().upload_rulefile(filename, rulefile);
         cache.insert(filename.to_string(), pr);
     }
 

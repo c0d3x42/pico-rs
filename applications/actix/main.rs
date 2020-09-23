@@ -4,6 +4,7 @@ use std::sync::Mutex;
 
 use actix_web::{post, web, App, Error, HttpResponse, HttpServer};
 
+use picolang::rules::RuleFile;
 use picolang::runtime::PicoRuntime;
 
 #[macro_use]
@@ -71,6 +72,32 @@ async fn rules<'a>(data: web::Data<Mutex<PicoRuntime<'a>>>) -> Result<HttpRespon
   Ok(HttpResponse::Ok().json(rules))
 }
 
+async fn get_rule_by_name<'a>(
+  data: web::Data<Mutex<PicoRuntime<'a>>>,
+  rulename: web::Path<String>,
+) -> Result<HttpResponse, Error> {
+  let rt = data.lock().unwrap();
+
+  let maybe_rulefile = rt.get_rule(&rulename);
+
+  match maybe_rulefile {
+    Some(rulefile) => Ok(HttpResponse::Ok().json(rulefile)),
+    None => HttpResponse::NotFound().await,
+  }
+}
+
+async fn post_rule_by_name<'a>(
+  data: web::Data<Mutex<PicoRuntime<'a>>>,
+  rulename: web::Path<String>,
+  rulefile: web::Json<RuleFile>,
+) -> Result<HttpResponse, Error> {
+  info!("GOT a rulefile {}", rulefile);
+
+  let mut rt = data.lock().unwrap();
+  rt.post_rule(&rulename, rulefile.into_inner());
+  HttpResponse::Ok().await
+}
+
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
   env_logger::init();
@@ -130,8 +157,9 @@ async fn main() -> std::io::Result<()> {
       .app_data(data.clone())
       .service(web::resource("/submit").route(web::post().to(submit_default)))
       .service(web::scope("/submit/").service(submit_with_rulename))
-      //.service(web::resource("/submit/").route(web::post().to(submit_with_rulename)))
       .service(web::resource("/rules").route(web::get().to(rules)))
+      .route("/rule/{rulename}", web::get().to(get_rule_by_name))
+      .route("/rule/{rulename}", web::post().to(post_rule_by_name))
   })
   .workers(32)
   .bind(binding_to)?

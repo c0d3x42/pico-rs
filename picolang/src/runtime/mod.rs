@@ -6,6 +6,7 @@ use std::{env, path::Path};
 use crate::context::PicoContext;
 use crate::errors::RuntimeError;
 use crate::rules::lookups::LookupTable;
+use crate::rules::RuleFile;
 use crate::values::PicoValue;
 
 type Namespace = String;
@@ -133,6 +134,17 @@ impl<'a> PicoRuntime<'a> {
 
     pub fn rule_file_names(&self) -> Vec<String> {
         self.rules_cache.filenames()
+    }
+
+    pub fn get_rule(&self, rulefile_name: &str) -> Option<&RuleFile> {
+        self.rules_cache
+            .get(rulefile_name)
+            .and_then(|pico_rule| pico_rule.get_rulefile())
+    }
+
+    pub fn post_rule(&mut self, rulefile_name: &str, rulefile: RuleFile) {
+        self.rules_cache.upload(rulefile_name, rulefile);
+        info!("Upload new rulefile {}", rulefile_name);
     }
 
     pub fn make_ctx(&self, input_json: serde_json::Value) -> PicoContext {
