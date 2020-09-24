@@ -6,7 +6,7 @@ use std::{env, path::Path};
 use crate::context::PicoContext;
 use crate::errors::RuntimeError;
 use crate::rules::lookups::LookupTable;
-use crate::rules::RuleFile;
+use crate::rules::{PicoRules, RuleFile};
 use crate::values::PicoValue;
 
 type Namespace = String;
@@ -136,9 +136,12 @@ impl<'a> PicoRuntime<'a> {
         self.rules_cache.filenames()
     }
 
+    pub fn get_pico_rule(&self, rulename: &str) -> Option<&PicoRules> {
+        self.rules_cache.get(rulename)
+    }
+
     pub fn get_rule(&self, rulefile_name: &str) -> Option<&RuleFile> {
-        self.rules_cache
-            .get(rulefile_name)
+        self.get_pico_rule(rulefile_name)
             .and_then(|pico_rule| pico_rule.get_rulefile())
     }
 

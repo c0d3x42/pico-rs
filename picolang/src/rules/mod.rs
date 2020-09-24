@@ -305,6 +305,14 @@ impl PicoRules {
                                 trace!(" have these instead {:?}", self.rulefile_cache);
                             }
                             */
+
+                            match runtime.get_pico_rule(&i.include) {
+                                Some(next_rulefile) => {
+                                    info!("switching context to new pico.rule");
+                                    next_rulefile.run_with_context(runtime, ctx)
+                                }
+                                None => error!("no such rule {}", i.include),
+                            }
                         }
                         RuleFileRoot::Command(c) => match c.run_with_context(&self, runtime, ctx) {
                             _ => debug!("root: command finished"),
