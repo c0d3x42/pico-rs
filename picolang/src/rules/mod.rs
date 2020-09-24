@@ -121,7 +121,7 @@ enum FileStatus {
 
 #[derive(Debug)]
 pub struct PicoRules {
-    entrypoint: String,
+    rulename: String,
     rulefile: Option<RuleFile>,
     status: FileStatus,
 
@@ -134,14 +134,14 @@ impl fmt::Display for PicoRules {
             Some(rf) => write!(
                 f,
                 "PicoRule: {}, namespaces: [{}], rule summary: [{}]",
-                self.entrypoint,
+                self.rulename,
                 self.allowed_namespaces.iter().join(", "),
                 rf
             ),
             None => write!(
                 f,
                 "PicoRule: {}, namespaces: [{}], rule summary: [NOT LOADED]",
-                self.entrypoint,
+                self.rulename,
                 self.allowed_namespaces.iter().join(", "),
             ),
         }
@@ -151,7 +151,7 @@ impl fmt::Display for PicoRules {
 impl Default for PicoRules {
     fn default() -> Self {
         Self {
-            entrypoint: String::new(),
+            rulename: String::new(),
             rulefile: None,
             status: FileStatus::Missing,
             allowed_namespaces: HashSet::new(),
@@ -160,8 +160,11 @@ impl Default for PicoRules {
 }
 
 impl PicoRules {
-    pub fn new() -> Self {
-        Default::default()
+    pub fn new(rulename: &str) -> Self {
+        Self {
+            rulename: rulename.to_string(),
+            ..Default::default()
+        }
     }
 
     pub fn all_namespace(&self, collected: &mut Vec<String>) {
@@ -183,13 +186,13 @@ impl PicoRules {
         }
     }
 
-    pub fn set_entry(mut self, entrypoint: &str) -> Self {
-        self.entrypoint = entrypoint.to_string();
+    pub fn set_rulename(mut self, rulename: &str) -> Self {
+        self.rulename = rulename.to_string();
         self
     }
 
-    pub fn get_entry(&self) -> &String {
-        &self.entrypoint
+    pub fn get_rulename(&self) -> &String {
+        &self.rulename
     }
 
     pub fn external_lookups(&self) -> Vec<(&String, &String)> {
@@ -201,12 +204,12 @@ impl PicoRules {
 
     pub fn load_rulefile(mut self, loader: impl PicoRuleLoader) -> Self {
         let s = &loader.filename_is();
+
         match loader.load() {
             Ok(rf) => {
                 get_external_lookup_names(&rf.lookups);
 
                 self.rulefile = Some(rf);
-
                 self.status = FileStatus::Loaded;
             }
             Err(x) => {
@@ -217,13 +220,13 @@ impl PicoRules {
         }
 
         trace!("After loading file SELF is {:?}", self);
-        self.set_entry(&s)
+        self
     }
 
-    pub fn upload_rulefile(mut self, rulefile_name: &str, rulefile: RuleFile) -> Self {
+    pub fn install_rulefile(mut self, rulefile_name: &str, rulefile: RuleFile) -> Self {
         self.rulefile = Some(rulefile);
         self.status = FileStatus::Loaded;
-        self.set_entry(rulefile_name)
+        self
     }
 
     // convenience, returns vec of filenames this file also includes
@@ -267,7 +270,7 @@ impl PicoRules {
 
     pub fn load_into_cache(filename: &str, cache: &mut HashMap<String, PicoRules>) {
         let f = FileLoader::new(filename);
-        let pr = PicoRules::new().load_rulefile(f);
+        let pr = PicoRules::new(filename).load_rulefile(f);
         for x in pr.include_sections().iter() {
             PicoRules::load_into_cache(&x.include, cache);
         }
@@ -279,7 +282,7 @@ impl PicoRules {
         rulefile: RuleFile,
         cache: &mut HashMap<String, PicoRules>,
     ) {
-        let pr = PicoRules::new().upload_rulefile(filename, rulefile);
+        let pr = PicoRules::new(filename).install_rulefile(filename, rulefile);
         cache.insert(filename.to_string(), pr);
     }
 
