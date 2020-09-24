@@ -31,9 +31,9 @@ impl ValueExecution for PicoValue {
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(untagged)]
 pub enum VarValue {
-    /// String to lookup
+    /// VarName to lookup
     Lookup(String),
-    /// String to lookup, with a default value
+    /// VarName to lookup, with a default value if VarName was not found
     DefaultLookup(String, PicoValue),
 }
 
@@ -346,7 +346,10 @@ impl ValueExecution for Slice {
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(untagged)]
 pub enum PointerValue {
+    /// JSON Pointer path applied to the input JSON
     InputPointer(String),
+
+    /// JSON Pointer pather applied to a named variable
     VarPointer(String, VarLookup),
 }
 
