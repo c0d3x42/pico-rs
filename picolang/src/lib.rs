@@ -4,6 +4,7 @@ extern crate log;
 extern crate env_logger;
 
 extern crate serde;
+#[macro_use]
 extern crate serde_json;
 extern crate tinytemplate;
 
@@ -18,4 +19,5 @@ pub mod context;
 pub mod errors;
 pub mod rules;
 pub mod runtime;
+pub mod types;
 pub mod values;

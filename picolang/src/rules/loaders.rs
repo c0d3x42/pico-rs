@@ -1,6 +1,6 @@
 use crate::commands::execution::AnyResult;
 use crate::errors::RuleFileError;
-use crate::rules::RuleFile;
+use crate::rules::{PicoRules, RuleFile};
 use std::fs::File;
 
 pub type LoaderResult = AnyResult<RuleFile, RuleFileError>;
@@ -60,6 +60,7 @@ impl PicoRuleLoader for FileLoader {
       Ok(opened_file) => {
         info!("serde_json::from_reader...");
         let rule_file: RuleFile = serde_json::from_reader(opened_file).unwrap();
+        //let pr: PicoRules = PicoRules::from(rule_file);
         Ok(rule_file)
       }
       Err(x) => {

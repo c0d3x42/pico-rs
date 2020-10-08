@@ -31,3 +31,7 @@ futures-util = "0"
 [[bin]]
 name = "server-actix"
 path = "actix/main.rs"
+
+[[bin]]
+name = "newt"
+path = "newt/main.rs"

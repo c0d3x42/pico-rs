@@ -12,6 +12,7 @@ use crate::commands::execution::ActionExecution;
 use crate::commands::{Command, FiniCommand};
 use crate::context::PicoContext;
 use crate::runtime::PicoRuntime;
+use crate::types;
 use crate::values::PicoValue;
 use loaders::{FileLoader, PicoRuleLoader};
 use lookups::{get_external_lookup_names, LookupType, Lookups};
@@ -62,6 +63,23 @@ where
 pub enum RuleFileRoot {
     Command(Command),
     IncludeFile(IncludeFile),
+}
+
+use crate::commands::logging::Log;
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(untagged)]
+pub enum RuleCommand {
+    Log(Log),
+    Empty,
+}
+
+impl From<&RuleFileRoot> for RuleCommand {
+    fn from(rff: &RuleFileRoot) -> Self {
+        match rff {
+            RuleFileRoot::Command(c) => Self::Empty,
+            _ => Self::Empty,
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -123,6 +141,8 @@ enum FileStatus {
 pub struct PicoRules {
     rulename: String,
     rulefile: Option<RuleFile>,
+
+    rules: Vec<RuleCommand>,
     status: FileStatus,
 
     allowed_namespaces: HashSet<String>,
@@ -148,11 +168,24 @@ impl fmt::Display for PicoRules {
     }
 }
 
+impl From<RuleFile> for PicoRules {
+    fn from(rulefile: RuleFile) -> Self {
+        let pr: Self = Self {
+            //rulefile: Some(rulefile),
+            rules: rulefile.root.iter().map(RuleCommand::from).collect(),
+            ..Default::default()
+        };
+
+        pr
+    }
+}
+
 impl Default for PicoRules {
     fn default() -> Self {
         Self {
             rulename: String::new(),
             rulefile: None,
+            rules: Vec::new(),
             status: FileStatus::Missing,
             allowed_namespaces: HashSet::new(),
         }

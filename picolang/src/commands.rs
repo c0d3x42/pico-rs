@@ -7,7 +7,7 @@ pub mod setting;
 use serde::{Deserialize, Serialize};
 
 use crate::commands::execution::{ActionExecution, ActionResult, ActionValue};
-use crate::commands::flow_control::{BreakToCommand, IfThenElse, StopCommand};
+use crate::commands::flow_control::{BreakToCommand, IfThenElse, MifThenElse, StopCommand};
 use crate::commands::logging::{DebugLog, Log};
 use crate::commands::setting::SetCommand;
 use crate::context::PicoContext;
@@ -20,6 +20,7 @@ use crate::runtime::PicoRuntime;
 pub enum Command {
     Log(Log),
     DebugLog(DebugLog),
+    MifThenElse(Box<MifThenElse>),
     IfThenElse(Box<IfThenElse>),
     BreakTo(BreakToCommand),
     Stop(StopCommand),
@@ -34,6 +35,7 @@ impl ActionExecution for Command {
     ) -> ActionResult {
         info!("Running command...");
         match self {
+            Command::MifThenElse(mif) => mif.run_with_context(pico_rules, runtime, ctx),
             Command::IfThenElse(ite) => ite.run_with_context(pico_rules, runtime, ctx),
             Command::Log(log) => log.run_with_context(pico_rules, runtime, ctx),
             Command::DebugLog(debug_log) => debug_log.run_with_context(pico_rules, runtime, ctx),
