@@ -5,6 +5,8 @@ use serde_json::Value;
 
 use std::convert::TryFrom;
 
+use crate::PicoValue;
+
 #[derive(Debug)]
 pub struct PicoRule {
     root: Vec<PicoInstruction>,
@@ -66,18 +68,94 @@ pub enum Producer {
 }
 
 #[derive(Debug)]
+pub struct ExprString {
+    s: String,
+}
+impl From<String> for ExprString {
+    fn from(s: String) -> Self {
+        Self { s: s.clone() }
+    }
+}
+
+#[derive(Debug)]
+pub struct ExprEq {
+    lhs: Box<Expr>,
+    rhs: Box<Expr>,
+}
+impl From<der::EqOperation> for ExprEq {
+    fn from(eq_operation: der::EqOperation) -> Self {
+        Self {
+            lhs: Box::new(Expr::from(eq_operation.value.0)),
+            rhs: Box::new(Expr::from(eq_operation.value.1)),
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct ExprLt {
+    lhs: Box<Expr>,
+    rhs: Vec<Expr>,
+}
+
+impl Default for ExprLt {
+    fn default() ->Self{
+        Self{ lhs: Box::new(Expr::Nop), rhs: Vec::new()}
+    }
+}
+
+impl From<der::LessThanOperation> for ExprLt {
+    fn from(lt_operation: der::LessThanOperation) -> Self {
+        let mut this = Self::default();
+        if lt_operation.value.len() >= 2 {
+            let mut iter = lt_operation.value.into_iter();
+
+            if let Some(expr_first) = iter.next(){
+                this.lhs = Box::new(Expr::from(expr_first));
+
+                for expr in iter {
+                    this.rhs.push( Expr::from(expr));
+                }
+            }
+        }
+        this
+    }
+}
+
+
+
+#[derive(Debug)]
+pub enum Expr {
+    Nop,
+    Eq(ExprEq),
+    Lt(ExprLt),
+    String(String),
+}
+
+impl From<der::Producer> for Expr {
+    fn from(producer: der::Producer) -> Self {
+        println!("FRom: {:?}", producer);
+        match producer {
+            der::Producer::Eq(eq) => Expr::Eq(ExprEq::from(eq)),
+            der::Producer::Lt(lt) => Expr::Lt(ExprLt::from(lt)),
+            der::Producer::String(s) => Expr::String(s),
+            _ => Expr::Nop,
+        }
+    }
+}
+
+#[derive(Debug)]
 pub struct PicoIf {
-    r#if: Producer,
-    r#then: Producer,
-    elseifs: Vec<(Producer, Producer)>,
-    r#else: Option<Producer>,
+    r#if: Expr,
+    r#then: Expr,
+    elseifs: Vec<(Expr, Expr)>,
+    r#else: Option<Expr>,
 }
 
 impl Default for PicoIf {
     fn default() -> Self {
         Self {
-            r#if: Producer::Nop,
-            r#then: Producer::Nop,
+            r#if: Expr::Nop,
+            r#then: Expr::Nop,
             elseifs: Vec::new(),
             r#else: None,
         }
@@ -91,23 +169,22 @@ impl From<der::IfOperation> for PicoIf {
 
         let mut this = Self::default();
 
-        for p in if_operation.value.chunks(2) {
-            println!("L={}, P = {:?}", if_operation.value.len(), p);
+        let mut iter = if_operation.value.into_iter().peekable();
+        if let Some(first_if) = iter.next() {
+            if let Some(first_then) = iter.next() {
+                this.r#if = Expr::from(first_if);
+                this.r#then = Expr::from(first_then);
+            }
         }
 
-        for x in &if_operation.value {}
-        let mut iter = if_operation.value.into_iter();
-
-        while let Some(p) = iter.next() {}
-
-        match counter {
-            i if i <= 2 => {
-                this.r#if = match iter.next() {
-                    Some(x) => Producer::One,
-                    None => Producer::Nop,
+        while let Some(expr1) = iter.next() {
+            if let Some(expr2_peek) = iter.peek() {
+                if let Some(expr2) = iter.next() {
+                    this.elseifs.push((Expr::from(expr1), Expr::from(expr2)));
                 }
+            } else {
+                this.r#else = Some(Expr::from(expr1));
             }
-            _ => {}
         }
 
         this

@@ -37,7 +37,7 @@ pub enum Producer {
     Eq(EqOperation),
     Ne(NeOperation),
     Or(OrOperation),
-    Lt(LessThanOp),
+    Lt(LessThanOperation),
     Var(VarOp),
     String(String),
 }
@@ -61,7 +61,7 @@ pub struct IfOperation {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct EqOperation {
     #[serde(rename = "==")]
-    value: Box<(String, String)>,
+    pub value: Box<(Producer, Producer)>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -75,6 +75,12 @@ pub struct OrOperation {
     #[serde(rename = "or")]
     value: Vec<Producer>,
 }
+#[derive(Serialize, Deserialize, Debug)]
+pub struct AndOperation {
+    #[serde(rename = "and")]
+    value: Vec<Producer>,
+}
+
 
 /*
  * Numeric operations
@@ -82,13 +88,16 @@ pub struct OrOperation {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub enum NumericOperation {
-    LessThan(LessThanOp),
+    LT(LessThanOperation),
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct LessThanOp {
-    #[serde(rename = ">")]
-    value: String,
+pub struct LessThanOperation {
+    #[serde(rename = "<")]
+    /**
+     * two or more producers
+     */
+    pub value: Vec<Producer>, 
 }
 
 /*
@@ -140,6 +149,10 @@ impl VarOp {
         "_".to_string()
     }
 }
+
+/*
+ * Values
+ */
 
 /*
  * Misc operations

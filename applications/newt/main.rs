@@ -2,12 +2,12 @@ use picolang::types::{der::RuleFile, PicoRule};
 use serde_json;
 
 fn main() {
-    let j = r#"
+  let j = r#"
     {
       "version": "1.2",
       "root": [ 
         {
-          "if": [ {"==": ["l","b"]}]
+          "if": [ {"==": ["l","b"]}, {"==": ["one", "two"]}, {"==": [ "three", "four"]}]
         },
         {
           "if": [ {"!=": ["l","b"]}]
@@ -16,16 +16,30 @@ fn main() {
         { "if": [ {"var": ["l", "k"]}] },
         {
           "debug": "dd"
+        },
+        {
+          "if": [ 
+            {"==": ["l","b"]}, 
+            {"==": ["one", "two"]}, 
+            {"==": [ "three", "four"]},
+            {"==": [ "five", "six"]}
+          ]
+        },
+        {
+          "if": [ 
+            {"<": ["1","2","3"]}, 
+            {"==":["seven","eight"]}
+          ]
         }
       ]
     }
   "#;
 
-    let rule: RuleFile = serde_json::from_str(&j).unwrap();
+  let rule: RuleFile = serde_json::from_str(&j).unwrap();
 
-    println!("Rule = {:?}", rule);
+  println!("Rule = {:?}", rule);
 
-    let pico_rule = PicoRule::from(rule);
+  let pico_rule = PicoRule::from(rule);
 
-    println!("Pico = {:?}", pico_rule);
+  println!("Pico = {:?}", pico_rule);
 }
