@@ -46,6 +46,7 @@ pub enum Producer {
 #[serde(untagged)]
 pub enum RuleInstruction {
     Logic(IfOperation),
+    Let(LetStmt),
     Debug(DebugOperation),
 }
 /*
@@ -151,8 +152,16 @@ impl VarOp {
 }
 
 /*
- * Values
+ * Statements
  */
+
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct LetStmt {
+
+    #[serde(rename="let")]
+    pub value: (String, Producer)
+}
 
 /*
  * Misc operations

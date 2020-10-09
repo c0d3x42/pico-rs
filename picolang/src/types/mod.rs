@@ -26,6 +26,7 @@ impl From<der::RuleFile> for PicoRule {
             .into_iter()
             .map(|x| match x {
                 der::RuleInstruction::Logic(logic) => PicoInstruction::If(PicoIf::from(logic)),
+                der::RuleInstruction::Let(l) => PicoInstruction::Let(PicoLet::from(l)),
                 der::RuleInstruction::Debug(debug) => {
                     PicoInstruction::Debug(PicoInstructionDebug::from(debug))
                 }
@@ -58,14 +59,22 @@ pub trait PicoInstructionTrait {
 #[derive(Debug)]
 pub enum PicoInstruction {
     If(PicoIf),
+    Let(PicoLet),
     Debug(PicoInstructionDebug),
 }
 
 #[derive(Debug)]
-pub enum Producer {
-    One,
-    Nop,
+pub struct PicoLet {
+    varbind: String,
+    value: Box<Expr>
 }
+
+impl From<der::LetStmt> for PicoLet {
+    fn from( source: der::LetStmt) -> Self{
+        Self { varbind: source.value.0, value: Box::new(Expr::from(source.value.1))}
+    }
+}
+
 
 #[derive(Debug)]
 pub struct ExprString {
@@ -128,6 +137,7 @@ pub enum Expr {
     Nop,
     Eq(ExprEq),
     Lt(ExprLt),
+    If(Box<PicoIf>),
     String(String),
 }
 
@@ -137,6 +147,7 @@ impl From<der::Producer> for Expr {
         match producer {
             der::Producer::Eq(eq) => Expr::Eq(ExprEq::from(eq)),
             der::Producer::Lt(lt) => Expr::Lt(ExprLt::from(lt)),
+            der::Producer::If(i) => Expr::If(Box::new(PicoIf::from(i))),
             der::Producer::String(s) => Expr::String(s),
             _ => Expr::Nop,
         }
