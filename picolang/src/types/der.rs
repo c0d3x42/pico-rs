@@ -47,6 +47,7 @@ pub enum Producer {
 pub enum RuleInstruction {
     Logic(IfOperation),
     Let(LetStmt),
+    Set(SetStmt),
     Debug(DebugOperation),
 }
 /*
@@ -112,15 +113,9 @@ pub struct AddOp {
 }
 
 /*
- * Variables
+ * Variable lookup
  */
 
-#[derive(Serialize, Deserialize, Debug)]
-#[serde(untagged)]
-pub enum VarValue {
-    Simple(String),
-    WithDefault(String, String),
-}
 
 #[derive(Serialize, Deserialize, Debug)]
 pub enum VarType {
@@ -134,22 +129,40 @@ impl VarType {
     }
 }
 
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct SimpleString (pub String);
+
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(untagged)]
+pub enum VarValue {
+    String(String),
+    OneString([String;1]),
+    WithDefault( String, PicoValue)
+}
+
 #[derive(Serialize, Deserialize, Debug)]
 pub struct VarOp {
     #[serde(rename = "var")]
     pub value: VarValue,
-    #[serde(default = "VarType::plain")]
-    pub r#type: VarType,
 
-    #[serde(default = "VarOp::register")]
-    pub register: String,
+    #[serde(default)]
+    pub register: Option<Vec<String>>,
+    
+    /**
+     * is the var/value a JSONPath?
+     */
+    #[serde(default)]
+    pub path: bool
 }
 
-impl VarOp {
-    fn register() -> String {
-        "_".to_string()
+impl Default for VarOp {
+    fn default() -> Self {
+        //Self { value: VarValue::String( "/".to_string()), register: None, path: false }
+        Self { value:  VarValue::String("/".to_string()), path: false, register: None }
     }
 }
+
 
 /*
  * Statements
@@ -162,6 +175,19 @@ pub struct LetStmt {
     #[serde(rename="let")]
     pub value: (String, Producer)
 }
+
+/**
+ * declares a named variable with some JSON
+ */
+#[derive(Serialize, Deserialize, Debug)]
+pub struct SetStmt {
+
+    #[serde(rename="set")]
+    pub value: (String, PicoValue)
+}
+
+
+
 
 /*
  * Misc operations
