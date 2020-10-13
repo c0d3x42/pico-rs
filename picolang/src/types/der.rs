@@ -113,19 +113,34 @@ pub struct AddOp {
 }
 
 /*
+ * Array Operations
+ */
+
+
+
+/*
  * Variable lookup
  */
 
 
 #[derive(Serialize, Deserialize, Debug)]
 pub enum VarType {
+    #[serde(alias="Type not detected")]
+    Unknown,
     Plain,
+    #[serde(rename="pointer")]
     Pointer,
-    Path,
+    #[serde(rename="path")]
+    Path
 }
 impl VarType {
     pub fn plain() -> Self {
         VarType::Plain
+    }
+}
+impl Default for VarType {
+    fn default() -> Self {
+        Self::Plain
     }
 }
 
@@ -141,25 +156,40 @@ pub enum VarValue {
     WithDefault( String, PicoValue)
 }
 
+
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(untagged)]
+pub enum VarRegister {
+    Input,
+    Single(String),
+    Named(Vec<String>)
+}
+impl Default for VarRegister{
+    fn default() -> Self {
+        Self::Input
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug)]
 pub struct VarOp {
     #[serde(rename = "var")]
     pub value: VarValue,
 
     #[serde(default)]
-    pub register: Option<Vec<String>>,
+    pub register: VarRegister,
     
     /**
      * is the var/value a JSONPath?
      */
-    #[serde(default)]
-    pub path: bool
+    #[serde(default )]
+    pub r#type: VarType
+
 }
 
 impl Default for VarOp {
     fn default() -> Self {
         //Self { value: VarValue::String( "/".to_string()), register: None, path: false }
-        Self { value:  VarValue::String("/".to_string()), path: false, register: None }
+        Self { value:  VarValue::String("/".to_string()), r#type: VarType::Plain, register: VarRegister::Input }
     }
 }
 

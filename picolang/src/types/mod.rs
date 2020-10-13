@@ -4,8 +4,20 @@ use jsonpath_lib::{compile, JsonPathError};
 use serde_json::Value;
 
 use std::convert::TryFrom;
+use std::collections::HashMap;
+use jmespatch;
 
 use crate::PicoValue;
+
+
+#[derive(thiserror::Error, Debug)]
+pub enum PicoRuleError {
+    #[error("Invalid PicoRule")]
+    InvalidPicoRule,
+
+    #[error("Invalid PicoVar")]
+    InvalidPicoVar
+}
 
 #[derive(Debug)]
 pub struct PicoRule {
@@ -19,21 +31,39 @@ impl std::fmt::Debug for PicoRule {
 }
 */
 
-impl From<der::RuleFile> for PicoRule {
-    fn from(rule_file: der::RuleFile) -> Self {
+
+impl TryFrom<der::RuleFile> for PicoRule {
+   type Error = PicoRuleError;
+
+    fn try_from(rule_file: der::RuleFile) -> Result<PicoRule, Self::Error> {
         let i = rule_file
             .root
             .into_iter()
-            .map(|x| match x {
-                der::RuleInstruction::Logic(logic) => PicoInstruction::If(PicoIf::from(logic)),
-                der::RuleInstruction::Let(l) => PicoInstruction::from(l),
-                der::RuleInstruction::Set(s) => PicoInstruction::from(s),
-                der::RuleInstruction::Debug(debug) => {
-                    PicoInstruction::Debug(PicoInstructionDebug::from(debug))
-                }
+            .map(|x| {
+                let m = match x {
+                    der::RuleInstruction::Logic(logic) => PicoInstruction::If(PicoIf::try_from(logic)?),
+                    der::RuleInstruction::Let(l) => PicoInstruction::try_from(l)?,
+                    der::RuleInstruction::Set(s) => PicoInstruction::try_from(s)?,
+                    der::RuleInstruction::Debug(debug) => {
+                        PicoInstruction::Debug(PicoInstructionDebug::try_from(debug)?)
+                    }
+                };
+                Ok(m)
+                //m
             })
-            .collect();
-        Self { root: i }
+            // https://stackoverflow.com/questions/62687455/alternatives-for-using-the-question-mark-operator-inside-a-map-function-closure
+            .collect::<Result<Vec<PicoInstruction>, _>>()?;
+        Ok(Self { root: i })
+    }
+}
+
+impl PicoRule {
+
+    pub fn run(&self) {
+        let mut ctx: HashMap<String, PicoValue> = HashMap::new();
+        for rule in &self.root {
+            rule.run(&mut ctx);
+        }
     }
 }
 
@@ -51,15 +81,40 @@ pub enum PicoInstruction {
     Debug(PicoInstructionDebug),
 }
 
-impl From<der::LetStmt> for PicoInstruction {
-    fn from( s: der::LetStmt) -> Self {
-        Self::Let{ varbind: s.value.0, value: Box::new(Expr::from(s.value.1))}
+impl TryFrom<der::LetStmt> for PicoInstruction {
+    type Error = PicoRuleError;
+
+    fn try_from( s: der::LetStmt) -> Result<PicoInstruction, Self::Error> {
+        let stmt = Self::Let{ varbind: s.value.0, value: Box::new(Expr::try_from(s.value.1)?)};
+        Ok(stmt)
     }
 }
 
-impl From<der::SetStmt> for PicoInstruction {
-    fn from( s: der::SetStmt) -> Self {
-        Self::Set{ varbind: s.value.0, value: s.value.1}
+impl TryFrom<der::SetStmt> for PicoInstruction {
+    type Error = PicoRuleError;
+
+    fn try_from( s: der::SetStmt) -> Result<PicoInstruction, Self::Error> {
+        Ok( Self::Set{ varbind: s.value.0, value: s.value.1} )
+    }
+}
+
+impl PicoInstruction {
+
+    fn run(&self, ctx: &mut HashMap<String, PicoValue>) {
+        //let mut ctx : HashMap<&String, &PicoValue>= HashMap::new();
+        match &self {
+            PicoInstruction::Set{ varbind , value} => {
+                info!("SET varbind: {} ", varbind);
+                ctx.insert(varbind.to_string(), value.clone());
+            },
+            PicoInstruction::Let{ varbind, value} => {
+
+                let result = value.run(ctx);
+
+                info!("LET varbind: {} = {:?}", varbind, result);
+            }
+            _ => {println!("unhandled command")}
+        }
     }
 }
 
@@ -75,17 +130,23 @@ impl From<String> for ExprString {
     }
 }
 
+/**
+ * ExprEq
+ * 
+ */
 #[derive(Debug)]
 pub struct ExprEq {
     lhs: Box<Expr>,
     rhs: Box<Expr>,
 }
-impl From<der::EqOperation> for ExprEq {
-    fn from(eq_operation: der::EqOperation) -> Self {
-        Self {
-            lhs: Box::new(Expr::from(eq_operation.value.0)),
-            rhs: Box::new(Expr::from(eq_operation.value.1)),
-        }
+impl TryFrom<der::EqOperation> for ExprEq {
+    type Error = PicoRuleError;
+
+    fn try_from(eq_operation: der::EqOperation) -> Result<ExprEq, Self::Error> {
+        Ok(Self {
+            lhs: Box::new(Expr::try_from(eq_operation.value.0)?),
+            rhs: Box::new(Expr::try_from(eq_operation.value.1)?),
+        })
     }
 }
 
@@ -101,21 +162,23 @@ impl Default for ExprLt {
     }
 }
 
-impl From<der::LessThanOperation> for ExprLt {
-    fn from(lt_operation: der::LessThanOperation) -> Self {
+impl TryFrom<der::LessThanOperation> for ExprLt {
+    type Error = PicoRuleError;
+
+    fn try_from(lt_operation: der::LessThanOperation) -> Result<ExprLt, Self::Error> {
         let mut this = Self::default();
         if lt_operation.value.len() >= 2 {
             let mut iter = lt_operation.value.into_iter();
 
             if let Some(expr_first) = iter.next(){
-                this.lhs = Box::new(Expr::from(expr_first));
+                this.lhs = Box::new(Expr::try_from(expr_first)?);
 
                 for expr in iter {
-                    this.rhs.push( Expr::from(expr));
+                    this.rhs.push( Expr::try_from(expr)?);
                 }
             }
         }
-        this
+        Ok(this)
     }
 }
 
@@ -131,16 +194,44 @@ pub enum Expr {
     String(String),
 }
 
-impl From<der::Producer> for Expr {
-    fn from(producer: der::Producer) -> Self {
+impl TryFrom<der::Producer> for Expr {
+    type Error = PicoRuleError;
+
+    fn try_from(producer: der::Producer) -> Result<Expr, Self::Error> {
         println!("FRom: {:?}", producer);
-        match producer {
-            der::Producer::Eq(eq) => Expr::Eq(ExprEq::from(eq)),
-            der::Producer::Lt(lt) => Expr::Lt(ExprLt::from(lt)),
-            der::Producer::If(i) => Expr::If(Box::new(PicoIf::from(i))),
-            der::Producer::Var(v) => Expr::Var(ExprVar::from(v)),
+        let prod = match producer {
+            der::Producer::Eq(eq) => Expr::Eq(ExprEq::try_from(eq)?),
+            der::Producer::Lt(lt) => Expr::Lt(ExprLt::try_from(lt)?),
+            der::Producer::If(i) => Expr::If(Box::new(PicoIf::try_from(i)?)),
+            der::Producer::Var(v) => Expr::Var(ExprVar::try_from(v)?),
             der::Producer::String(s) => Expr::String(s),
             _ => Expr::Nop,
+        };
+
+        Ok(prod)
+    }
+}
+
+impl Expr{
+    fn run(&self, ctx: &mut HashMap<String, PicoValue>) {
+        match self {
+            Expr::Var(v) => {
+                for register in &v.registers {
+                    debug!("Checking register {}", register);
+                    if let Some(value) = ctx.get(register) {
+                        debug!("Hash value {}", value);
+                        if let Some(lookup) = value.pointer(&v.key){
+                            info!("Found: {}", lookup);
+                        } else {
+                            debug!("Path missed {}", v.key);
+                        }
+                    } else {
+                        info!("no register {}", register);
+                    }
+                }
+                info!("VAR = {:?}", v);
+            },
+            _ => {}
         }
     }
 }
@@ -160,9 +251,10 @@ impl Default for PicoIf {
     }
 }
 
-impl PicoInstructionTrait for PicoIf {}
-impl From<der::IfOperation> for PicoIf {
-    fn from(if_operation: der::IfOperation) -> Self {
+impl TryFrom<der::IfOperation> for PicoIf {
+    type Error = PicoRuleError;
+
+    fn try_from(if_operation: der::IfOperation) -> Result<PicoIf, Self::Error> {
 
         let mut this = Self::default();
 
@@ -171,14 +263,15 @@ impl From<der::IfOperation> for PicoIf {
         while let Some(expr1) = iter.next() {
             if iter.peek().is_some() {
                 if let Some(expr2) = iter.next() {
-                    this.if_then.push((Expr::from(expr1), Expr::from(expr2)));
+                    this.if_then.push((Expr::try_from(expr1)?, Expr::try_from(expr2)?));
                 }
             } else {
-                this.r#else = Some(Expr::from(expr1));
+                this.r#else = Some(Expr::try_from(expr1)?);
             }
         }
 
-        this
+        Ok(this)
+        //Err(PicoRuleError::InvalidPicoRule)
     }
 }
 #[derive(Debug)]
@@ -186,6 +279,8 @@ pub struct PicoInstructionDebug {
     instruction: String,
 }
 impl PicoInstructionTrait for PicoInstructionDebug {}
+
+/*
 impl From<der::DebugOperation> for PicoInstructionDebug {
     fn from(if_operation: der::DebugOperation) -> Self {
         Self {
@@ -193,15 +288,46 @@ impl From<der::DebugOperation> for PicoInstructionDebug {
         }
     }
 }
+*/
+
+impl TryFrom<der::DebugOperation> for PicoInstructionDebug {
+
+    type Error = PicoRuleError;
+    fn try_from(value: der::DebugOperation) -> Result<PicoInstructionDebug, Self::Error> {
+
+        Ok(Self{ instruction: "ll".to_string()})
+    }
+
+}
+
+#[derive(Debug)]
+pub enum VarKeyType {
+    Simple,
+    JSONPointer,
+    JSONPath,
+    /**
+     * https://lib.rs/crates/jmespatch
+     */
+    JMESPath,
+    /**
+     * https://crates.io/crates/json_dotpath
+     */
+    JSONDotPath,
+    /**
+     * https://crates.io/crates/jsondata
+     */
+    JSONData, 
+}
 
 #[derive(Debug)]
 pub struct ExprVar {
     key: String,
+    key_type: VarKeyType,
     default: PicoValue,
 
     registers: Vec<String>,
+    jmespath: Option<jmespatch::Expression<'static>>
 
-    json_path: bool
 
 }
 
@@ -209,18 +335,33 @@ impl Default for ExprVar {
     fn default() -> Self {
         Self {
             key: "/".to_string(),
+            key_type: VarKeyType::JSONPointer,
             default: PicoValue::Null,
             registers: Vec::new(),
-            json_path: false
+            jmespath: None
         }
     }
 }
 
-impl From<der::VarOp> for ExprVar {
-    fn from(var: der::VarOp) -> Self {
+impl ExprVar {
+
+    fn exec(&self, value: &PicoValue){
+        if let Some(jmespath) = &self.jmespath{
+        }
+    }
+}
+
+impl TryFrom<der::VarOp> for ExprVar {
+    type Error = PicoRuleError;
+
+    fn try_from(var: der::VarOp) -> Result<ExprVar, Self::Error> {
         let mut v: Self = Self {
             ..Default::default()
         };
+
+        let j = jmespatch::compile("bar").unwrap();
+        v.jmespath = Some(j);
+
 
         match var.value {
             der::VarValue::String(s) => v.key = s,
@@ -233,15 +374,14 @@ impl From<der::VarOp> for ExprVar {
             der::VarValue::WithDefault(s,d) => {v.key = s; v.default = d;}
 
         }
-        
 
-        
-        if let Some(registers) = var.register {
-            v.registers = registers;
+        match var.register {
+            der::VarRegister::Single(s) => v.registers.push(s),
+            der::VarRegister::Named(registers) => v.registers = registers,
+            _ => {}
         }
-        v.json_path = var.path;
-
-        v
+        
+        Ok(v)
     }
 }
 

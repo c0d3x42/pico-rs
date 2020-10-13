@@ -25,6 +25,7 @@ thiserror = "1"
 anyhow = "1"
 jsonpath_lib = "0"
 serde_json = "1"
+jmespatch = "0"
 
 serde_derive = "1"
 log = "0.4.8"

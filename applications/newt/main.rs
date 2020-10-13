@@ -1,11 +1,22 @@
-use picolang::types::{der::RuleFile, PicoRule};
+use picolang::types::{der::RuleFile };
+use picolang::types::PicoRule;
 use serde_json;
 
+use std::convert::TryFrom;
+
 fn main() {
+  env_logger::init();
+
   let j = r#"
     {
       "version": "1.2",
       "root": [ 
+        {
+          "set": ["vendors", { "aapl": "Apple", "msft": "Microsoft" }]
+        },
+        {
+          "let": ["vendor_name", {"var":["/aapl"], "register": "vendors"}]
+        },
         {
           "if": [ {"==": ["l","b"]}, {"==": ["one", "two"]}, {"==": [ "three", "four"]}]
         },
@@ -35,7 +46,7 @@ fn main() {
         { "let": ["x2", {"if": [ {"==": [ "a", "b"]}, "kk" ] }]},
         {
           "if": [
-            { "==": [ "a", {"var": ["a", "l" ]} ]}
+            { "==": [ "a", {"var": ["a", "l" ], "type": "pointer", "register": ["_", "k"]  } ]}
           ]
         }
 
@@ -47,7 +58,10 @@ fn main() {
 
   println!("Rule = {:?}", rule);
 
-  let pico_rule = PicoRule::from(rule);
+  let pico_rule = PicoRule::try_from(rule).unwrap();
+
+
+  pico_rule.run();
 
   println!("Pico = {:?}", pico_rule);
 }
