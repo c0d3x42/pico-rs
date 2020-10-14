@@ -19,10 +19,10 @@ fn main() {
           "let": ["vendor_name", {"var":["/aapl"], "register": "vendors"}]
         },
         {
-          "if": [ {"==": ["l","b"]}, {"==": ["one", "two"]}, {"==": [ "three", "four"]}]
+          "let": ["vendor_name_2", {"var":["$.aapl"], "register": "vendors", "type": "path"}]
         },
         {
-          "if": [ {"!=": ["l","b"]}]
+          "if": [ {"==": ["l","b"]}, {"==": ["one", "two"]}, {"==": [ "three", "four"]}]
         },
         {
           "debug": "dd"
@@ -62,6 +62,8 @@ fn main() {
   match  PicoRule::try_from(rule) {
 
     Ok(pico_rule) => { 
+
+      println!("RUNNING...");
       pico_rule.run();
       println!("Pico = {:?}", pico_rule);
     },

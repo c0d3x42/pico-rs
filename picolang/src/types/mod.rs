@@ -1,6 +1,6 @@
 pub mod der;
 
-use jsonpath_lib::{compile, JsonPathError};
+use jsonpath_lib::{compile as jsonpath_compile, JsonPathError};
 use serde_json::Value;
 
 use std::convert::TryFrom;
@@ -225,11 +225,18 @@ impl Expr{
                     debug!("Checking register {}", register);
                     if let Some(value) = ctx.get(register) {
                         debug!("Hash value {}", value);
+
+                        match v.exec(&value){
+                            Ok(x) => info!("XX = {}", x),
+                            _ => {}
+                        }
+                        /*
                         if let Some(lookup) = value.pointer(&v.key){
                             info!("Found: {}", lookup);
                         } else {
                             debug!("Path missed {}", v.key);
                         }
+                        */
                     } else {
                         info!("no register {}", register);
                     }
@@ -335,8 +342,7 @@ pub struct ExprVar {
     default: PicoValue,
 
     registers: Vec<String>,
-    jmespath: Option<jmespatch::Expression<'static>>
-
+    jmespath: Option<jmespatch::Expression<'static>>,
 
 }
 
@@ -354,8 +360,33 @@ impl Default for ExprVar {
 
 impl ExprVar {
 
-    fn exec(&self, value: &PicoValue){
+    fn exec(&self, value: &PicoValue) -> Result<PicoValue, PicoRuleError>{
         if let Some(jmespath) = &self.jmespath{
+        }
+
+        info!("keytype {:?}", self.key_type);
+        match self.key_type {
+            VarKeyType::JSONPath => {
+                if let Ok(matches) = jsonpath_lib::select(value, &self.key) {
+                    info!("Matches {:?}", matches);
+
+                if matches.len() > 0 {
+                    match matches.first() {
+                        Some( v) => {
+                            let t = (*v).clone();
+                            Ok(t)
+                        },
+                        None => Err(PicoRuleError::InvalidPicoRule)
+                    }
+                } else {
+                    return Ok(PicoValue::Null)
+                }
+                } else {
+                    info!("didnt match");
+                    Err(PicoRuleError::InvalidPicoRule)
+                }
+            },
+            _ => Err(PicoRuleError::InvalidPicoRule)
         }
     }
 }
@@ -389,7 +420,12 @@ impl TryFrom<der::VarOp> for ExprVar {
             der::VarRegister::Named(registers) => v.registers = registers,
             _ => {}
         }
-        
+
+        if let der::VarType::Path = var.r#type {
+            let path = jsonpath_compile(&v.key);
+            v.key_type = VarKeyType::JSONPath;
+        }
+
         Ok(v)
     }
 }
