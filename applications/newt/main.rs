@@ -3,6 +3,7 @@ use picolang::types::PicoRule;
 use serde_json;
 
 use std::convert::TryFrom;
+use log::error;
 
 fn main() {
   env_logger::init();
@@ -58,10 +59,15 @@ fn main() {
 
   println!("Rule = {:?}", rule);
 
-  let pico_rule = PicoRule::try_from(rule).unwrap();
+  match  PicoRule::try_from(rule) {
+
+    Ok(pico_rule) => { 
+      pico_rule.run();
+      println!("Pico = {:?}", pico_rule);
+    },
+    Err(err) => error!("Err: {}",err)
+
+  }
 
 
-  pico_rule.run();
-
-  println!("Pico = {:?}", pico_rule);
 }

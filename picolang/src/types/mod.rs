@@ -15,6 +15,9 @@ pub enum PicoRuleError {
     #[error("Invalid PicoRule")]
     InvalidPicoRule,
 
+    #[error("Invalid PicoRule - unsupported expression {producer:?}")]
+    UnsupportedExpression{ producer: der::Producer},
+
     #[error("Invalid PicoVar")]
     InvalidPicoVar
 }
@@ -167,15 +170,17 @@ impl TryFrom<der::LessThanOperation> for ExprLt {
 
     fn try_from(lt_operation: der::LessThanOperation) -> Result<ExprLt, Self::Error> {
         let mut this = Self::default();
-        if lt_operation.value.len() >= 2 {
-            let mut iter = lt_operation.value.into_iter();
+        if lt_operation.value.len() < 2 {
+            return Err(PicoRuleError::InvalidPicoRule)
+        }
 
-            if let Some(expr_first) = iter.next(){
-                this.lhs = Box::new(Expr::try_from(expr_first)?);
+        let mut iter = lt_operation.value.into_iter();
 
-                for expr in iter {
-                    this.rhs.push( Expr::try_from(expr)?);
-                }
+        if let Some(expr_first) = iter.next(){
+            this.lhs = Box::new(Expr::try_from(expr_first)?);
+
+            for expr in iter {
+                this.rhs.push( Expr::try_from(expr)?);
             }
         }
         Ok(this)
@@ -205,7 +210,7 @@ impl TryFrom<der::Producer> for Expr {
             der::Producer::If(i) => Expr::If(Box::new(PicoIf::try_from(i)?)),
             der::Producer::Var(v) => Expr::Var(ExprVar::try_from(v)?),
             der::Producer::String(s) => Expr::String(s),
-            _ => Expr::Nop,
+            _ => return Err(PicoRuleError::UnsupportedExpression{producer})
         };
 
         Ok(prod)
@@ -257,6 +262,10 @@ impl TryFrom<der::IfOperation> for PicoIf {
     fn try_from(if_operation: der::IfOperation) -> Result<PicoIf, Self::Error> {
 
         let mut this = Self::default();
+
+        if if_operation.value.is_empty() {
+            return Err(PicoRuleError::InvalidPicoRule)
+        }
 
         let mut iter = if_operation.value.into_iter().peekable();
 
