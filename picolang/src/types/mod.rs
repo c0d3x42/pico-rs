@@ -1,4 +1,7 @@
 pub mod der;
+pub mod var;
+
+use var::ExprVar;
 
 use jsonpath_lib::{compile as jsonpath_compile, JsonPathError};
 use serde_json::Value;
@@ -7,8 +10,9 @@ use jmespatch;
 use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::rc::Rc;
+use log;
 
-use crate::PicoValue;
+use crate::{PicoValue,pico_value_as_truthy};
 
 #[derive(thiserror::Error, Debug)]
 pub enum PicoRuleError {
@@ -18,12 +22,16 @@ pub enum PicoRuleError {
     #[error("Invalid PicoRule - unsupported expression {producer:?}")]
     UnsupportedExpression { producer: der::Producer },
 
+    #[error("No such variable {variable:?}")]
+    NoSuchVariable { variable: String},
+
     #[error("Invalid PicoVar")]
     InvalidPicoVar,
 }
 
 pub struct Context<'parent> {
-    input: Rc<HashMap<String, PicoValue>>,
+    input: &'parent PicoValue,
+    globals: &'parent HashMap<String, PicoValue>,
     locals: HashMap<String, PicoValue>,
     parent: Option<&'parent Self>,
 }
@@ -31,21 +39,35 @@ pub struct Context<'parent> {
 // https://arzg.github.io/lang/6/
 // Env
 impl<'parent> Context<'parent> {
-    fn new(input: Rc<HashMap<String, PicoValue>>) -> Self {
-        let locals: HashMap<String, PicoValue> = HashMap::new();
+    pub fn new(input: &'parent PicoValue, globals: &'parent HashMap<String, PicoValue>) -> Self {
         Self {
-            input: Rc::clone(&input),
+            input,
+            globals,
             locals: HashMap::new(),
             parent: None,
         }
     }
 
-    fn create_child(&'parent self) -> Self {
+    pub fn create_child(&'parent self) -> Self {
         Self {
-            input: Rc::clone(&self.input),
+            input: &self.input,
+            globals: &self.globals,
             locals: HashMap::new(),
             parent: Some(self),
         }
+    }
+
+    pub fn insert(&mut self, key: &str, value: &PicoValue) -> Option<PicoValue>{
+        self.locals.insert(key.to_string(), value.clone())
+    }
+
+    pub fn get(&self, key: &str) -> Option<&PicoValue> {
+        trace!("CTX get {}", key);
+        self.locals.get(key)
+    }
+
+    pub fn input_get(&self, key: &str) -> Option<&PicoValue>{
+        self.input.get(key)
     }
 }
 
@@ -89,10 +111,33 @@ impl TryFrom<der::RuleFile> for PicoRule {
 }
 
 impl PicoRule {
-    pub fn run(&self) {
-        let mut ctx: HashMap<String, PicoValue> = HashMap::new();
+
+    pub fn exec(&self, ctx: &mut Context) -> Result<PicoValue, PicoRuleError>{
+        let mut iter = self.root.iter().peekable();
+
+        let result = loop {
+            let i = iter.next();
+            match i {
+                Some(instruction) => {
+                    let last = instruction.run(ctx);
+                    if iter.peek().is_none() {
+                        break last;
+                    }
+
+                },
+                None => break Ok(PicoValue::Null)
+            }
+        };
+
+        result
+    }
+
+    pub fn run(&self, ctx: &mut Context) {
         for rule in &self.root {
-            rule.run(&mut ctx);
+            match rule.run(ctx) {
+                Ok(result) => { info!("PicoRule result {}", result)},
+                Err(pre) => {error!("PicoRule {}", pre)}
+            }
         }
     }
 }
@@ -135,19 +180,22 @@ impl TryFrom<der::SetStmt> for PicoInstruction {
 }
 
 impl PicoInstruction {
-    fn run(&self, ctx: &mut HashMap<String, PicoValue>) {
+    fn run(&self, ctx: &mut Context) -> Result<PicoValue, PicoRuleError>{
         //let mut ctx : HashMap<&String, &PicoValue>= HashMap::new();
         match &self {
             PicoInstruction::Set { varbind, value } => {
                 info!("SET varbind: {} ", varbind);
-                ctx.insert(varbind.to_string(), value.clone());
+                ctx.insert(varbind, value).ok_or(PicoRuleError::InvalidPicoRule)
             }
             PicoInstruction::Let { varbind, value } => {
                 let result = value.run(ctx);
 
                 info!("LET varbind: {} = {:?}", varbind, result);
-            }
-            _ => println!("unhandled command"),
+
+                result
+            },
+            PicoInstruction::If(pif) => pif.exec(ctx),
+            _ => Err(PicoRuleError::InvalidPicoRule)
         }
     }
 }
@@ -179,6 +227,18 @@ impl TryFrom<der::EqOperation> for ExprEq {
             lhs: Box::new(Expr::try_from(eq_operation.value.0)?),
             rhs: Box::new(Expr::try_from(eq_operation.value.1)?),
         })
+    }
+}
+
+impl ExprEq{
+
+    pub fn exec(&self, ctx: &mut Context) -> Result<PicoValue, PicoRuleError>{
+        trace!("ExprEq...");
+        let left_handle_value = self.lhs.run(ctx)?;
+        let right_handle_value = self.rhs.run(ctx)?;
+        trace!("ExprEq {} == {}", left_handle_value, right_handle_value);
+
+        Ok( PicoValue::Bool( left_handle_value == right_handle_value ))
     }
 }
 
@@ -248,32 +308,18 @@ impl TryFrom<der::Producer> for Expr {
 }
 
 impl Expr {
-    fn run(&self, ctx: &mut HashMap<String, PicoValue>) {
+    fn run(&self, ctx: &mut Context) -> Result<PicoValue, PicoRuleError>{
+
+        trace!("Expr {:?}", self);
         match self {
             Expr::Var(v) => {
-                for register in &v.registers {
-                    debug!("Checking register {}", register);
-                    if let Some(value) = ctx.get(register) {
-                        debug!("Hash value {}", value);
-
-                        match v.exec(&value) {
-                            Ok(x) => info!("XX = {}", x),
-                            _ => {}
-                        }
-                    /*
-                    if let Some(lookup) = value.pointer(&v.key){
-                        info!("Found: {}", lookup);
-                    } else {
-                        debug!("Path missed {}", v.key);
-                    }
-                    */
-                    } else {
-                        info!("no register {}", register);
-                    }
-                }
                 info!("VAR = {:?}", v);
-            }
-            _ => {}
+                v.exec( ctx)
+            },
+            Expr::Eq(eq)=> eq.exec(ctx),
+            Expr::String(s) => Ok(PicoValue::String(s.to_string())),
+
+            _ => Err(PicoRuleError::InvalidPicoRule)
         }
     }
 }
@@ -320,6 +366,31 @@ impl TryFrom<der::IfOperation> for PicoIf {
         //Err(PicoRuleError::InvalidPicoRule)
     }
 }
+
+impl PicoIf {
+    pub fn exec(&self, ctx: &mut Context) -> Result<PicoValue, PicoRuleError>{
+        trace!("PicoIf");
+
+        for (if_stmt, then_stmt) in &self.if_then {
+            let res = if_stmt.run(ctx)?;
+            if pico_value_as_truthy(&res){
+                trace!("PicoIf..Then");
+                return then_stmt.run(ctx);
+            }
+        }
+
+        if let Some(else_stmt) = &self.r#else {
+            trace!("PicoIf..Else {:?}", else_stmt);
+            return else_stmt.run(ctx);
+        }
+
+        trace!("PicoIf not matched");
+
+        Ok(PicoValue::Null)
+
+    }
+}
+
 #[derive(Debug)]
 pub struct PicoInstructionDebug {
     instruction: String,
@@ -345,118 +416,6 @@ impl TryFrom<der::DebugOperation> for PicoInstructionDebug {
     }
 }
 
-#[derive(Debug)]
-pub enum VarKeyType {
-    Simple,
-    JSONPointer,
-    JSONPath,
-    /**
-     * https://lib.rs/crates/jmespatch
-     */
-    JMESPath,
-    /**
-     * https://crates.io/crates/json_dotpath
-     */
-    JSONDotPath,
-    /**
-     * https://crates.io/crates/jsondata
-     */
-    JSONData,
-}
-
-#[derive(Debug)]
-pub struct ExprVar {
-    key: String,
-    key_type: VarKeyType,
-    default: PicoValue,
-
-    registers: Vec<String>,
-    jmespath: Option<jmespatch::Expression<'static>>,
-}
-
-impl Default for ExprVar {
-    fn default() -> Self {
-        Self {
-            key: "/".to_string(),
-            key_type: VarKeyType::JSONPointer,
-            default: PicoValue::Null,
-            registers: Vec::new(),
-            jmespath: None,
-        }
-    }
-}
-
-impl ExprVar {
-    fn exec(&self, value: &PicoValue) -> Result<PicoValue, PicoRuleError> {
-        if let Some(jmespath) = &self.jmespath {}
-
-        info!("keytype {:?}", self.key_type);
-        match self.key_type {
-            VarKeyType::JSONPath => {
-                if let Ok(matches) = jsonpath_lib::select(value, &self.key) {
-                    info!("Matches {:?}", matches);
-
-                    if matches.len() > 0 {
-                        match matches.first() {
-                            Some(v) => {
-                                let t = (*v).clone();
-                                Ok(t)
-                            }
-                            None => Err(PicoRuleError::InvalidPicoRule),
-                        }
-                    } else {
-                        return Ok(PicoValue::Null);
-                    }
-                } else {
-                    info!("didnt match");
-                    Err(PicoRuleError::InvalidPicoRule)
-                }
-            }
-            VarKeyType::Simple => Ok(PicoValue::Null),
-            _ => Err(PicoRuleError::InvalidPicoRule),
-        }
-    }
-}
-
-impl TryFrom<der::VarOp> for ExprVar {
-    type Error = PicoRuleError;
-
-    fn try_from(var: der::VarOp) -> Result<ExprVar, Self::Error> {
-        let mut v: Self = Self {
-            ..Default::default()
-        };
-
-        let j = jmespatch::compile("bar").unwrap();
-        v.jmespath = Some(j);
-
-        match var.value {
-            der::VarValue::String(s) => v.key = s,
-            der::VarValue::OneString(s) => {
-                if let Some(s1) = s.first() {
-                    v.key = s1.to_owned();
-                }
-            }
-
-            der::VarValue::WithDefault(s, d) => {
-                v.key = s;
-                v.default = d;
-            }
-        }
-
-        match var.register {
-            der::VarRegister::Single(s) => v.registers.push(s),
-            der::VarRegister::Named(registers) => v.registers = registers,
-            _ => {}
-        }
-
-        if let der::VarType::Path = var.r#type {
-            let path = jsonpath_compile(&v.key);
-            v.key_type = VarKeyType::JSONPath;
-        }
-
-        Ok(v)
-    }
-}
 
 /*
 #[cfg(test)]

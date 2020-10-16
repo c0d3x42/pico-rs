@@ -6,6 +6,19 @@ use serde_json::Value;
 /// For now identical to [`serde_json::Value`](crate::serde_json::Value)
 pub type PicoValue = Value;
 
+pub fn pico_value_as_truthy( pico_value: &PicoValue) -> bool {
+
+    match pico_value {
+        PicoValue::Bool(b) => *b,
+        PicoValue::String(s) => s.len() > 0,
+        PicoValue::Array(a) => a.len() > 0,
+        PicoValue::Null => false,
+        PicoValue::Object(o) => o.is_empty(),
+        _ => false
+
+    }
+}
+
 use crate::commands::execution::{ValueExecution, ValueResult};
 use crate::context::PicoContext;
 use crate::errors::PicoError;

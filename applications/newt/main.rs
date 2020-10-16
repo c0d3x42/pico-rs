@@ -1,6 +1,9 @@
-use picolang::types::{der::RuleFile };
+use picolang::types::{der::RuleFile, Context };
 use picolang::types::PicoRule;
 use serde_json;
+use picolang::PicoValue;
+
+use std::collections::HashMap;
 
 use std::convert::TryFrom;
 use log::error;
@@ -45,11 +48,14 @@ fn main() {
         { "set": ["s2", "yeah"] },
         { "let": ["x", "xxxx"]},
         { "let": ["x2", {"if": [ {"==": [ "a", "b"]}, "kk" ] }]},
-        {
-          "if": [
+        { "if": [
             { "==": [ "a", {"var": ["a", "l" ], "type": "pointer", "register": ["_", "k"]  } ]}
-          ]
-        }
+        ] },
+
+        { "if": [
+            { "==": [ "not a", {"var": ["not a", "l" ], "register": ["_", "k"]  } ]}
+        ] }
+
 
       ]
     }
@@ -63,8 +69,12 @@ fn main() {
 
     Ok(pico_rule) => { 
 
+      let globals: HashMap<String, PicoValue> = HashMap::new();
+      let input = serde_json::json!({"a": "is a", "b": "is b"});
+
+      let mut ctx = Context::new(&input, &globals);
       println!("RUNNING...");
-      pico_rule.run();
+      pico_rule.run(&mut ctx);
       println!("Pico = {:?}", pico_rule);
     },
     Err(err) => error!("Err: {}",err)
