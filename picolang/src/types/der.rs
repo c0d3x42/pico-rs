@@ -4,16 +4,24 @@ use std::collections::HashMap;
 
 pub type LookupTableName = String;
 
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(untagged)]
+pub enum JsonLogic {
+    Single(Producer),
+    Many(Vec<Producer>)
+}
+
 ///
 /// The ondisk representation of a Pico rule file
 #[derive(Serialize, Deserialize, Debug)]
 pub struct RuleFile {
+    #[serde(default)]
     pub version: String,
 
     #[serde(default)]
     pub lookups: HashMap<LookupTableName, LookupDefinition>,
 
-    pub root: Vec<RuleInstruction>,
+    pub root: JsonLogic
 }
 
 trait ExternalLookup {
@@ -33,29 +41,32 @@ pub enum LookupDefinition {
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(untagged)]
 pub enum Producer {
-    If(IfOperation),
+    /**
+     * statementy
+     */
+    If(IfStmt),
+    Let(LetStmt),
+    Set(SetStmt),
+    Debug(DebugStmt),
+
+    /**
+     * expressiony
+     */
     Eq(EqOperation),
     Ne(NeOperation),
     Or(OrOperation),
     Lt(LessThanOperation),
+    And(AndOperation),
     Var(VarOp),
     String(String),
 }
 
-#[derive(Serialize, Deserialize, Debug)]
-#[serde(untagged)]
-pub enum RuleInstruction {
-    Logic(IfOperation),
-    Let(LetStmt),
-    Set(SetStmt),
-    Debug(DebugOperation),
-}
 /*
  * Logic operations
  */
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct IfOperation {
+pub struct IfStmt {
     #[serde(rename = "if")]
     pub value: Vec<Producer>,
 }
@@ -69,18 +80,18 @@ pub struct EqOperation {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct NeOperation {
     #[serde(rename = "!=")]
-    value: Box<(Producer, Producer)>,
+    pub value: Box<(Producer, Producer)>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct OrOperation {
     #[serde(rename = "or")]
-    value: Vec<Producer>,
+    pub value: Vec<Producer>,
 }
 #[derive(Serialize, Deserialize, Debug)]
 pub struct AndOperation {
     #[serde(rename = "and")]
-    value: Vec<Producer>,
+    pub value: Vec<Producer>,
 }
 
 
@@ -203,7 +214,7 @@ impl Default for VarOp {
 pub struct LetStmt {
 
     #[serde(rename="let")]
-    pub value: (String, Producer)
+    pub value: (String, Box<Producer>)
 }
 
 /**
@@ -224,7 +235,7 @@ pub struct SetStmt {
  */
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct DebugOperation {
+pub struct DebugStmt {
     #[serde(rename = "debug")]
-    value: String,
+    pub value: String,
 }
