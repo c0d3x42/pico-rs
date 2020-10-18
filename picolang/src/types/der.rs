@@ -8,7 +8,7 @@ pub type LookupTableName = String;
 #[serde(untagged)]
 pub enum JsonLogic {
     Single(Producer),
-    Many(Vec<Producer>)
+    Many(Vec<Producer>),
 }
 
 ///
@@ -21,7 +21,7 @@ pub struct RuleFile {
     #[serde(default)]
     pub lookups: HashMap<LookupTableName, LookupDefinition>,
 
-    pub root: JsonLogic
+    pub root: JsonLogic,
 }
 
 trait ExternalLookup {
@@ -58,6 +58,10 @@ pub enum Producer {
     Lt(LessThanOperation),
     And(AndOperation),
     Var(VarOp),
+
+    Block(Block),
+    Stop(BlockStop),
+
     String(String),
 }
 
@@ -94,7 +98,6 @@ pub struct AndOperation {
     pub value: Vec<Producer>,
 }
 
-
 /*
  * Numeric operations
  */
@@ -110,7 +113,7 @@ pub struct LessThanOperation {
     /**
      * two or more producers
      */
-    pub value: Vec<Producer>, 
+    pub value: Vec<Producer>,
 }
 
 /*
@@ -127,22 +130,19 @@ pub struct AddOp {
  * Array Operations
  */
 
-
-
 /*
  * Variable lookup
  */
 
-
 #[derive(Serialize, Deserialize, Debug)]
 pub enum VarType {
-    #[serde(alias="Type not detected")]
+    #[serde(alias = "Type not detected")]
     Unknown,
     Plain,
-    #[serde(rename="pointer")]
+    #[serde(rename = "pointer")]
     Pointer,
-    #[serde(rename="path")]
-    Path
+    #[serde(rename = "path")]
+    Path,
 }
 impl VarType {
     pub fn plain() -> Self {
@@ -155,27 +155,25 @@ impl Default for VarType {
     }
 }
 
-
 #[derive(Serialize, Deserialize, Debug)]
-pub struct SimpleString (pub String);
+pub struct SimpleString(pub String);
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(untagged)]
 pub enum VarValue {
     String(String),
-    OneString([String;1]),
-    WithDefault( String, PicoValue)
+    OneString([String; 1]),
+    WithDefault(String, PicoValue),
 }
-
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(untagged)]
 pub enum VarRegister {
     Input,
     Single(String),
-    Named(Vec<String>)
+    Named(Vec<String>),
 }
-impl Default for VarRegister{
+impl Default for VarRegister {
     fn default() -> Self {
         Self::Input
     }
@@ -188,33 +186,32 @@ pub struct VarOp {
 
     #[serde(default)]
     pub register: VarRegister,
-    
     /**
      * is the var/value a JSONPath?
      */
-    #[serde(default )]
-    pub r#type: VarType
-
+    #[serde(default)]
+    pub r#type: VarType,
 }
 
 impl Default for VarOp {
     fn default() -> Self {
         //Self { value: VarValue::String( "/".to_string()), register: None, path: false }
-        Self { value:  VarValue::String("/".to_string()), r#type: VarType::Plain, register: VarRegister::Input }
+        Self {
+            value: VarValue::String("/".to_string()),
+            r#type: VarType::Plain,
+            register: VarRegister::Input,
+        }
     }
 }
-
 
 /*
  * Statements
  */
 
-
 #[derive(Serialize, Deserialize, Debug)]
 pub struct LetStmt {
-
-    #[serde(rename="let")]
-    pub value: (String, Box<Producer>)
+    #[serde(rename = "let")]
+    pub value: (String, Box<Producer>),
 }
 
 /**
@@ -222,13 +219,9 @@ pub struct LetStmt {
  */
 #[derive(Serialize, Deserialize, Debug)]
 pub struct SetStmt {
-
-    #[serde(rename="set")]
-    pub value: (String, PicoValue)
+    #[serde(rename = "set")]
+    pub value: (String, PicoValue),
 }
-
-
-
 
 /*
  * Misc operations
@@ -237,5 +230,20 @@ pub struct SetStmt {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct DebugStmt {
     #[serde(rename = "debug")]
+    pub value: String,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Block {
+    #[serde(rename = "block")]
+    pub value: Vec<Producer>,
+
+    #[serde(default)]
+    pub label: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct BlockStop {
+    #[serde(rename = "stop")]
     pub value: String,
 }

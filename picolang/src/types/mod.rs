@@ -1,32 +1,36 @@
-pub mod der;
-pub mod var;
-pub mod run;
-pub mod r#let;
-pub mod set;
-pub mod debug;
-pub mod or;
 pub mod and;
-pub mod logic;
+pub mod block;
+pub mod debug;
+pub mod der;
 pub mod eq;
+pub mod r#let;
+pub mod logic;
+pub mod lt;
+pub mod or;
+pub mod run;
+pub mod set;
+pub mod var;
 
-use var::ExprVar;
+use and::ExprAnd;
+use block::{ExprBlock, ExprStop};
+use debug::ExprDebug;
+use eq::ExprEq;
+use lt::ExprLt;
+use or::ExprOr;
 use r#let::ExprLet;
 use set::ExprSet;
-use debug::ExprDebug;
-use or::ExprOr;
-use and::ExprAnd;
-use eq::ExprEq;
+use var::ExprVar;
 
 use jsonpath_lib::{compile as jsonpath_compile, JsonPathError};
 use serde_json::Value;
 
 use jmespatch;
+use log;
 use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::rc::Rc;
-use log;
 
-use crate::{PicoValue,pico_value_as_truthy};
+use crate::{pico_value_as_truthy, PicoValue};
 
 #[derive(thiserror::Error, Debug)]
 pub enum PicoRuleError {
@@ -37,18 +41,23 @@ pub enum PicoRuleError {
     UnsupportedExpression { producer: der::Producer },
 
     #[error("No such variable {variable:?}")]
-    NoSuchVariable { variable: String},
+    NoSuchVariable { variable: String },
 
     #[error("Invalid PicoVar")]
     InvalidPicoVar,
+
+    #[error("Stopping a block")]
+    BlockStop,
 }
 
 pub struct Message {
-    msg: String
+    msg: String,
 }
 impl Message {
-    pub fn new (msg: &str) -> Self {
-        Self { msg: msg.to_string()}
+    pub fn new(msg: &str) -> Self {
+        Self {
+            msg: msg.to_string(),
+        }
     }
 }
 
@@ -57,7 +66,7 @@ pub struct Context<'parent> {
     globals: &'parent HashMap<String, PicoValue>,
     locals: HashMap<String, PicoValue>,
     parent: Option<&'parent Self>,
-    messages: Vec<Message>
+    messages: Vec<Message>,
 }
 
 // https://arzg.github.io/lang/6/
@@ -69,7 +78,7 @@ impl<'parent> Context<'parent> {
             globals,
             locals: HashMap::new(),
             parent: None,
-            messages: Vec::new()
+            messages: Vec::new(),
         }
     }
 
@@ -79,7 +88,7 @@ impl<'parent> Context<'parent> {
             globals: &self.globals,
             locals: HashMap::new(),
             parent: Some(self),
-            messages: Vec::new()
+            messages: Vec::new(),
         }
     }
 
@@ -87,14 +96,14 @@ impl<'parent> Context<'parent> {
         self.messages.push(Message::new(msg));
     }
 
-    pub fn insert(&mut self, key: &str, value: &PicoValue) -> Option<PicoValue>{
+    pub fn insert(&mut self, key: &str, value: &PicoValue) -> Option<PicoValue> {
         self.locals.insert(key.to_string(), value.clone())
     }
 
     pub fn get(&self, key: &str) -> Option<&PicoValue> {
         trace!("CTX get {}", key);
 
-        if self.locals.contains_key(key){
+        if self.locals.contains_key(key) {
             self.locals.get(key)
         } else if let Some(p) = self.parent {
             p.get(key)
@@ -103,7 +112,7 @@ impl<'parent> Context<'parent> {
         }
     }
 
-    pub fn input_get(&self, key: &str) -> Option<&PicoValue>{
+    pub fn input_get(&self, key: &str) -> Option<&PicoValue> {
         self.input.get(key)
     }
 }
@@ -117,18 +126,17 @@ impl TryFrom<der::RuleFile> for PicoRule {
     type Error = PicoRuleError;
 
     fn try_from(rule_file: der::RuleFile) -> Result<PicoRule, Self::Error> {
-
-        let mut instructions : Vec<Expr> = Vec::new();
+        let mut instructions: Vec<Expr> = Vec::new();
 
         match rule_file.root {
             der::JsonLogic::Single(producer) => {
                 instructions.push(Expr::try_from(producer)?);
-            },
+            }
             der::JsonLogic::Many(many_producers) => {
                 for producer in many_producers {
                     instructions.push(Expr::try_from(producer)?);
                 }
-            },
+            }
             _ => {}
         }
 
@@ -137,22 +145,24 @@ impl TryFrom<der::RuleFile> for PicoRule {
 }
 
 impl PicoRule {
-
-    pub fn exec(&self, ctx: &mut Context) -> Result<PicoValue, PicoRuleError>{
-
+    pub fn exec(&self, ctx: &mut Context) -> Result<PicoValue, PicoRuleError> {
+        trace!("PicoRule::exec");
         let mut results: Vec<PicoValue> = Vec::new();
 
         for expr in &self.root {
-            let result : PicoValue = expr.run(ctx).unwrap_or(PicoValue::Null);
+            trace!("running expr");
+            // FIXME this swallows Stop
+            //let result: PicoValue = expr.run(ctx).unwrap_or(PicoValue::Null);
+            let result: PicoValue = expr.run(ctx)?;
             results.push(result);
         }
 
         trace!("PicoRule result count {}", results.len());
 
         match results.len() {
-            0 | 1 => Ok(results.pop().unwrap_or(PicoValue::Null)),
-            _ => Ok(PicoValue::Array(results))
-
+            0 => Ok(PicoValue::Null),
+            1 => Ok(results.pop().unwrap_or(PicoValue::Null)),
+            _ => Ok(PicoValue::Array(results)),
         }
     }
 
@@ -164,12 +174,13 @@ impl PicoRule {
         }
         match result {
             Ok(value) => Ok(value),
-            Err(err) => Err(format!("{}", err))
+            Err(err) => {
+                error!("PicoRule::run {}", err);
+                Err(format!("{}", err))
+            }
         }
-
     }
 }
-
 
 #[derive(Debug)]
 pub struct ExprString {
@@ -181,72 +192,17 @@ impl From<String> for ExprString {
     }
 }
 
-
-
-#[derive(Debug)]
-pub struct ExprLt {
-    lhs: Box<Expr>,
-    rhs: Vec<Expr>,
-}
-
-impl Default for ExprLt {
-    fn default() -> Self {
-        Self {
-            lhs: Box::new(Expr::Nop),
-            rhs: Vec::new(),
-        }
-    }
-}
-
-impl TryFrom<der::LessThanOperation> for ExprLt {
-    type Error = PicoRuleError;
-
-    fn try_from(lt_operation: der::LessThanOperation) -> Result<ExprLt, Self::Error> {
-        let mut this = Self::default();
-        if lt_operation.value.len() < 2 {
-            return Err(PicoRuleError::InvalidPicoRule);
-        }
-
-        let mut iter = lt_operation.value.into_iter();
-
-        if let Some(expr_first) = iter.next() {
-            this.lhs = Box::new(Expr::try_from(expr_first)?);
-
-            for expr in iter {
-                this.rhs.push(Expr::try_from(expr)?);
-            }
-        }
-        Ok(this)
-    }
-}
-
-impl ExprLt {
-    fn exec(&self, ctx: &mut Context) -> Result<PicoValue, PicoRuleError>{
-        let mut left = self.lhs.run(ctx).unwrap_or(PicoValue::Null);
-
-        trace!("ExprLt {:?}, {:?}", self.lhs, self.rhs);
-
-        for val in &self.rhs {
-            let right = val.run(ctx)?;
-            if logic::less_than( &left, &right ){
-                left = right;
-            } else {
-                return Ok(PicoValue::Bool(false));
-            }
-        }
-
-        Ok(PicoValue::Bool(true))
-
-    }
-}
-
 #[derive(Debug)]
 pub enum Expr {
     Nop,
+    // statementy
     If(Box<PicoIf>),
     Let(ExprLet),
     Set(ExprSet),
     Debug(ExprDebug),
+    // expressiony
+    Block(ExprBlock),
+    Stop(ExprStop),
     Eq(ExprEq),
     Lt(ExprLt),
     And(ExprAnd),
@@ -259,7 +215,7 @@ impl TryFrom<der::Producer> for Expr {
     type Error = PicoRuleError;
 
     fn try_from(producer: der::Producer) -> Result<Expr, Self::Error> {
-        println!("FRom: {:?}", producer);
+        println!("TryFrom:Expr {:?}", producer);
         let prod = match producer {
             der::Producer::Eq(eq) => Expr::Eq(ExprEq::try_from(eq)?),
             der::Producer::Lt(lt) => Expr::Lt(ExprLt::try_from(lt)?),
@@ -269,6 +225,9 @@ impl TryFrom<der::Producer> for Expr {
             der::Producer::Let(l) => Expr::Let(ExprLet::try_from(l)?),
             der::Producer::Set(s) => Expr::Set(ExprSet::try_from(s)?),
             der::Producer::Var(v) => Expr::Var(ExprVar::try_from(v)?),
+            der::Producer::Block(b) => Expr::Block(ExprBlock::try_from(b)?),
+            der::Producer::Stop(s) => Expr::Stop(ExprStop::try_from(s)?),
+
             der::Producer::Debug(d) => Expr::Debug(ExprDebug::try_from(d)?),
             der::Producer::String(s) => Expr::String(s),
             _ => return Err(PicoRuleError::UnsupportedExpression { producer }),
@@ -279,8 +238,7 @@ impl TryFrom<der::Producer> for Expr {
 }
 
 impl Expr {
-    fn run(&self, ctx: &mut Context) -> Result<PicoValue, PicoRuleError>{
-
+    fn run(&self, ctx: &mut Context) -> Result<PicoValue, PicoRuleError> {
         trace!("Expr {:?}", self);
 
         match self {
@@ -288,21 +246,19 @@ impl Expr {
             Expr::Set(s) => s.exec(ctx),
             Expr::Debug(d) => d.exec(ctx),
 
-            Expr::Var(v) => {
-                v.exec( ctx)
-            },
-            Expr::Eq(eq)=> eq.exec(ctx),
+            Expr::Var(v) => v.exec(ctx),
+            Expr::Eq(eq) => eq.exec(ctx),
             Expr::And(a) => a.exec(ctx),
 
             Expr::If(i) => i.exec(ctx),
             Expr::Lt(l) => l.exec(ctx),
 
-
+            Expr::Block(b) => b.exec(ctx),
+            Expr::Stop(s) => s.exec(ctx),
 
             Expr::String(s) => Ok(PicoValue::String(s.to_string())),
 
-            _ => Err(PicoRuleError::InvalidPicoRule)
-
+            _ => Err(PicoRuleError::InvalidPicoRule),
         }
     }
 }
@@ -351,12 +307,12 @@ impl TryFrom<der::IfStmt> for PicoIf {
 }
 
 impl PicoIf {
-    pub fn exec(&self, ctx: &mut Context) -> Result<PicoValue, PicoRuleError>{
+    pub fn exec(&self, ctx: &mut Context) -> Result<PicoValue, PicoRuleError> {
         trace!("PicoIf");
 
         for (if_stmt, then_stmt) in &self.if_then {
             let res = if_stmt.run(ctx)?;
-            if pico_value_as_truthy(&res){
+            if pico_value_as_truthy(&res) {
                 trace!("PicoIf..Then");
                 return then_stmt.run(ctx);
             }
@@ -370,10 +326,8 @@ impl PicoIf {
         trace!("PicoIf not matched");
 
         Ok(PicoValue::Null)
-
     }
 }
-
 
 /*
 #[cfg(test)]
