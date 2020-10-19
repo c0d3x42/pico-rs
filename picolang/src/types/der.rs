@@ -56,6 +56,9 @@ pub enum Producer {
     Ne(NeOperation),
     Or(OrOperation),
     Lt(LessThanOperation),
+    LtE(LessThanEqualOperation),
+    Gt(GreaterThanOperation),
+    GtE(GreaterThanEqualOperation),
     And(AndOperation),
     Var(VarOp),
 
@@ -110,6 +113,33 @@ pub enum NumericOperation {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct LessThanOperation {
     #[serde(rename = "<")]
+    /**
+     * two or more producers
+     */
+    pub value: Vec<Producer>,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct LessThanEqualOperation {
+    #[serde(rename = "<=")]
+    /**
+     * two or more producers
+     */
+    pub value: Vec<Producer>,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct GreaterThanOperation {
+    #[serde(rename = ">")]
+    /**
+     * two or more producers
+     */
+    pub value: Vec<Producer>,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct GreaterThanEqualOperation {
+    #[serde(rename = ">=")]
     /**
      * two or more producers
      */

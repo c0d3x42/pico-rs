@@ -3,9 +3,14 @@ pub mod block;
 pub mod debug;
 pub mod der;
 pub mod eq;
+pub mod gt;
+pub mod gte;
+pub mod ne;
+
+pub mod r#if;
 pub mod r#let;
-pub mod logic;
 pub mod lt;
+pub mod lte;
 pub mod or;
 pub mod run;
 pub mod set;
@@ -15,8 +20,13 @@ use and::ExprAnd;
 use block::{ExprBlock, ExprStop};
 use debug::ExprDebug;
 use eq::ExprEq;
+use gt::ExprGt;
+use gte::ExprGtE;
 use lt::ExprLt;
+use lte::ExprLtE;
+use ne::ExprNe;
 use or::ExprOr;
+use r#if::PicoIf;
 use r#let::ExprLet;
 use set::ExprSet;
 use var::ExprVar;
@@ -30,7 +40,7 @@ use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::rc::Rc;
 
-use crate::{pico_value_as_truthy, PicoValue};
+use crate::PicoValue;
 
 #[derive(thiserror::Error, Debug)]
 pub enum PicoRuleError {
@@ -39,6 +49,9 @@ pub enum PicoRuleError {
 
     #[error("Invalid PicoRule - unsupported expression {producer:?}")]
     UnsupportedExpression { producer: der::Producer },
+
+    #[error("Invalid PicoRule - invalid expression {op:?}")]
+    InvalidExpression { op: String },
 
     #[error("No such variable {variable:?}")]
     NoSuchVariable { variable: String },
@@ -114,6 +127,10 @@ impl<'parent> Context<'parent> {
 
     pub fn input_get(&self, key: &str) -> Option<&PicoValue> {
         self.input.get(key)
+    }
+
+    pub fn input(&self) -> &PicoValue {
+        self.input
     }
 }
 
@@ -204,7 +221,11 @@ pub enum Expr {
     Block(ExprBlock),
     Stop(ExprStop),
     Eq(ExprEq),
+    Ne(ExprNe),
     Lt(ExprLt),
+    LtE(ExprLtE),
+    Gt(ExprGt),
+    GtE(ExprGtE),
     And(ExprAnd),
     Or(ExprOr),
     Var(ExprVar),
@@ -215,10 +236,14 @@ impl TryFrom<der::Producer> for Expr {
     type Error = PicoRuleError;
 
     fn try_from(producer: der::Producer) -> Result<Expr, Self::Error> {
-        println!("TryFrom:Expr {:?}", producer);
-        let prod = match producer {
+        println!("TryFrom:Expr producer {:?}", producer);
+        let expr = match producer {
             der::Producer::Eq(eq) => Expr::Eq(ExprEq::try_from(eq)?),
+            der::Producer::Ne(ne) => Expr::Ne(ExprNe::try_from(ne)?),
             der::Producer::Lt(lt) => Expr::Lt(ExprLt::try_from(lt)?),
+            der::Producer::LtE(lte) => Expr::LtE(ExprLtE::try_from(lte)?),
+            der::Producer::Gt(gt) => Expr::Gt(ExprGt::try_from(gt)?),
+            der::Producer::GtE(gte) => Expr::GtE(ExprGtE::try_from(gte)?),
             der::Producer::If(i) => Expr::If(Box::new(PicoIf::try_from(i)?)),
             der::Producer::And(a) => Expr::And(ExprAnd::try_from(a)?),
             der::Producer::Or(o) => Expr::Or(ExprOr::try_from(o)?),
@@ -233,7 +258,8 @@ impl TryFrom<der::Producer> for Expr {
             _ => return Err(PicoRuleError::UnsupportedExpression { producer }),
         };
 
-        Ok(prod)
+        trace!("Expr::TryFrom -> {:?}", expr);
+        Ok(expr)
     }
 }
 
@@ -249,6 +275,7 @@ impl Expr {
             Expr::Var(v) => v.exec(ctx),
             Expr::Eq(eq) => eq.exec(ctx),
             Expr::And(a) => a.exec(ctx),
+            Expr::Or(o) => o.exec(ctx),
 
             Expr::If(i) => i.exec(ctx),
             Expr::Lt(l) => l.exec(ctx),
@@ -258,74 +285,10 @@ impl Expr {
 
             Expr::String(s) => Ok(PicoValue::String(s.to_string())),
 
-            _ => Err(PicoRuleError::InvalidPicoRule),
+            _ => Err(PicoRuleError::InvalidExpression {
+                op: format!("{:?}", self),
+            }),
         }
-    }
-}
-
-#[derive(Debug)]
-pub struct PicoIf {
-    r#if_then: Vec<(Expr, Expr)>,
-    r#else: Option<Expr>,
-}
-
-impl Default for PicoIf {
-    fn default() -> Self {
-        Self {
-            if_then: Vec::new(),
-            r#else: None,
-        }
-    }
-}
-
-impl TryFrom<der::IfStmt> for PicoIf {
-    type Error = PicoRuleError;
-
-    fn try_from(if_operation: der::IfStmt) -> Result<PicoIf, Self::Error> {
-        let mut this = Self::default();
-
-        if if_operation.value.is_empty() {
-            return Err(PicoRuleError::InvalidPicoRule);
-        }
-
-        let mut iter = if_operation.value.into_iter().peekable();
-
-        while let Some(expr1) = iter.next() {
-            if iter.peek().is_some() {
-                if let Some(expr2) = iter.next() {
-                    this.if_then
-                        .push((Expr::try_from(expr1)?, Expr::try_from(expr2)?));
-                }
-            } else {
-                this.r#else = Some(Expr::try_from(expr1)?);
-            }
-        }
-
-        Ok(this)
-        //Err(PicoRuleError::InvalidPicoRule)
-    }
-}
-
-impl PicoIf {
-    pub fn exec(&self, ctx: &mut Context) -> Result<PicoValue, PicoRuleError> {
-        trace!("PicoIf");
-
-        for (if_stmt, then_stmt) in &self.if_then {
-            let res = if_stmt.run(ctx)?;
-            if pico_value_as_truthy(&res) {
-                trace!("PicoIf..Then");
-                return then_stmt.run(ctx);
-            }
-        }
-
-        if let Some(else_stmt) = &self.r#else {
-            trace!("PicoIf..Else {:?}", else_stmt);
-            return else_stmt.run(ctx);
-        }
-
-        trace!("PicoIf not matched");
-
-        Ok(PicoValue::Null)
     }
 }
 

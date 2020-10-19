@@ -1,17 +1,16 @@
-
 use super::*;
+use json_compare::is_truthy;
 
 #[derive(Debug)]
 pub struct ExprAnd {
-    and: Vec<Expr>
+    and: Vec<Expr>,
 }
 impl TryFrom<der::AndOperation> for ExprAnd {
     type Error = PicoRuleError;
 
     fn try_from(andop: der::AndOperation) -> Result<Self, Self::Error> {
-
-        let mut this = Self{ and: Vec::new()};
-        for op in andop.value   {
+        let mut this = Self { and: Vec::new() };
+        for op in andop.value {
             this.and.push(Expr::try_from(op)?)
         }
 
@@ -19,17 +18,16 @@ impl TryFrom<der::AndOperation> for ExprAnd {
     }
 }
 
-impl ExprAnd{
-
-    pub fn exec(&self, ctx: &mut Context) -> Result<PicoValue, PicoRuleError>{
+impl ExprAnd {
+    pub fn exec(&self, ctx: &mut Context) -> Result<PicoValue, PicoRuleError> {
         trace!("ExprAnd");
 
-        let mut last :Option<PicoValue> = None;
+        let mut last: Option<PicoValue> = None;
 
         for a in &self.and {
             let result = a.run(ctx)?;
 
-            if pico_value_as_truthy(&result){
+            if is_truthy(&result) {
                 trace!("ExprAnd!");
                 last = Some(result);
             } else {

@@ -1063,6 +1063,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "json-compare"
+version = "0.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6ed7af1a17359fd018664f0e0551a28ae6a9689fd2c71b2e32beed33ac46048b"
+dependencies = [
+ "serde_json",
+]
+
+[[package]]
 name = "jsonpath_lib"
 version = "0.2.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1331,6 +1340,7 @@ dependencies = [
  "env_logger",
  "itertools",
  "jmespatch",
+ "json-compare",
  "jsonpath_lib",
  "log",
  "regex",

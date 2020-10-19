@@ -11,7 +11,7 @@ extern crate tinytemplate;
 #[macro_use]
 extern crate serde_derive;
 
-pub use crate::values::{PicoValue, ValueProducer, Var, pico_value_as_truthy};
+pub use crate::values::{PicoValue, ValueProducer, Var};
 
 pub mod commands;
 pub mod conditions;
