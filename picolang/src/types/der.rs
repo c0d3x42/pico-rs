@@ -65,6 +65,7 @@ pub enum Producer {
     Block(Block),
     Stop(BlockStop),
 
+    Concat(ConcatOp),
     String(String),
 }
 
@@ -154,6 +155,16 @@ pub struct GreaterThanEqualOperation {
 pub struct AddOp {
     #[serde(rename = "+")]
     value: Vec<Producer>,
+}
+
+/*
+ * String Operations
+ */
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct ConcatOp {
+    #[serde(rename = "concat")]
+    pub value: Vec<Producer>,
 }
 
 /*

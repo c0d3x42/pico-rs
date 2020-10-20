@@ -62,6 +62,38 @@ mod tests {
         assert_eq!(result, Ok(json!(["is a", "is b"])))
     }
 
+    mod concat {
+        use super::*;
+
+        #[test]
+        fn test_concat1() {
+            init();
+            let result = json_logic_run(
+                r#"{"root":[ {"concat":["AAA", {"var": ["b"]} ] }] }"#,
+                r#"{"b": "is b"}"#,
+            );
+            assert_eq!(result, Ok(json!("AAAis b")))
+        }
+        #[test]
+        fn test_concat2() {
+            init();
+            let result = json_logic_run(
+                r#"{"root":[ {"concat":["AAA", {"var": ["b"]}, {"var": "c"} ] }] }"#,
+                r#"{"b": "is b"}"#,
+            );
+            assert_eq!(result, Ok(json!("AAAis b")))
+        }
+        #[test]
+        fn test_concat3() {
+            init();
+            let result = json_logic_run(
+                r#"{"root":[ {"concat":["AAA", {"var": ["b"]}, {"var": "c"} ] }] }"#,
+                r#"{"b": "is b", "c": 123}"#,
+            );
+            assert_eq!(result, Ok(json!("AAAis b123")))
+        }
+    }
+
     mod equality {
         use super::*;
 
@@ -318,6 +350,33 @@ mod tests {
             )
         }
 
+        fn prog2() -> String {
+            String::from(
+                r#"
+{
+    "root":[
+        {"if":[
+            {"==": [
+                {"var": "var1"},
+                {"var": "var2"}
+            ]},
+            {"set": ["var1=var2", {"result": true}]},
+            {"debug": "did not equal"}
+        ]},
+        {"if":[
+            {"==": [
+                {"var": "var1"},
+                {"var": "var2"}
+            ]},
+            {"set": ["var1=var2", {"result": true}]},
+            {"debug": "did not equal"}
+        ]}
+    ]
+}
+            "#,
+            )
+        }
+
         #[test]
         fn prog_zero() {
             init();
@@ -326,24 +385,22 @@ mod tests {
 
             assert_eq!(result, Ok(json!(Value::Null)))
         }
-
         #[test]
         fn prog_one() {
             init();
+            let prog = prog2();
+            let result = json_logic_run(&prog, r#"{"var1": "XXX", "var2": "XXX"}"#);
 
-            let result = json_logic_run(
-                r#"{
-      "root":[
-        {"if": [
-          {"==": [{"var": "v1"}, "v1 is"]},
-          {"var": "v1a"},
-          "else reached"
-        ]} 
-      ]
-    }"#,
-                r#"{"v1": "v1 is", "v1a": "v1a"}"#,
-            );
-            assert_eq!(result, Ok(json!("v1a")))
+            assert_eq!(result, Ok(json!(["var1=var2", "var1=var2"])))
+        }
+
+        #[test]
+        fn prog_two() {
+            init();
+            let prog = prog2();
+            let result = json_logic_run(&prog, r#"{"var1": "1", "var2": "2"}"#);
+
+            assert_eq!(result, Ok(json!([Value::Null, Value::Null])))
         }
     }
 }

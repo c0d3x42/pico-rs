@@ -1,5 +1,6 @@
 pub mod and;
 pub mod block;
+pub mod concat;
 pub mod debug;
 pub mod der;
 pub mod eq;
@@ -18,6 +19,7 @@ pub mod var;
 
 use and::ExprAnd;
 use block::{ExprBlock, ExprStop};
+use concat::ExprConcat;
 use debug::ExprDebug;
 use eq::ExprEq;
 use gt::ExprGt;
@@ -229,6 +231,7 @@ pub enum Expr {
     And(ExprAnd),
     Or(ExprOr),
     Var(ExprVar),
+    Concat(ExprConcat),
     String(String),
 }
 
@@ -254,6 +257,7 @@ impl TryFrom<der::Producer> for Expr {
             der::Producer::Stop(s) => Expr::Stop(ExprStop::try_from(s)?),
 
             der::Producer::Debug(d) => Expr::Debug(ExprDebug::try_from(d)?),
+            der::Producer::Concat(c) => Expr::Concat(ExprConcat::try_from(c)?),
             der::Producer::String(s) => Expr::String(s),
             _ => return Err(PicoRuleError::UnsupportedExpression { producer }),
         };
@@ -282,6 +286,8 @@ impl Expr {
 
             Expr::Block(b) => b.exec(ctx),
             Expr::Stop(s) => s.exec(ctx),
+
+            Expr::Concat(s) => s.exec(ctx),
 
             Expr::String(s) => Ok(PicoValue::String(s.to_string())),
 
