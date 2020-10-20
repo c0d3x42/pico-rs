@@ -81,7 +81,7 @@ mod tests {
                 r#"{"root":[ {"concat":["AAA", {"var": ["b"]}, {"var": "c"} ] }] }"#,
                 r#"{"b": "is b"}"#,
             );
-            assert_eq!(result, Ok(json!("AAAis b")))
+            assert_eq!(result, Ok(json!("AAAis bnull")))
         }
         #[test]
         fn test_concat3() {

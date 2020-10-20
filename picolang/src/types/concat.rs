@@ -29,11 +29,9 @@ impl ExprConcat {
             let result = expr.run(ctx)?;
             trace!("ExprConcat result {:?}", result);
 
-            if let Some(s) = result.as_str() {
-                trace!("ExprConcat s={}", s);
+            let s = json_compare::coerce_to_str(&result);
 
-                collected_string.push_str(&s);
-            }
+            collected_string.push_str(&s);
         }
         Ok(json!(collected_string))
     }
