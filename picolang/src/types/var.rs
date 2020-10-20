@@ -49,7 +49,7 @@ impl Default for ExprVar {
         Self {
             key: "/".to_string(),
             key_type: VarKeyType::Simple,
-            key_type_f: VarLookupType::Pointer(VarPointer {}),
+            key_type_f: VarLookupType::Pointer(VarPointer {pointer: String::from("")}),
             default: PicoValue::Null,
             registers: Vec::new(),
             jmespath: None,
@@ -61,6 +61,8 @@ impl TryFrom<der::VarOp> for ExprVar {
     type Error = PicoRuleError;
 
     fn try_from(var: der::VarOp) -> Result<ExprVar, Self::Error> {
+
+        trace!("ExprVar::TryFrom var {:?}", var);
         let mut v: Self = Self {
             ..Default::default()
         };
@@ -90,9 +92,14 @@ impl TryFrom<der::VarOp> for ExprVar {
 
         match var.r#type {
             der::VarType::Path => {
+                v.key_type = VarKeyType::JMESPath;
                 v.key_type_f = VarLookupType::JmesPath(VarJmesPath {
                     expr: jmespatch::compile(&v.key).unwrap(),
                 })
+            },
+            der::VarType::Pointer => {
+                v.key_type = VarKeyType::JSONPointer;
+                v.key_type_f = VarLookupType::Pointer(VarPointer{pointer: v.key.clone()})
             }
             _ => {}
         }
@@ -119,6 +126,12 @@ impl ExprVar {
                     variable: self.key.to_string(),
                 }),
             VarKeyType::JMESPath => self.key_type_f.exec(ctx.input()),
+            VarKeyType::JSONPointer => {
+                match ctx.input().pointer(&self.key) {
+                    Some(value) => Ok(value.clone()),
+                    None => Ok(PicoValue::Null)
+                }
+            },
             _ => Err(PicoRuleError::InvalidPicoRule),
         };
 
@@ -136,7 +149,9 @@ impl ExprVar {
 }
 
 #[derive(Debug)]
-pub struct VarPointer {}
+pub struct VarPointer {
+    pointer: String
+}
 
 #[derive(Debug)]
 pub struct VarJmesPath {

@@ -169,8 +169,15 @@ pub enum VarType {
     #[serde(alias = "Type not detected")]
     Unknown,
     Plain,
+    /**
+     * JSONPointer
+     */
     #[serde(rename = "pointer")]
     Pointer,
+
+    /**
+     * JMESPath
+     */
     #[serde(rename = "path")]
     Path,
 }
