@@ -62,6 +62,19 @@ mod tests {
         assert_eq!(result, Ok(json!(["is a", "is b"])))
     }
 
+    mod re {
+        use super::*;
+
+        #[test]
+        fn test_re1() {
+            init();
+            let result = json_logic_run(
+                r#"{"root":[ {"regex":["AA", {"var": ["b"]} ] }] }"#,
+                r#"{"b": "AA"}"#,
+            );
+            assert_eq!(result, Ok(json!(Value::Bool(true))))
+        }
+    }
     mod concat {
         use super::*;
 

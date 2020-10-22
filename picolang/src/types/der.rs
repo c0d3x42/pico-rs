@@ -65,6 +65,7 @@ pub enum Producer {
     Block(Block),
     Stop(BlockStop),
 
+    Re(RegexOperation),
     Concat(ConcatOp),
     String(String),
 }
@@ -166,6 +167,14 @@ pub struct ConcatOp {
     #[serde(rename = "concat")]
     pub value: Vec<Producer>,
 }
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct RegexOperation {
+    #[serde(rename = "regex")]
+    pub value: Vec<Producer>,
+}
+
+
 
 /*
  * Array Operations

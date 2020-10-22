@@ -16,16 +16,23 @@ fn main() {
       "version": "1.2",
       "root": [ 
         {
+          "regex": ["aa", "aaab"]
+        },
+        {
           "set": ["vendors", { "aapl": "Apple", "msft": "Microsoft" }]
         },
         {
           "let": ["vendor_name", {"var":["/aapl"], "register": "vendors"}]
         },
         {
-          "let": ["vendor_name_2", {"var":["$.aapl"], "register": "vendors", "type": "path"}]
+          "let": ["vendor_name_2", {"var":["aapl"], "register": "vendors", "type": "path"}]
         },
         {
-          "if": [ {"==": ["l","b"]}, {"==": ["one", "two"]}, {"==": [ "three", "four"]}]
+          "if": [ 
+            {"==": ["l","b"]}, 
+            {"==": ["one", "two"]}, 
+            {"==": [ "three", "four"]}
+          ]
         },
         {
           "debug": "dd"
@@ -49,20 +56,22 @@ fn main() {
         { "let": ["x", "xxxx"]},
         { "let": ["x2", {"if": [ {"==": [ "a", "b"]}, "kk" ] }]},
         { "if": [
-            { "==": [ "a", {"var": ["a", "l" ], "type": "pointer", "register": ["_", "k"]  } ]}
+            { "==": [ "a", {"var": ["a", "l" ], "type": "pointer", "register": ["_", "k"]  } ] },
+            { "debug": "jjjj"}
         ] },
 
         { "if": [
-            { "==": [ "not a", {"var": ["not a", "l" ], "register": ["_", "k"]  } ]}
+            { "==": [ "not a", {"var": ["not a", "l" ], "register": ["_", "k"]  } ]},
+            { "debug": "nnnn" }
         ] },
 
         { "if": [
             { "and": [ 
               {"==": ["a", "a"]},
               {"==": ["b", "b"]} 
-            ]}
+            ]},
+            { "debug": "lll" }
         ] }
-
       ]
     }
   "#;

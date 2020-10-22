@@ -13,6 +13,7 @@ pub mod r#let;
 pub mod lt;
 pub mod lte;
 pub mod or;
+pub mod re;
 pub mod run;
 pub mod set;
 pub mod var;
@@ -30,6 +31,7 @@ use ne::ExprNe;
 use or::ExprOr;
 use r#if::PicoIf;
 use r#let::ExprLet;
+use re::ExprRegex;
 use set::ExprSet;
 use var::ExprVar;
 
@@ -232,6 +234,7 @@ pub enum Expr {
     Or(ExprOr),
     Var(ExprVar),
     Concat(ExprConcat),
+    Re(ExprRegex),
     String(String),
 }
 
@@ -258,6 +261,7 @@ impl TryFrom<der::Producer> for Expr {
 
             der::Producer::Debug(d) => Expr::Debug(ExprDebug::try_from(d)?),
             der::Producer::Concat(c) => Expr::Concat(ExprConcat::try_from(c)?),
+            der::Producer::Re(r) => Expr::Re(ExprRegex::try_from(r)?),
             der::Producer::String(s) => Expr::String(s),
             _ => return Err(PicoRuleError::UnsupportedExpression { producer }),
         };
@@ -288,6 +292,7 @@ impl Expr {
             Expr::Stop(s) => s.exec(ctx),
 
             Expr::Concat(s) => s.exec(ctx),
+            Expr::Re(r) => r.exec(ctx),
 
             Expr::String(s) => Ok(PicoValue::String(s.to_string())),
 

@@ -25,7 +25,7 @@ impl TryFrom<der::LetStmt> for ExprLet {
 impl ExprLet {
 
   pub fn exec(&self, ctx: &mut Context) -> Result<PicoValue, PicoRuleError> {
-    trace!("ExprSet {}", self.varbind);
+    trace!("ExprLet {}", self.varbind);
     Ok(PicoValue::Bool(true))
   }
 }

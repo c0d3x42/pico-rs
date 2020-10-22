@@ -94,7 +94,10 @@ impl TryFrom<der::VarOp> for ExprVar {
             der::VarType::Path => {
                 v.key_type = VarKeyType::JMESPath;
                 v.key_type_f = VarLookupType::JmesPath(VarJmesPath {
-                    expr: jmespatch::compile(&v.key).unwrap(),
+                    expr: jmespatch::compile(&v.key).map_err(|err| {
+                        error!("JMESPath[{}]: {}", v.key, err);
+                        PicoRuleError::InvalidPicoRule
+                    })?
                 })
             },
             der::VarType::Pointer => {
