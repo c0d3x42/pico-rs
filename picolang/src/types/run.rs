@@ -74,6 +74,28 @@ mod tests {
             );
             assert_eq!(result, Ok(json!(Value::Bool(true))))
         }
+
+        #[test]
+        fn test_re2() {
+            init();
+            let result = json_logic_run(
+                r#"{"root":[ {"regex":["a.c", "abc" ] }]}"#,
+                r#"{}"#,
+            );
+            assert_eq!(result, Ok(json!(Value::Bool(true))))
+        }
+        #[test]
+        fn test_re3() {
+            init();
+            let result = json_logic_run(
+                r#"{"root":[ {"regex":["a[0-9]c", "abc" ] }]}"#,
+                r#"{}"#,
+            );
+            assert_eq!(result, Ok(json!(Value::Bool(false))))
+        }
+
+
+
     }
     mod concat {
         use super::*;

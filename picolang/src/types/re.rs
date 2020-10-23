@@ -39,7 +39,11 @@ impl ExprRegex {
         let expr_result = self.expr.run(ctx)?;
         trace!("ExprRegexResult {}", expr_result);
 
-        let result = self.re.is_match(expr_result.as_str().unwrap());
+        let result = if let Some(haystack) = expr_result.as_str(){
+            self.re.is_match(haystack)
+        } else {
+            false
+        };
 
         Ok(json!(result))
     }
